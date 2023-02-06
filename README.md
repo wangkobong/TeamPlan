@@ -15,12 +15,12 @@ Team Project member todo tracking service
 
 ## Contributors
 * PM & DB/API
-[Crossbell](https://github.com/crossbell8368)
+  * [Crossbell](https://github.com/crossbell8368)
 
 * IOS Developer
-[sani](https://github.com/dotori-0)
-[wangkobong](https://github.com/wangkobong)
-[dazzleb](https://github.com/dazzleb)
+  * [sani](https://github.com/dotori-0)
+  * [wangkobong](https://github.com/wangkobong)
+  * [dazzleb](https://github.com/dazzleb)
 
 
 ## References
