@@ -20,7 +20,6 @@ Team Project member todo tracking service
 * IOS Developer
   * [sani](https://github.com/dotori-0)
   * [wangkobong](https://github.com/wangkobong)
-  * [dazzleb](https://github.com/dazzleb)
 
 
 ## References
