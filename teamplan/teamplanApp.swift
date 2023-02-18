@@ -11,7 +11,7 @@ import SwiftUI
 struct teamplanApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            TestFontView()
         }
     }
 }
