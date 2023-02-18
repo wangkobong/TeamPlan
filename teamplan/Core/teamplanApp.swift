@@ -9,9 +9,10 @@ import SwiftUI
 
 @main
 struct teamplanApp: App {
+    @State private var showLaunchView: Bool = true
     var body: some Scene {
         WindowGroup {
-            TestFontView()
+            SplashView(showOnboardingView: $showLaunchView)
         }
     }
 }
