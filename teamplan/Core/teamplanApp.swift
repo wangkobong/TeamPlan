@@ -9,10 +9,21 @@ import SwiftUI
 
 @main
 struct teamplanApp: App {
-    @State private var showLaunchView: Bool = true
+    
+    @State private var showIntroView: Bool = true
+    
     var body: some Scene {
         WindowGroup {
-            SplashView(showOnboardingView: $showLaunchView)
+            ZStack {
+                ZStack {
+                    if showIntroView {
+                        SplashView(showIntroView: $showIntroView)
+                            .transition(.move(edge: .leading))
+                    } else {
+                        IntroView()
+                    }
+                }
+            }
         }
     }
 }

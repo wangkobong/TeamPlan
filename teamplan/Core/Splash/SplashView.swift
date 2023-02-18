@@ -16,7 +16,7 @@ struct SplashView: View {
     @State private var loops: Int = 0
     @State private var percent: CGFloat = 0
     
-    @Binding var showOnboardingView: Bool
+    @Binding var showIntroView: Bool
     
     let timerForLoadingText = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
     let timerForProgressBar = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
@@ -57,7 +57,7 @@ struct SplashView: View {
                     counter = 0
                     loops += 1
                     if loops >= 3 {
-                        showOnboardingView = false
+                        showIntroView = false
                     }
                 } else {
                     counter += 1
@@ -76,7 +76,7 @@ struct SplashView: View {
 
 struct SplashView_Previews: PreviewProvider {
     static var previews: some View {
-        SplashView(showOnboardingView: .constant(true))
+        SplashView(showIntroView: .constant(true))
     }
 }
 
