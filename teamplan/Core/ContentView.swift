@@ -16,6 +16,7 @@ struct ContentView: View {
             Text("Hello, Welcome to TeamPlan!")
         }
         .padding()
+
     }
 }
 
