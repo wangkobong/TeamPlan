@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import GoogleSignInSwift
 
 struct LoginView: View {
     var body: some View {
@@ -30,6 +31,10 @@ struct LoginView_Previews: PreviewProvider {
 }
 
 struct LoginButtonsView: View {
+    // GoogleSignIn 관련
+    @EnvironmentObject var googleAuthViewModel: GoogleAuthViewModel
+    @ObservedObject var vm = GoogleSignInButtonViewModel()
+    
     var body: some View {
         VStack(spacing: 18) {
             Button(action: {}) {
@@ -50,6 +55,19 @@ struct LoginButtonsView: View {
             }
             .padding(.horizontal, 55)
             
+            VStack {
+                HStack {
+                    VStack{
+                        GoogleSignInButton(viewModel: vm, action: googleAuthViewModel.signIn)
+                          .accessibilityIdentifier("GoogleSignInButton")
+                          .accessibility(hint: Text("Sign in with Google button."))
+                          .padding()
+                    }
+                }
+            }
+           .padding(.horizontal, 55)
+            
+            /*  구글제공 로그인버튼 사용을 위해 주석처리
             Button(action: {}) {
                 HStack {
                     Image("appleLogo")
@@ -66,7 +84,7 @@ struct LoginButtonsView: View {
                         .stroke(SwiftUI.Color.theme.blackColor, lineWidth: 1)
                 )
             }
-            .padding(.horizontal, 55)
+            */
         }
     }
 }
