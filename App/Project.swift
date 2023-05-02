@@ -30,7 +30,14 @@ let project = Project(
             bundleId: "com.team1os.teamplan",
             infoPlist: "teamplan/Info.plist",
             sources: ["teamplan/Sources/**"],
-            resources: ["teamplan/Resources/**"]
+            resources: ["teamplan/Resources/**"],
+            dependencies: [
+                .external(name: "GoogleSignIn"),
+                .external(name: "GoogleSignInSwift"),
+                .external(name: "FirebaseAuth"),
+                .external(name: "FirebaseFirestore"),
+                .external(name: "FirebaseFirestoreSwift"),
+            ]
         ),
     ]
 )
