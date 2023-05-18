@@ -11,28 +11,34 @@ import GoogleSignIn
 
 final class GoogleAuthViewModel: ObservableObject{
     
-    var state: State
+    @Published var state: State
+    @Published var user: GoogleUser
     private var authenticator: Authenticator{
         return Authenticator(authViewModel: self)
     }
     
     // 사용자 상태값 설정
     var authorizedScopes: [String] {
-      switch state {
-      case .signedIn(let user):
-        return user.grantedScopes ?? []
-      case .signedOut:
-        return []
-      }
+        if case let .signedIn(user) = state {
+            return user.grantedScopes ?? []
+        }else{
+            return []
+        }
     }
 
     // ViewModel 생성자
     init() {
-      if let user = GIDSignIn.sharedInstance.currentUser {
-        self.state = .signedIn(user)
-      } else {
-        self.state = .signedOut
-      }
+        if let currentUser = GIDSignIn.sharedInstance.currentUser{
+            self.state = .signedIn(currentUser)
+            self.user = GoogleUser(googleUser: currentUser)
+        } else {
+            self.state = .signedOut
+            self.user = GoogleUser(
+                email: "No Email Info",
+                displayName: "No Name Info",
+                providerID: "No ID Info",
+                profilePicUrl: nil)
+        }
     }
 
     // 로그인
@@ -58,3 +64,8 @@ extension GoogleAuthViewModel{
       case signedOut
     }
 }
+
+
+
+
+

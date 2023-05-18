@@ -17,9 +17,7 @@ struct ContentView: View {
             NavigationView {
                 switch googleAuthViewModel.state{
                 case .signedIn:
-                    LoginView()
-                        .navigationTitle(
-                        NSLocalizedString("Signed In State", comment: "Signed In State Navi Title"))
+                    UserProfileView()
                 case .signedOut:
                     LoginView()
                         .navigationTitle(

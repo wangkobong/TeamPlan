@@ -56,14 +56,10 @@ struct LoginButtonsView: View {
             .padding(.horizontal, 55)
             
             VStack {
-                HStack {
-                    VStack{
-                        GoogleSignInButton(viewModel: vm, action: googleAuthViewModel.signIn)
-                          .accessibilityIdentifier("GoogleSignInButton")
-                          .accessibility(hint: Text("Sign in with Google button."))
-                          .padding()
-                    }
-                }
+                GoogleSignInButton(viewModel: vm, action: googleAuthViewModel.signIn)
+                  .accessibilityIdentifier("GoogleSignInButton")
+                  .accessibility(hint: Text("Sign in with Google button."))
+                  .padding()
             }
            .padding(.horizontal, 55)
             

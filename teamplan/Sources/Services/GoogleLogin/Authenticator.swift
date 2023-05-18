@@ -8,39 +8,67 @@
 
 import Foundation
 import GoogleSignIn
+import FirebaseCore
+import FirebaseAuth
 
-final class Authenticator: ObservableObject{
+final class Authenticator: NSObject, ObservableObject {
     
     // ViewModel 객체
     private var authViewModel: GoogleAuthViewModel
     
     // 인증관리자 생성자
     init(authViewModel: GoogleAuthViewModel){
+        // 인증 ViewModel 생성
         self.authViewModel = authViewModel
+        super.init()
+        
+        // FB 클라이언트ID 생성
+        guard let clientID = FirebaseApp.app()?.options.clientID else { return }
+        
+        //FB 클라이언트 값으로 GID설정
+        let config = GIDConfiguration(clientID: clientID)
+        GIDSignIn.sharedInstance.configuration = config
     }
+    
     
     // 로그인
     func signIn(){
         
-        // rootViewController 존재여부 확인
-        guard let rootViewController =
-                UIApplication.shared.windows.first?.rootViewController else{
-            // 없을 시 예외처리
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootViewController = windowScene.windows.first?.rootViewController else {
             print("There is no root view controller!")
             return
         }
         
-        // 로그인 로직파트
-        // signInResult 에 로그인 결과를 담아 return
-        // 에러가 담겨져 온 경우, 예외처리를 통해 콘솔에 예외출력 후 null값 return => 예외처리 개선 포인트
-        // 로그인 유저가 있는경우 authViewModel 객체의 상태값 추가
         GIDSignIn.sharedInstance.signIn(withPresenting: rootViewController){
             signInResult, error in
             guard let signInResult = signInResult else{
                 print("Error! \(String(describing: error))")
                 return
             }
-            self.authViewModel.state = .signedIn(signInResult.user)
+            // 토큰추출 파트
+            guard let idToken = signInResult.user.idToken?.tokenString else{
+                print("No ID token found")
+                return
+            }
+            
+            // Access Token과 비교
+            let credential = GoogleAuthProvider.credential(
+                withIDToken: idToken,
+                accessToken: signInResult.user.accessToken.tokenString)
+            
+            // FB 사용자 인증
+            Auth.auth().signIn(with: credential){ authResult, error in
+                guard authResult != nil else{
+                    print("Error! \(String(describing: error))")
+                    return
+                }
+                
+                if let authUser = authResult?.user {
+                    self.authViewModel.user = GoogleUser(authUser: authUser)
+                }
+                self.authViewModel.state = .signedIn(signInResult.user)
+            }
         }
     }
     
