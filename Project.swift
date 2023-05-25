@@ -1,27 +1,16 @@
 import ProjectDescription
 
-/*
-                +-------------+
-                |             |
-                |     App     | Contains Tuist App target and Tuist unit-test target
-                |             |
-         +------+-------------+-------+
-         |         depends on         |
-         |                            |
- +----v-----+                   +-----v-----+
- |          |                   |           |
- |   Kit    |                   |     UI    |   Two independent frameworks to share code and start modularising your app
- |          |                   |           |
- +----------+                   +-----------+
-
- */
-
-// MARK: - Project
-
 let project = Project(
     name: "teamplan",
     organizationName: "team1os",
-    settings: nil,
+    packages: [
+        .remote(
+            url: "https://github.com/google/GoogleSignIn-iOS",
+            requirement: .upToNextMajor(from: "7.0.0")),
+        .remote(
+            url: "https://github.com/firebase/firebase-ios-sdk",
+            requirement: .upToNextMajor(from: "9.0.0"))
+    ],
     targets: [
         Target(
             name: "teamplan",
@@ -30,7 +19,14 @@ let project = Project(
             bundleId: "com.team1os.teamplan",
             infoPlist: "teamplan/Info.plist",
             sources: ["teamplan/Sources/**"],
-            resources: ["teamplan/Resources/**"]
+            resources: ["teamplan/Resources/**"],
+            dependencies: [
+                .package(product: "GoogleSignIn"),
+                .package(product: "GoogleSignInSwift"),
+                .package(product: "FirebaseAuth"),
+                .package(product: "FirebaseFirestore"),
+                .package(product: "FirebaseFirestoreSwift"),
+            ]
         ),
     ]
 )
