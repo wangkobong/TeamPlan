@@ -10,6 +10,9 @@ let project = Project(
         .remote(
             url: "https://github.com/firebase/firebase-ios-sdk",
             requirement: .upToNextMajor(from: "9.0.0"))
+        .remote(
+            url: "https://github.com/dkk/WrappingHStack",
+            requirement: .upToNextMajor(from: "2.0.0"))
     ],
     targets: [
         Target(
@@ -26,6 +29,7 @@ let project = Project(
                 .package(product: "FirebaseAuth"),
                 .package(product: "FirebaseFirestore"),
                 .package(product: "FirebaseFirestoreSwift"),
+                .package(product: "WrappingHStack"),
             ]
         ),
     ]

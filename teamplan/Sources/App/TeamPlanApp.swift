@@ -11,67 +11,28 @@ import FirebaseCore
 
 @main
 struct TeamPlanApp: App {
-    @State private var showIntroView: Bool = false
-    @State private var showUserProfile: Bool = false
+    @State private var showIntroView: Bool = true
     @StateObject var googleAuthViewModel = GoogleAuthViewModel()
+    @StateObject var termsViewModel = TermsViewModel()
+    @StateObject var signupViewModel = SignupViewModel()
     
     // Main 파트
     var body: some Scene {
         WindowGroup {
             
             // 도입부 설정
-            ZStack{
-                if showIntroView{
+            ZStack {
+                if showIntroView {
                     SplashView(showIntroView: $showIntroView)
                         .transition(.move(edge: .leading))
                 } else {
                     IntroView()
                 }
             }
-            
-            // 메인설정
-            ContentView()
-                .environmentObject(googleAuthViewModel)
-                .sheet(isPresented: $showUserProfile){
-                    UserProfileView()
-                }
-                .onAppear {
-                    configureFirebase()
-                    restorePreviousGoogleSignIn()
-                    
-                    if googleAuthViewModel.user.email != "No Email Info"{
-                        showUserProfile = true
-                    }
-                }
-                // 최초 로그인일 경우, 로그인페이지로
-                .onOpenURL{ url in
-                    handelOpenURL(url)
-                }
+            .environmentObject(googleAuthViewModel)
+            .environmentObject(termsViewModel)
+            .environmentObject(signupViewModel)
         }
-    }
-    
-    // FireBase 초기화
-    private func configureFirebase(){
-        FirebaseApp.configure()
-    }
-    
-    // Google 로그인정보 확인
-    private func restorePreviousGoogleSignIn(){
-        GIDSignIn.sharedInstance.restorePreviousSignIn{ restoreUser, error in
-            // 기존 로그인유저 정보추출
-            if let user = restoreUser {
-                self.googleAuthViewModel.state = .signedIn(user)
-            }else if let error = error {
-                self.googleAuthViewModel.state = .signedOut
-                print("There was an error restoring the previous sign-in: \(error)")
-            }else{
-                self.googleAuthViewModel.state = .signedOut
-            }
-        }
-    }
-    
-    private func handelOpenURL(_ url: URL){
-        GIDSignIn.sharedInstance.handle(url)
     }
 }
 

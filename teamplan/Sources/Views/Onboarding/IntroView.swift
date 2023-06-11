@@ -19,6 +19,7 @@ struct IntroView: View {
             } else {
                 LoginView()
                     .transition(.asymmetric(insertion: .move(edge: .bottom), removal: .move(edge: .top)))
+     
             }
         }
     }
