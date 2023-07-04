@@ -16,11 +16,11 @@ struct TeamPlanApp: App {
     @StateObject var termsViewModel = TermsViewModel()
     @StateObject var signupViewModel = SignupViewModel()
     
-    // Main 파트
+    //====================
+    // Main
+    //====================
     var body: some Scene {
         WindowGroup {
-            
-            // 도입부 설정
             ZStack {
                 if showIntroView {
                     SplashView(showIntroView: $showIntroView)
@@ -32,9 +32,49 @@ struct TeamPlanApp: App {
             .environmentObject(googleAuthViewModel)
             .environmentObject(termsViewModel)
             .environmentObject(signupViewModel)
+            .onAppear {
+                configureFirebase()
+                restorePreviousGoogleSignIn()
+            }
+            .onOpenURL{ url in
+                handelOpenURL(url)
+            }
         }
     }
+    
+    //====================
+    // Function
+    //====================
+
+    // FireBase 초기화
+    private func configureFirebase(){
+        FirebaseApp.configure()
+    }
+
+    // Google 로그인정보 복원
+    private func restorePreviousGoogleSignIn(){
+        GIDSignIn.sharedInstance.restorePreviousSignIn{ restoreUser, error in
+            // 기존 로그인유저 정보추출
+            if let user = restoreUser {
+                self.googleAuthViewModel.state = .signedIn(user)
+            }else if let error = error {
+                self.googleAuthViewModel.state = .signedOut
+                print("There was an error restoring the previous sign-in: \(error)")
+            }else{
+                self.googleAuthViewModel.state = .signedOut
+            }
+        }
+    }
+
+    // Google 로그인 URL Redirect
+    private func handelOpenURL(_ url: URL){
+        GIDSignIn.sharedInstance.handle(url)
+    }
 }
+
+//====================
+// App Delegate
+//====================
 
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
