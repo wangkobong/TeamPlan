@@ -10,15 +10,6 @@ import Foundation
 import GoogleSignIn
 import GoogleSignInSwift
 
-
-struct GoogleSignInResultModel {
-    let idToken: String
-    let accessToken: String
-    let name: String?
-    let email: String?
-}
-
-
 final class SignInGoogleHelper {
     
     @MainActor
