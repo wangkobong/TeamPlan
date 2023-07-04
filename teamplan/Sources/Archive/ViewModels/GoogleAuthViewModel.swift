@@ -5,7 +5,7 @@
 //  Created by 주찬혁 on 2023/05/02.
 //  Copyright © 2023 team1os. All rights reserved.
 //
-
+/*
 import SwiftUI
 import GoogleSignIn
 
@@ -64,8 +64,4 @@ extension GoogleAuthViewModel{
       case signedOut
     }
 }
-
-
-
-
-
+*/

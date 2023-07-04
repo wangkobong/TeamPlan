@@ -4,7 +4,7 @@
 //
 //  Created by 주찬혁 on 2023/02/15.
 //
-
+/*
 import SwiftUI
 import GoogleSignIn
 
@@ -33,3 +33,4 @@ struct ContentView_Previews: PreviewProvider {
         ContentView()
     }
 }
+*/

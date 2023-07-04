@@ -5,7 +5,7 @@
 //  Created by 주찬혁 on 2023/05/18.
 //  Copyright © 2023 team1os. All rights reserved.
 //
-
+/*
 import Foundation
 import GoogleSignIn
 import FirebaseAuth
@@ -25,4 +25,4 @@ extension GoogleUser{
         self.profilePicUrl = authUser.photoURL
     }
 }
-
+*/

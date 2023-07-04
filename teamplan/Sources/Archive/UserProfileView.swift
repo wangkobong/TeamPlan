@@ -5,7 +5,7 @@
 //  Created by 주찬혁 on 2023/05/17.
 //  Copyright © 2023 team1os. All rights reserved.
 //
-
+/*
 import SwiftUI
 
 struct UserProfileView: View {
@@ -25,3 +25,4 @@ struct UserProfileView_Previews: PreviewProvider {
         UserProfileView()
     }
 }
+*/
