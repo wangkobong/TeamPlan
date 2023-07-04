@@ -5,7 +5,7 @@
 //  Created by 주찬혁 on 2023/05/17.
 //  Copyright © 2023 team1os. All rights reserved.
 //
-
+/*
 import Foundation
 
 struct GoogleUser{
@@ -14,3 +14,4 @@ struct GoogleUser{
     let providerID: String?
     let profilePicUrl: URL?
 }
+*/

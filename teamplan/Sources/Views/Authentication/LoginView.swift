@@ -12,9 +12,9 @@ struct LoginView: View {
     
     @State private var showTermsView: Bool = false
     @State private var showUserProfile: Bool = false
-    @EnvironmentObject var googleAuthViewModel: GoogleAuthViewModel
+
     @ObservedObject var vm = GoogleSignInButtonViewModel()
-    @StateObject private var viewModel = AuthenticationViewModel()
+    @EnvironmentObject var authViewModel: AuthenticationViewModel
     
     
     var body: some View {
@@ -75,7 +75,7 @@ extension LoginView {
                 print("구글버튼클릭")
                 Task {
                     do {
-                        try await viewModel.signInGoogle()
+                        try await authViewModel.signInGoogle()
                         print("구글로그인 성공")
                         showTermsView = true
                     } catch {

@@ -12,7 +12,7 @@ import FirebaseCore
 @main
 struct TeamPlanApp: App {
     @State private var showIntroView: Bool = true
-    @StateObject var googleAuthViewModel = GoogleAuthViewModel()
+    @StateObject var authViewModel = AuthenticationViewModel()
     @StateObject var termsViewModel = TermsViewModel()
     @StateObject var signupViewModel = SignupViewModel()
     
@@ -29,7 +29,7 @@ struct TeamPlanApp: App {
                     IntroView()
                 }
             }
-            .environmentObject(googleAuthViewModel)
+            .environmentObject(authViewModel)
             .environmentObject(termsViewModel)
             .environmentObject(signupViewModel)
             .onAppear {
@@ -54,14 +54,16 @@ struct TeamPlanApp: App {
     // Google 로그인정보 복원
     private func restorePreviousGoogleSignIn(){
         GIDSignIn.sharedInstance.restorePreviousSignIn{ restoreUser, error in
-            // 기존 로그인유저 정보추출
             if let user = restoreUser {
-                self.googleAuthViewModel.state = .signedIn(user)
+                let authUser = AuthenticatedUser(user: user)
+                self.authViewModel.state = .signedIn(authUser)
+                print("Privious Login Info Recovered")
             }else if let error = error {
-                self.googleAuthViewModel.state = .signedOut
+                self.authViewModel.state = .signedOut
                 print("There was an error restoring the previous sign-in: \(error)")
             }else{
-                self.googleAuthViewModel.state = .signedOut
+                self.authViewModel.state = .signedOut
+                print("No Privious Login Data")
             }
         }
     }
