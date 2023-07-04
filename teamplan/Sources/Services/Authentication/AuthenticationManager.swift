@@ -18,7 +18,7 @@ enum AuthProviderOption: String {
 final class AuthenticationManager {
     
     static let shared = AuthenticationManager()
-    private init() { }
+    init() { }
     
     //==============================
     // 인증완료 유저정보 추출

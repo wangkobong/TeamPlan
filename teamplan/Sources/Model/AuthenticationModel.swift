@@ -8,6 +8,7 @@
 
 import Foundation
 import FirebaseAuth
+import GoogleSignIn
 
 //====================
 // Google 소셜로그인
@@ -27,6 +28,20 @@ struct AuthenticatedUser{
     let uid: String
     let email: String?
     let photoUrl: String?
+    
+    // Default Null User
+    init(){
+        self.uid = "No UID Data"
+        self.email = "No Email Data"
+        self.photoUrl = "No URL Data"
+    }
+    
+    // Google User
+    init(user: GIDGoogleUser){
+        self.uid = user.userID.unsafelyUnwrapped
+        self.email = user.profile?.email
+        self.photoUrl = user.profile?.imageURL(withDimension: 320)?.absoluteString
+    }
     
     // Firebase User
     init(user: User) {
