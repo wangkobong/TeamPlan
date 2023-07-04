@@ -9,6 +9,17 @@
 import Foundation
 import FirebaseAuth
 
+//====================
+// Google 소셜로그인
+//====================
+
+struct GoogleSignInUser{
+    let idToken: String
+    let accessToken: String
+    let name: String?
+    let email: String?
+}
+
 struct AuthDataResultModel {
     let uid: String
     let email: String?
@@ -19,11 +30,4 @@ struct AuthDataResultModel {
         self.email = user.email
         self.photoUrl = user.photoURL?.absoluteString
     }
-}
-
-struct GoogleSignInResultModel {
-    let idToken: String
-    let accessToken: String
-    let name: String?
-    let email: String?
 }
