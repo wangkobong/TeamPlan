@@ -12,7 +12,6 @@ import FirebaseAuth
 //====================
 // Google 소셜로그인
 //====================
-
 struct GoogleSignInUser{
     let idToken: String
     let accessToken: String
@@ -20,11 +19,16 @@ struct GoogleSignInUser{
     let email: String?
 }
 
-struct AuthDataResultModel {
+
+//====================
+// FireBase 인증
+//====================
+struct AuthenticatedUser{
     let uid: String
     let email: String?
     let photoUrl: String?
     
+    // Firebase User
     init(user: User) {
         self.uid = user.uid
         self.email = user.email

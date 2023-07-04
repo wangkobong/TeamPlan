@@ -20,14 +20,20 @@ final class AuthenticationManager {
     static let shared = AuthenticationManager()
     private init() { }
     
-    func getAuthenticatedUser() throws -> AuthDataResultModel {
+    //==============================
+    // 인증완료 유저정보 추출
+    //==============================
+    func getAuthenticatedUser() throws -> AuthenticatedUser {
         guard let user = Auth.auth().currentUser else {
             throw URLError(.badServerResponse)
         }
         
-        return AuthDataResultModel(user: user)
+        return AuthenticatedUser(user: user)
     }
-    
+
+    //==============================
+    // 로그인방식 추출
+    //==============================
     func getProvider() throws -> [AuthProviderOption] {
         guard let providerData = Auth.auth().currentUser?.providerData else {
             throw URLError(.badServerResponse)
@@ -45,22 +51,36 @@ final class AuthenticationManager {
         return providers
     }
     
-    func singOut() throws {
-        try Auth.auth().signOut()
+    //==============================
+    // 로그아웃
+    //==============================
+    func logout() throws {
+        do{
+            try Auth.auth().signOut()
+        } catch let signOutError as NSError {
+            print("Error signing out: %@", signOutError)
+          }
     }
 }
 
 // MARK: - SIGN IN SSO
 extension AuthenticationManager {
     
+    //==============================
+    // GoogleToken 추출
+    //==============================
     @discardableResult
-    func signInWithGoogle(user: GoogleSignInUser) async throws -> AuthDataResultModel {
+    func signInWithGoogle(user: GoogleSignInUser) async throws -> AuthenticatedUser {
         let credential = GoogleAuthProvider.credential(withIDToken: user.idToken, accessToken: user.accessToken)
-        return try await signIn(credential: credential)
+        return try await firebaseAuthentication(credential: credential)
     }
+
     
-    func signIn(credential: AuthCredential) async throws -> AuthDataResultModel {
-        let authDataResult = try await Auth.auth().signIn(with: credential)
-        return AuthDataResultModel(user: authDataResult.user)
+    //==============================
+    // FireBase 인증
+    //==============================
+    func firebaseAuthentication(credential: AuthCredential) async throws -> AuthenticatedUser {
+        let authResult = try await Auth.auth().signIn(with: credential)
+        return AuthenticatedUser(user: authResult.user)
     }
 }
