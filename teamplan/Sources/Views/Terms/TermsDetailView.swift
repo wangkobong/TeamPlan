@@ -17,39 +17,29 @@ enum ButtonState {
 struct TermsDetailView: View {
     
     @EnvironmentObject private var viewModel: TermsViewModel
-    @State var buttonState: ButtonState
-    @State var isChecked: Bool = false
-    @State var isCheckedWholeButton: Bool
     var terms: TermsModel
-
     
     var body: some View {
         VStack {
             HStack {
                 Button {
-//                    isChecked.toggle()
-//                    if buttonState == .wholeButton {
-//                        print("전체동의버튼 클릭")
-//                        viewModel.termsList.forEach {
-//                            $0.isSelected.toggle()
-//                        }
-//                    }
-                    
-//                    test()
-//                    print(terms.id)
-//                    var index: Range<Array<String>.Index>.Element? = nil
-//                    ForEach(viewModel.termsList.indices, id: \.self) { index2 in
-//                        index = index2
-//                    }
-//                    viewModel.test(index: index)
+                    switch terms.buttonState {
+                    case .wholeButton:
+                        viewModel.didTapAllAgreeButton()
+                    case .necessaryButton:
+                        viewModel.didTapRequiredTermsButton(terms: self.terms)
+                    case .optionalButton:
+                        viewModel.didTapOptionalTermsButton(terms: self.terms)
+                    }
                 } label: {
-                    Image(systemName: isChecked ? "heart.fill" : "heart")
+                    Image(systemName: "checkmark.circle")
+                        .foregroundColor(terms.isSelected ? .theme.mainPurpleColor : .theme.whiteGreyColor)
                 }
                 Text(terms.title)
                     .foregroundColor(Color(hex: "4B4B4B"))
                     .font(.appleSDGothicNeo(.regular, size: 18))
                 
-                switch buttonState {
+                switch terms.buttonState {
                 case .wholeButton:
                     Text(" ")
                         .opacity(0.0)
@@ -84,7 +74,7 @@ struct TermsDetailView: View {
 struct TermsDetailView_Previews: PreviewProvider {
     static var previews: some View {
         
-        TermsDetailView(buttonState: .necessaryButton, isCheckedWholeButton: false, terms: TermsModel(title: "서비스 이용약관 동의", isSelected: false, buttonState: .optionalButton))
+        TermsDetailView(terms: TermsModel(title: "서비스 이용약관 동의", isSelected: false, buttonState: .optionalButton))
         //.previewLayout(.sizeThatFits)
     }
 }
