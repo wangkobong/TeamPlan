@@ -31,7 +31,6 @@ struct LoginView: View {
     @ObservedObject var vm = GoogleSignInButtonViewModel()
     @StateObject private var viewModel = AuthenticationViewModel()
     
-    
     var body: some View {
         NavigationView {
             VStack {
