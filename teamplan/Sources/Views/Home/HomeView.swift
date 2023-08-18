@@ -19,37 +19,40 @@ struct HomeView: View {
     @State private var isChallenging: Bool = false
     @State private var isExistProject: Bool = true
     @State private var percent: CGFloat = 0.65
+    @State private var isNotificationViewActive = false
     
     var body: some View {
-        VStack {
-            navigationArea
-                .padding(.horizontal, 30)
-            
-            ScrollView {
-                guideArea
+        NavigationStack {
+            VStack {
+                navigationArea
+                    .padding(.horizontal, 30)
                 
-                userNameArea
-                    .padding(.top, 40)
-
-                if isExistProject {
-                    myProjectCardView
-                        .padding(.horizontal, 16)
-                } else {
-                    noProjectView
-                        .padding(.horizontal, 16)
-                }
+                ScrollView {
+                    guideArea
                     
-                pageControl
-                    .padding(.top, 12)
-                
-                myChallengeArea
-                    .padding(.top, 20)
-                
-                challengeCardsArea
+                    userNameArea
+                        .padding(.top, 40)
 
-                Spacer()
+                    if isExistProject {
+                        myProjectCardView
+                            .padding(.horizontal, 16)
+                    } else {
+                        noProjectView
+                            .padding(.horizontal, 16)
+                    }
+                        
+                    pageControl
+                        .padding(.top, 12)
+                    
+                    myChallengeArea
+                        .padding(.top, 20)
+                    
+                    challengeCardsArea
+
+                    Spacer()
+                }
+
             }
-
         }
     }
 }
@@ -67,11 +70,9 @@ extension HomeView {
                 .font(.appleSDGothicNeo(.regular, size: 20))
                 .foregroundColor(.theme.mainPurpleColor)
             Spacer()
-            Button {
-                
-            } label: {
+            NavigationLink(destination: NotificationView(), isActive: $isNotificationViewActive) {
                 Image(systemName: "bell")
-                    .foregroundColor(.theme.blackColor)
+                    .foregroundColor(.black)
             }
             
         }

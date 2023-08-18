@@ -11,6 +11,7 @@ import KeychainSwift
 struct IntroView: View {
     @AppStorage("isOnboarding") var isOnboarding: Bool = true
     @State private var selectedTab: Int = 1
+    @StateObject var notificationViewModel = NotificationViewModel()
     
     var body: some View {
         ZStack {
@@ -20,6 +21,7 @@ struct IntroView: View {
 
             } else if isLoggedIn() {
                 tabView
+                    .environmentObject(notificationViewModel)
                     .transition(.asymmetric(insertion: .move(edge: .bottom), removal: .move(edge: .top)))
             } else {
                 LoginView()
