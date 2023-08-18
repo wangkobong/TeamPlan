@@ -7,6 +7,7 @@
 //
 import Foundation
 import GoogleSignIn
+import KeychainSwift
 
 final class AuthenticationViewModel: ObservableObject{
     
@@ -46,6 +47,7 @@ final class AuthenticationViewModel: ObservableObject{
     //====================
     // Google Login
     //====================
+    @MainActor
     func signInGoogle() async throws {
         
         // 로그인 & 인증
@@ -55,6 +57,11 @@ final class AuthenticationViewModel: ObservableObject{
         // 유저정보 저장
         self.user = authUser
         self.state = .signedIn(authUser)
+        print("idToken: \(googleSignInUser.idToken)")
+        print("accessToken: \(googleSignInUser.accessToken)")
+        let keychain = KeychainSwift()
+        keychain.set(googleSignInUser.idToken, forKey: "idToken")
+        keychain.set(googleSignInUser.accessToken, forKey: "accessToken")
     }
     
     

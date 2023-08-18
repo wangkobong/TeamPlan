@@ -45,11 +45,12 @@ struct TermsView: View {
                 Text("다음")
                     .frame(width: 300, height: 96)
                     .frame(maxWidth: .infinity)
-                    .background(Color.theme.mainPurpleColor)
-                    .foregroundColor(.theme.whiteColor)
+                    .background(termsViewModel.isAgree ? Color.theme.mainPurpleColor : Color.theme.whiteGreyColor)
+                    .foregroundColor(termsViewModel.isAgree ? .theme.whiteColor : .theme.greyColor)
                     .font(.appleSDGothicNeo(.regular, size: 20))
                     .onTapGesture {
                         self.showSignup = true
+                        // 약관동의 네트워크 통신 진행 필요
                     }
             }
             .onAppear {
@@ -85,19 +86,19 @@ extension TermsView {
     
     private var termsList: some View {
         VStack {
-            TermsDetailView(buttonState: .wholeButton, isCheckedWholeButton: true, terms: TermsModel(title: "전체동의", isSelected: false, buttonState: .wholeButton))
+            if let allAgree = termsViewModel.wholeTermsButton {
+                TermsDetailView(terms: allAgree)
                 .onTapGesture {
                     print("전체동의버튼")
                 }
-            
-
+            }
             
             Divider()
                 .padding(.horizontal, 16)
                 .padding(.bottom, 10)
             
             ForEach(termsViewModel.termsList) { terms in
-                TermsDetailView(buttonState: terms.buttonState, isCheckedWholeButton: false, terms: terms)
+                TermsDetailView(terms: terms)
                     .onTapGesture {
                         print(terms.id)
                     }

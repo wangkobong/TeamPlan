@@ -11,6 +11,7 @@ import Combine
 
 final class TermsDataService {
     
+    @Published var allAgreeButton = TermsModel(title: "전체 동의", isSelected: false, buttonState: .wholeButton)
     @Published var termsList: [TermsModel] = []
     var terms: AnyCancellable?
     

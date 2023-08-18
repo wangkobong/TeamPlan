@@ -28,8 +28,11 @@ struct SignupView: View {
     // goal
     @State var goalCount: String = ""
     
+    @State var showHome: Bool = false
+    
     var body: some View {
         NavigationView {
+
             
             VStack {
                 Spacer()
@@ -65,8 +68,17 @@ struct SignupView: View {
                 }
                 
                 Spacer()
+                NavigationLink(
+                    destination: HomeView().defaultNavigationMFormatting(),
+                     isActive: $showHome) {
+                          Text("")
+                               .hidden()
+                               .frame(height: 0)
+                 }
                 
                 bottomButton
+                
+
                 
 
             }
@@ -462,6 +474,7 @@ extension SignupView {
             print("abilitiesSection")
         case 4:
             print("goalSection")
+            showHome = true
         default:
             break
         }

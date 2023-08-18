@@ -12,7 +12,10 @@ let project = Project(
             requirement: .upToNextMajor(from: "9.0.0")),
         .remote(
             url: "https://github.com/dkk/WrappingHStack",
-            requirement: .upToNextMajor(from: "2.0.0"))
+            requirement: .upToNextMajor(from: "2.0.0")),
+        .remote(
+            url: "https://github.com/evgenyneu/keychain-swift",
+            requirement: .branch("master")),
     ],
     targets: [
         Target(
@@ -30,6 +33,7 @@ let project = Project(
                 .package(product: "FirebaseFirestore"),
                 .package(product: "FirebaseFirestoreSwift"),
                 .package(product: "WrappingHStack"),
+                .package(product: "KeychainSwift"),
             ]
         ),
     ]
