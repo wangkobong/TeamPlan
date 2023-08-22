@@ -16,8 +16,8 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0</string>
-    <key>GIDClientID</key>
-    <string>951003284861-thjr78ebbc3vsjdb8bdbea0jvlvpokhp.apps.googleusercontent.com</string>
+	<key>GIDClientID</key>
+	<string>861413417966-b2rjh5m350gr7rmeerdp78fp2nlq72lb.apps.googleusercontent.com</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -25,7 +25,7 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.951003284861-thjr78ebbc3vsjdb8bdbea0jvlvpokhp</string>
+				<string>com.googleusercontent.apps.861413417966-b2rjh5m350gr7rmeerdp78fp2nlq72lb</string>
 			</array>
 		</dict>
 	</array>
@@ -47,6 +47,13 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict/>
+	</dict>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

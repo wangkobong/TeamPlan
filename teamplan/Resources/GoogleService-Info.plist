@@ -3,21 +3,21 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>951003284861-thjr78ebbc3vsjdb8bdbea0jvlvpokhp.apps.googleusercontent.com</string>
+	<string>861413417966-b2rjh5m350gr7rmeerdp78fp2nlq72lb.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.951003284861-thjr78ebbc3vsjdb8bdbea0jvlvpokhp</string>
+	<string>com.googleusercontent.apps.861413417966-b2rjh5m350gr7rmeerdp78fp2nlq72lb</string>
 	<key>API_KEY</key>
-	<string>AIzaSyCExqhi3VD4gyWafXhTLXFGRKtu7TN878c</string>
+	<string>AIzaSyBGpf7OAeCpH7RxZnjk5TgcnjIx5OblWQs</string>
 	<key>GCM_SENDER_ID</key>
-	<string>951003284861</string>
+	<string>861413417966</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>com.team1os.teamplan</string>
 	<key>PROJECT_ID</key>
-	<string>teamplan-1683017798210</string>
+	<string>teamplan-378214</string>
 	<key>STORAGE_BUCKET</key>
-	<string>teamplan-1683017798210.appspot.com</string>
+	<string>teamplan-378214.appspot.com</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -29,6 +29,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:951003284861:ios:181613a197c36f1b63f814</string>
+	<string>1:861413417966:ios:34d447daa0b5e99d9be4ff</string>
 </dict>
 </plist>
