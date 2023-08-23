@@ -52,7 +52,7 @@ extension IntroView {
     private var tabView: some View {
         
         TabView(selection: $selectedTab) {
-            Text("프로젝트")
+            ProjectView()
             .tabItem {
               Image("document")
               Text("프로젝트")
