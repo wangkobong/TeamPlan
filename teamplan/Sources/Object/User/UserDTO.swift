@@ -34,7 +34,7 @@ struct UserSignupLocalReqDTO{
 //============================
 // MARK: Signup - Server
 //============================
-/// Request DTO : Service -> CoreData
+/// Request DTO : Service -> Firestore
 struct UserSignupServerReqDTO{
     // id
     let user_id: String
@@ -65,4 +65,18 @@ struct UserSignupServerReqDTO{
         self.user_login_at = currentDate
         self.user_updated_at = currentDate
     }
+    
+    // Firestore Extension
+    func toDictionary() -> [String: Any] {
+            return [
+                "user_id": self.user_id,
+                "user_email": self.user_email,
+                "user_name": self.user_name,
+                "user_social_type": self.user_social_type,
+                "user_status": self.user_status.rawValue,
+                "user_created_at": self.user_created_at,
+                "user_login_at": self.user_login_at,
+                "user_updated_at": self.user_updated_at
+            ]
+        }
 }

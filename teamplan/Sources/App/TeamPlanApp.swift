@@ -17,73 +17,72 @@ struct TeamPlanApp: App {
     @StateObject var signupViewModel = SignupViewModel()
     
     //====================
-    // Main
+    // MARK: Main
     //====================
     var body: some Scene {
         WindowGroup {
-            ZStack {
-                if showIntroView {
-                    SplashView(showIntroView: $showIntroView)
-                        .transition(.move(edge: .leading))
-                } else {
-                    IntroView()
-                }
-            }
-            .environmentObject(authViewModel)
-            .environmentObject(termsViewModel)
-            .environmentObject(signupViewModel)
-            .onAppear {
-                configureFirebase()
-                restorePreviousGoogleSignIn()
-            }
-            .onOpenURL{ url in
-                handelOpenURL(url)
+            mainView
+                .environmentObject(authViewModel)
+                .environmentObject(termsViewModel)
+                .environmentObject(signupViewModel)
+                .onAppear(perform: initializeApp)
+                .onOpenURL(perform: handelOpenURL)
+        }
+    }
+    
+    private var mainView: some View {
+        ZStack {
+            if showIntroView {
+                SplashView(showIntroView: $showIntroView)
+                    .transition(.move(edge: .leading))
+            } else {
+                IntroView()
             }
         }
     }
     
+    
     //====================
-    // Function
+    // MARK: Function
     //====================
-
-    // FireBase 초기화
+    private func initializeApp() {
+        configureFirebase()
+        restorePreviousGoogleSignIn()
+    }
+    
     private func configureFirebase(){
         FirebaseApp.configure()
     }
 
-    // Google 로그인정보 복원
-    private func restorePreviousGoogleSignIn(){
-        GIDSignIn.sharedInstance.restorePreviousSignIn{ restoreUser, error in
+    private func restorePreviousGoogleSignIn() {
+        GIDSignIn.sharedInstance.restorePreviousSignIn { restoreUser, error in
             if let user = restoreUser {
-                let authUser = AuthenticatedUser(user: user)
-                self.authViewModel.state = .signedIn(authUser)
-                print("Privious Login Info Recovered")
-            }else if let error = error {
-                self.authViewModel.state = .signedOut
-                print("There was an error restoring the previous sign-in: \(error)")
-            }else{
-                self.authViewModel.state = .signedOut
-                print("No Privious Login Data")
+                authViewModel.state = .signedIn(AuthenticatedUser(user: user))
+                print("Previous login info recovered.")
+            } else if let error = error {
+                authViewModel.state = .signedOut
+                print("Error restoring previous login: \(error)")
+            } else {
+                authViewModel.state = .signedOut
+                print("No previous login data.")
             }
         }
     }
 
-    // Google 로그인 URL Redirect
     private func handelOpenURL(_ url: URL){
         GIDSignIn.sharedInstance.handle(url)
     }
 }
 
-//====================
-// App Delegate
-//====================
 
+//====================
+// MARK: App Delegate
+//====================
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
         
-        // 시작 시, 딜레이 부여
+        // Add delay at startup
         Thread.sleep(forTimeInterval: 1.5)
-        
         return true
     }
     

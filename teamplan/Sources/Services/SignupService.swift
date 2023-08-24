@@ -11,6 +11,7 @@ import Foundation
 final class SignupService{
     
     let cd = UserServicesCoredata(storeType: .binary)
+    let fs = UserServicesFirestore()
     
     //===============================
     // MARK: - Set Profile: Signup
@@ -28,7 +29,16 @@ final class SignupService{
         do{
             let newUser = try structNewUser(reqUser: reqUser)
             
-            // TODO: Add Firebase Logic
+            // Set Firestore
+            fs.setUserFirestore(reqUser: newUser){ result in
+                switch result {
+                case .success(let addDocsId):
+                    docsId = addDocsId
+                    print("Successfully added user with document ID: \(docsId)")
+                case .failure(let error):
+                    print("Failed to add user: \(error)")
+                }
+            }
             
             // Create UserObject
             let newUserObject = UserObject(newUser: newUser, docsId: docsId)
@@ -57,7 +67,6 @@ final class SignupService{
         
         return UserSignupServerReqDTO(reqUser: reqUser, identifier: identifier)
     }
-    
     
     func extractIdentifier(email: String) throws -> String {
         guard let atIndex = email.firstIndex(of: "@"),
