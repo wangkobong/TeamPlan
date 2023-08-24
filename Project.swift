@@ -23,6 +23,7 @@ let project = Project(
             platform: .iOS,
             product: .app,
             bundleId: "com.team1os.teamplan",
+            deploymentTarget: .iOS(targetVersion: "16.0", devices: .iphone),
             infoPlist: "teamplan/Info.plist",
             sources: ["teamplan/Sources/**"],
             resources: ["teamplan/Resources/**"],
