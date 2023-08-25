@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="21513" systemVersion="22G90" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="ProjectEntity" representedClassName="ProjectEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="proj_changed_at" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="proj_deadline" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="proj_finished" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="proj_finished_at" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="proj_id" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="proj_registed_at" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="proj_started_at" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="proj_title" attributeType="String"/>
+        <attribute name="proj_todo_finished" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="proj_todo_registed" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <relationship name="todo_relationship" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="TodoEntity" inverseName="project_relationship" inverseEntity="TodoEntity"/>
+    </entity>
+    <entity name="TodoEntity" representedClassName="TodoEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="todo_changed_at" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="todo_desc" attributeType="String"/>
+        <attribute name="todo_id" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="todo_pinned" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="todo_registed_at" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="todo_status" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="todo_updated_at" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="project_relationship" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ProjectEntity" inverseName="todo_relationship" inverseEntity="ProjectEntity"/>
+    </entity>
+    <entity name="UserEntity" representedClassName="UserEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="user_created_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="user_email" optional="YES" attributeType="String"/>
+        <attribute name="user_fb_id" optional="YES" attributeType="String"/>
+        <attribute name="user_id" optional="YES" attributeType="String"/>
+        <attribute name="user_login_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="user_name" optional="YES" attributeType="String"/>
+        <attribute name="user_social_type" optional="YES" attributeType="String"/>
+        <attribute name="user_status" optional="YES" attributeType="String"/>
+        <attribute name="user_updated_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <fetchedProperty name="fetchedProperty" optional="YES">
+            <fetchRequest name="fetchedPropertyFetchRequest" entity="UserEntity"/>
+        </fetchedProperty>
+    </entity>
+</model>
