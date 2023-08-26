@@ -42,12 +42,43 @@ struct UserObject{
         self.user_login_at = newUser.user_login_at
         self.user_updated_at = newUser.user_updated_at
     }
+    
+    init(userEntity: UserEntity){
+        self.user_id = userEntity.user_id ?? "Unknowned"
+        self.user_fb_id = userEntity.user_fb_id ?? "Unknowned"
+        self.user_email = userEntity.user_email ?? "Unknowned"
+        self.user_name = userEntity.user_name ?? "Unknowned"
+        self.user_social_type = userEntity.user_social_type ?? "Unknowned"
+        self.user_status = UserType(rawValue: userEntity.user_status ?? "Unknowned") ?? .unknown
+        self.user_created_at = userEntity.user_created_at ?? Date()
+        self.user_login_at = userEntity.user_login_at ?? Date()
+        self.user_updated_at = userEntity.user_updated_at ?? Date()
+    }
 }
 
 //============================
-// MARK: Extension
+// MARK: Exception
+//============================
+extension UserObject{
+    // get error message
+    init(error: String){
+        self.user_id = error
+        self.user_fb_id = error
+        self.user_email = error
+        self.user_name = error
+        self.user_social_type = "Unknowned"
+        self.user_status = .unknown
+        self.user_created_at = Date()
+        self.user_login_at = Date()
+        self.user_updated_at = Date()
+    }
+}
+
+//============================
+// MARK: Enum
 //============================
 enum UserType: String{
     case active = "Activated"
     case dormant = "Dormanted"
+    case unknown = "Unknowned"
 }

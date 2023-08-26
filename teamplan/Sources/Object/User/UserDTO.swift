@@ -80,3 +80,19 @@ struct UserSignupServerReqDTO{
             ]
         }
 }
+
+//============================
+// MARK: Home - Local
+//============================
+struct UserHomeResDTO{
+    // id
+    let user_id: String
+    
+    // content
+    let user_name: String
+    
+    init(userObject: UserObject){
+        self.user_id = userObject.user_id
+        self.user_name = userObject.user_name
+    }
+}

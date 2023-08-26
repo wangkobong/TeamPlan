@@ -10,23 +10,31 @@ import Foundation
 
 final class HomeService{
     
-    let cd = ProjectServicesCoredata(storeType: .binary)
+    let projectCD = ProjectServicesCoredata(storeType: .binary)
+    let userCD = UserServicesCoredata(storeType: .binary)
     
     //===============================
     // MARK: - get User
     //===============================
-    
-    
-    
+    /// * Return Type : UserDTO / UserHomeResDTO
+    ///    * success : 'user_id' & 'user_name' return
+    ///    * exception : filled error message in 'user_id' & 'user_name'
+    func getUser(identifier: String) async -> UserHomeResDTO {
+        
+        let requestUser = await userCD.getUserCoredata(identifier: identifier)
+        
+        return UserHomeResDTO(userObject: requestUser)
+    }
     
     
     //===============================
     // MARK: - get Project
     //===============================
+    // TODO: Add logic - No ProjectData case
     func getProject() async -> [ProjectHomeLocalResDTO]{
         
         // extract all project info
-        let fetchProjects = await cd.getProjectCoredata()
+        let fetchProjects = await projectCD.getProjectCoredata()
         
         // sorted by 'deadline'
         let sortedProjects = fetchProjects.sorted{ $0.proj_deadline > $1.proj_deadline }
@@ -39,7 +47,7 @@ final class HomeService{
     func getTestProject() -> [ProjectHomeLocalResDTO]{
         
         // get DummyProject
-        let dummyProjects = cd.createDummyProject()
+        let dummyProjects = projectCD.createDummyProject()
         
         // sorted by 'deadline'
         let sortedProjects = dummyProjects.sorted{ $0.proj_deadline < $1.proj_deadline }

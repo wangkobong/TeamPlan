@@ -40,17 +40,29 @@ final class UserServicesCoredata{
     }()
     
     //================================
-    // MARK: - Get User: Home
+    // MARK: - Get User: Home/MyPage
     // return: name
     //================================
-    
+    func getUserCoredata(identifier: String) async -> UserObject{
+        
+        // parameter setting
+        let context: NSManagedObjectContext = managedObjectContext
+        let fetchReq: NSFetchRequest<UserEntity> = UserEntity.fetchRequest()
+        
+        // Request Query
+        fetchReq.predicate = NSPredicate(format: "user_id == %@", identifier)
+        fetchReq.fetchLimit = 1
+        
+        do{
+            let reqUser = try context.fetch(fetchReq)
+            return UserObject(userEntity: reqUser.first!)
+        } catch let error as NSError {
+            let errorMessage = "Failed to get User by identifier"
+            print("Failed to get User by identifier: \(identifier) \n \(error)")
+            return UserObject(error: errorMessage)
+        }
+    }
 
-    //================================
-    // MARK: - Get User: MyPage
-    // return: email, socialType
-    //================================
-    
-    
     //================================
     // MARK: - Set User: SignUp
     //================================
