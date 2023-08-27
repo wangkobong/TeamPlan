@@ -1,5 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="21513" systemVersion="22G90" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="ChallengeEntity" representedClassName="ChallengeEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="chlg_desc" optional="YES" attributeType="String"/>
+        <attribute name="chlg_finished_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="chlg_goal" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="chlg_id" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="chlg_lock" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="chlg_reward" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="chlg_selected" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="chlg_selected_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="chlg_status" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="chlg_step" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="chlg_title" optional="YES" attributeType="String"/>
+        <attribute name="chlg_type" optional="YES" attributeType="String"/>
+        <attribute name="chlg_unselected_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+    </entity>
     <entity name="ProjectEntity" representedClassName="ProjectEntity" syncable="YES" codeGenerationType="class">
         <attribute name="proj_changed_at" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="proj_deadline" attributeType="Date" usesScalarValueType="NO"/>

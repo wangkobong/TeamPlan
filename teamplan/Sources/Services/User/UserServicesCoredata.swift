@@ -40,10 +40,9 @@ final class UserServicesCoredata{
     }()
     
     //================================
-    // MARK: - Get User: Home/MyPage
-    // return: name
+    // MARK: - Get User
     //================================
-    func getUserCoredata(identifier: String) async -> UserObject{
+    func getUserCoredata(identifier: String) async -> UserObject {
         
         // parameter setting
         let context: NSManagedObjectContext = managedObjectContext
@@ -64,7 +63,7 @@ final class UserServicesCoredata{
     }
 
     //================================
-    // MARK: - Set User: SignUp
+    // MARK: - Set User
     //================================
     
     func setUserCoredata(userObject: UserObject) async {
@@ -89,12 +88,12 @@ final class UserServicesCoredata{
     }
     
     //================================
-    // MARK: - Update User: MyPage
+    // MARK: - Update User
     //================================
     
     
     //================================
-    // MARK: - Delete User: MyPage
+    // MARK: - Delete User
     //================================
     
 }

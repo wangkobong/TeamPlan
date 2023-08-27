@@ -14,36 +14,36 @@ import Foundation
 /// Service -> View/ViewModel
 struct ProjectHomeLocalResDTO{
     // content
-    let proj_title: String
+    let title: String
     
     // status
-    let proj_started_at: Date
-    let proj_deadline: Date
-    let proj_finished: Bool
+    let startedAt: Date
+    let deadline: Date
+    let finished: Bool
     
     // todo
-    let proj_todo_registed: Int
-    let proj_todo_finished: Int
+    let registedTodo: Int
+    let finishedTodo: Int
     
     
     // Constructor
     // Coredata
     init(from projectEntity: ProjectEntity){
-        self.proj_title = projectEntity.proj_title ?? ""
-        self.proj_started_at = projectEntity.proj_started_at ?? Date()
-        self.proj_deadline = projectEntity.proj_deadline ?? Date()
-        self.proj_finished = projectEntity.proj_finished
-        self.proj_todo_registed = Int(projectEntity.proj_todo_registed)
-        self.proj_todo_finished = Int(projectEntity.proj_todo_finished)
+        self.title = projectEntity.proj_title ?? ""
+        self.startedAt = projectEntity.proj_started_at ?? Date()
+        self.deadline = projectEntity.proj_deadline ?? Date()
+        self.finished = projectEntity.proj_finished
+        self.registedTodo = Int(projectEntity.proj_todo_registed)
+        self.finishedTodo = Int(projectEntity.proj_todo_finished)
     }
     
     // dummyTest
     init(from projectObject: ProjectObject){
-        self.proj_title = projectObject.proj_title
-        self.proj_started_at = projectObject.proj_started_at
-        self.proj_deadline = projectObject.proj_deadline
-        self.proj_finished = projectObject.proj_finished
-        self.proj_todo_registed = Int(projectObject.proj_todo_registed)
-        self.proj_todo_finished = Int(projectObject.proj_todo_finished)
+        self.title = projectObject.proj_title
+        self.startedAt = projectObject.proj_started_at
+        self.deadline = projectObject.proj_deadline
+        self.finished = projectObject.proj_finished
+        self.registedTodo = Int(projectObject.proj_todo_registed)
+        self.finishedTodo = Int(projectObject.proj_todo_finished)
     }
 }

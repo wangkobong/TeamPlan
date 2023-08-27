@@ -1,15 +1,15 @@
 //
-//  ProjectServicesCoredata.swift
+//  ChallengeServicesCoredata.swift
 //  teamplan
 //
-//  Created by 주찬혁 on 2023/08/25.
+//  Created by 주찬혁 on 2023/08/26.
 //  Copyright © 2023 team1os. All rights reserved.
 //
 
 import Foundation
 import CoreData
 
-final class ProjectServicesCoredata{
+final class ChallengeServicesCoredata{
     
     //================================
     // MARK: - CoreData Setting
@@ -40,18 +40,23 @@ final class ProjectServicesCoredata{
     
     
     //================================
-    // MARK: - Get Project
+    // MARK: - Get MyChallenge
     //================================
-    func getProjectCoredata() async -> [ProjectObject] {
+    func getMyChallengeCoredata() async -> [ChallengeObject]{
         
+        // parameter setting
         let context: NSManagedObjectContext = managedObjectContext
-        let fetchReq: NSFetchRequest<ProjectEntity> = ProjectEntity.fetchRequest()
+        let fetchReq: NSFetchRequest<ChallengeEntity> = ChallengeEntity.fetchRequest()
         
+        // Request Query
+        fetchReq.predicate = NSPredicate(format: "chlg_selected == %@", NSNumber(value: true))
+        
+        // TODO: Exception Handling
         do{
-            let projectEntities = try context.fetch(fetchReq)
-            return projectEntities.map{ ProjectObject(projectEntity: $0 )}
+            let chlgEntities = try context.fetch(fetchReq)
+            return chlgEntities.map{ ChallengeObject(chlgEntity: $0) }
         } catch {
-            print("Failed to fetch projects: \(error)")
+            print("Failed to fetch Challenges: \(error)")
             return []
         }
     }
