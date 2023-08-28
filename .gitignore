@@ -151,4 +151,8 @@ xcuserdata
 ### Tuist
 Derived
 
+
+### XCTest
+Test
+
 # End of https://www.toptal.com/developers/gitignore/api/macos,xcode,swift,swiftpackagemanager,firebase
