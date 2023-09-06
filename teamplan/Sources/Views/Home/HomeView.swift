@@ -20,6 +20,7 @@ struct HomeView: View {
     @State private var isExistProject: Bool = true
     @State private var percent: CGFloat = 0.65
     @State private var isNotificationViewActive = false
+    @State private var showingTutorial = false
     
     var body: some View {
         NavigationStack {
@@ -52,6 +53,9 @@ struct HomeView: View {
                     Spacer()
                 }
 
+            }
+            .fullScreenCover(isPresented: $showingTutorial) {
+                TutorialView()
             }
         }
     }
@@ -136,7 +140,7 @@ extension HomeView {
                         .padding(.trailing, -7)
                         .padding(.bottom, 10)
                         .onTapGesture {
-                            print("읽으러 가기")
+                            showingTutorial.toggle()
                         }
 
                         Image("waterdrop_side")
