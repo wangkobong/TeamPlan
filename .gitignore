@@ -155,4 +155,8 @@ Derived
 ### XCTest
 Test
 
+
+### GoogleService
+teamplan/Resources/GoogleService-Info.plist
+
 # End of https://www.toptal.com/developers/gitignore/api/macos,xcode,swift,swiftpackagemanager,firebase
