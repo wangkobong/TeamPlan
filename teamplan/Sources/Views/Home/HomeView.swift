@@ -21,12 +21,16 @@ struct HomeView: View {
     @State private var percent: CGFloat = 0.65
     @State private var isNotificationViewActive = false
     @State private var showingTutorial = false
+    @State private var isGuideViewActive = false
     
     var body: some View {
         NavigationStack {
             VStack {
+                Spacer()
+                    .frame(height: 21)
                 navigationArea
                     .padding(.horizontal, 30)
+                    .padding(.bottom, 5)
                 
                 ScrollView {
                     guideArea
@@ -70,9 +74,9 @@ struct HomeView_Previews: PreviewProvider {
 extension HomeView {
     private var navigationArea: some View {
         HStack {
-            Text("투두팡")
-                .font(.appleSDGothicNeo(.regular, size: 20))
-                .foregroundColor(.theme.mainPurpleColor)
+            Image("title_home")
+                .frame(width: 61, height: 27)
+                .padding(.leading, -10)
             Spacer()
             NavigationLink(destination: NotificationView(), isActive: $isNotificationViewActive) {
                 Image(systemName: "bell")
@@ -125,7 +129,9 @@ extension HomeView {
                         Image("bomb")
                         Spacer()
                         HStack {
-                            Text("읽으러 가기")
+                            NavigationLink(destination: GuideView(), isActive: $isGuideViewActive) {
+                                Text("읽으러 가기")
+                            }
                                 .font(.appleSDGothicNeo(.bold, size: 12))
                                 .foregroundColor(.theme.whiteColor)
                                 .padding(.trailing, -6)
@@ -140,7 +146,7 @@ extension HomeView {
                         .padding(.trailing, -7)
                         .padding(.bottom, 10)
                         .onTapGesture {
-                            showingTutorial.toggle()
+//                            showingTutorial.toggle()
                         }
 
                         Image("waterdrop_side")
