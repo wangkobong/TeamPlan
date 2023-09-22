@@ -22,6 +22,7 @@ struct HomeView: View {
     @State private var isNotificationViewActive = false
     @State private var showingTutorial = false
     @State private var isGuideViewActive = false
+    @State private var isChallengesViewActive = false
     
     var body: some View {
         NavigationStack {
@@ -324,7 +325,9 @@ extension HomeView {
             Spacer()
             
             HStack {
-                Text("전체보기")
+                NavigationLink(destination: ChallengesView(), isActive: $isChallengesViewActive) {
+                    Text("전체보기")
+                }
                 Image("right_arrow_home")
                     .frame(width: 15, height: 15)
                     .padding(.leading, -5)
