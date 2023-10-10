@@ -45,4 +45,19 @@ struct StatisticsObject{
         self.stat_mychlg = statEntity.stat_mychlg as! [Int : Int]
         self.stat_upload_at = statEntity.stat_upload_at ?? Date()
     }
+    
+    // : Error
+    init(error: String) {
+        self.stat_user_id = error
+        self.stat_term = 0
+        self.stat_drop = 0
+        self.stat_proj_reg = 0
+        self.stat_proj_fin = 0
+        self.stat_proj_alert = 0
+        self.stat_proj_ext = 0
+        self.stat_todo_reg = 0
+        self.stat_chlg_step = [:]
+        self.stat_mychlg = [:]
+        self.stat_upload_at = Date()
+    }
 }
