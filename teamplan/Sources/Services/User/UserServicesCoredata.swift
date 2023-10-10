@@ -14,30 +14,10 @@ final class UserServicesCoredata{
     //================================
     // MARK: - CoreData Setting
     //================================
-    // CoreData
-    var persistentContainer: NSPersistentContainer
-    
-    // StoreType Setting
-    init(storeType: NSPersistentStore.StoreType){
-        persistentContainer = NSPersistentContainer(name: "Coredata")
-        
-        let desc = NSPersistentStoreDescription()
-        desc.type = storeType.rawValue
-        persistentContainer.persistentStoreDescriptions = [desc]
-        
-        persistentContainer.loadPersistentStores(completionHandler: { (storeDescription, error) in
-            if let error = error as NSError? {
-                fatalError("Unresolved error \(error), \(error.userInfo)")
-            } else {
-                print("Succcessfully Load CoreData : \(storeDescription.description)")
-            }
-        })
+    let cd = CoreDataManager.shared
+    var context: NSManagedObjectContext {
+        return cd.context
     }
-    
-    // Container Handler
-    lazy var managedObjectContext: NSManagedObjectContext = {
-        return persistentContainer.viewContext
-    }()
     
     //================================
     // MARK: - Get User
@@ -45,7 +25,6 @@ final class UserServicesCoredata{
     func getUserCoredata(identifier: String) async -> UserObject {
         
         // parameter setting
-        let context: NSManagedObjectContext = managedObjectContext
         let fetchReq: NSFetchRequest<UserEntity> = UserEntity.fetchRequest()
         
         // Request Query
@@ -67,7 +46,7 @@ final class UserServicesCoredata{
     //================================
     
     func setUserCoredata(userObject: UserObject) async {
-        let user = UserEntity(context: managedObjectContext)
+        let user = UserEntity(context: context)
         
         user.user_id = userObject.user_id
         user.user_fb_id = userObject.user_fb_id
@@ -80,7 +59,7 @@ final class UserServicesCoredata{
         user.user_updated_at = userObject.user_updated_at
         
         do{
-            try managedObjectContext.save()
+            try context.save()
             print("Successfully Saved User Data")
         } catch {
             print("Failed to Save User Data: \(error)")

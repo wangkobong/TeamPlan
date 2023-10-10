@@ -14,37 +14,17 @@ final class ProjectServicesCoredata{
     //================================
     // MARK: - CoreData Setting
     //================================
-    var persistentContainer: NSPersistentContainer
-    
-    // StoreType Setting
-    init(storeType: NSPersistentStore.StoreType){
-        persistentContainer = NSPersistentContainer(name: "Coredata")
-        
-        let desc = NSPersistentStoreDescription()
-        desc.type = storeType.rawValue
-        persistentContainer.persistentStoreDescriptions = [desc]
-        
-        persistentContainer.loadPersistentStores(completionHandler: { (storeDescription, error) in
-            if let error = error as NSError? {
-                fatalError("Unresolved error \(error), \(error.userInfo)")
-            } else {
-                print("Succcessfully Load CoreData : \(storeDescription.description)")
-            }
-        })
+    let cd = CoreDataManager.shared
+    var context: NSManagedObjectContext {
+        return cd.context
     }
-    
-    // Container Handler
-    lazy var managedObjectContext: NSManagedObjectContext = {
-        return persistentContainer.viewContext
-    }()
-    
     
     //================================
     // MARK: - Get Project
     //================================
     func getProjectCoredata() async -> [ProjectObject] {
         
-        let context: NSManagedObjectContext = managedObjectContext
+        // parameter setting
         let fetchReq: NSFetchRequest<ProjectEntity> = ProjectEntity.fetchRequest()
         
         do{

@@ -10,9 +10,9 @@ import Foundation
 
 final class HomeService{
     
-    let projectCD = ProjectServicesCoredata(storeType: .binary)
-    let userCD = UserServicesCoredata(storeType: .binary)
-    let challengeCD = ChallengeServicesCoredata(storeType: .binary)
+    let projectCD = ProjectServicesCoredata()
+    let userCD = UserServicesCoredata()
+    let challengeCD = ChallengeServicesCoredata()
     
     let genDummy = GenerateDummy()
     
@@ -40,7 +40,7 @@ final class HomeService{
     // MARK: - get Project
     //===============================
     // TODO: Add logic - No ProjectData case
-    func getProject() async -> [ProjectHomeLocalResDTO]{
+    func getProject() async -> [ ProjectCardResDTO ]{
         
         // extract all project info
         let fetchProjects = await projectCD.getProjectCoredata()
@@ -49,14 +49,14 @@ final class HomeService{
         let sortedProjects = fetchProjects.sorted{ $0.proj_deadline > $1.proj_deadline }
     
         // convert to DTO
-        let convertedProjects = sortedProjects.map{ProjectHomeLocalResDTO(from: $0)}
+        let convertedProjects = sortedProjects.map{ ProjectCardResDTO(from: $0) }
         
         // return top3 project Info
         return Array(convertedProjects.prefix(3))
     }
     
     
-    func getTDummyProject() -> [ProjectHomeLocalResDTO]{
+    func getTDummyProject() -> [ProjectCardResDTO]{
         
         // get DummyProject
         let dummyProjects = genDummy.createDummyProject()
@@ -64,7 +64,7 @@ final class HomeService{
         // sorted by 'deadline'
         let sortedProjects = dummyProjects.sorted{ $0.proj_deadline < $1.proj_deadline }
         
-        let convertedProjects = sortedProjects.map{ProjectHomeLocalResDTO(from: $0)}
+        let convertedProjects = sortedProjects.map{ ProjectCardResDTO(from: $0) }
         
         // return top3 project info
         return Array(convertedProjects.prefix(3))
@@ -74,17 +74,17 @@ final class HomeService{
     // MARK: - get MyChallenge
     //===============================
     
-    func getMyChallenge() async -> [ChallengeHomeLocalResDTO]{
+    func getMyChallenge() async -> [ChallengeCardResDTO]{
         
         let myChallenge = await challengeCD.getMyChallengeCoredata()
-        let myChallengeDTO = myChallenge.map{ ChallengeHomeLocalResDTO(from: $0) }
+        let myChallengeDTO = myChallenge.map{ ChallengeCardResDTO(chlgObject: $0) }
         
         return Array(myChallengeDTO)
     }
     
-    func getDummyMyChallenge() -> [ChallengeHomeLocalResDTO]{
+    func getDummyMyChallenge() -> [ChallengeCardResDTO]{
         let dummyMyChallenge = genDummy.createDummyMyChallenge()
-        let dummyMyChallengeDTO = dummyMyChallenge.map{ ChallengeHomeLocalResDTO(from: $0) }
+        let dummyMyChallengeDTO = dummyMyChallenge.map{ ChallengeCardResDTO(chlgObject: $0) }
         
         return Array(dummyMyChallengeDTO)
     }
