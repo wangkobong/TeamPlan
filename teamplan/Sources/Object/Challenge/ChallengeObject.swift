@@ -39,7 +39,7 @@ struct ChallengeObject{
     // Get Coredata
     init(chlgEntity: ChallengeEntity) {
         self.chlg_id = Int(chlgEntity.chlg_id)
-        self.chlg_type = ChallengeType(rawValue: chlgEntity.chlg_type!) ?? .unkown
+        self.chlg_type = ChallengeType(rawValue: Int(chlgEntity.chlg_type)) ?? .unknownType
         self.chlg_title = chlgEntity.chlg_title!
         self.chlg_desc = chlgEntity.chlg_desc!
         self.chlg_goal = Int(chlgEntity.chlg_goal)
@@ -71,11 +71,12 @@ struct ChallengeObject{
     }
 }
 
-enum ChallengeType: String{
-    case term = "Service Usage Term"
-    case totTodo = "Total Regist Todo"
-    case regiProj = "Total Regist Project"
-    case finProj = "Total finished Project"
-    case drop = "Total WaterDrop"
-    case unkown = "Unkown Type"
+enum ChallengeType: Int{
+    case onboarding = 0
+    case serviceTerm = 1
+    case totalTodo = 2
+    case projectRegist = 3
+    case projectFinish = 4
+    case waterDrop = 5
+    case unknownType = 6
 }

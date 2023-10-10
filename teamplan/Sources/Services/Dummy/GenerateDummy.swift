@@ -80,7 +80,7 @@ final class GenerateDummy{
     func createDummyMyChallenge() -> [ChallengeObject]{
         
         var myChallengeAry: [ChallengeObject] = []
-        let challengeType: [ChallengeType] = [.unkown, .term, .finProj, .totTodo]
+        let challengeType: [ChallengeType] = [.unknownType, .serviceTerm, .projectFinish, .totalTodo]
         
         for i in 1...3{
             let selectType = challengeType[i]

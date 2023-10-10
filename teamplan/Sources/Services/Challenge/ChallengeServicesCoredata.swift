@@ -14,50 +14,93 @@ final class ChallengeServicesCoredata{
     //================================
     // MARK: - CoreData Setting
     //================================
-    var persistentContainer: NSPersistentContainer
-    
-    // StoreType Setting
-    init(storeType: NSPersistentStore.StoreType){
-        persistentContainer = NSPersistentContainer(name: "Coredata")
-        
-        let desc = NSPersistentStoreDescription()
-        desc.type = storeType.rawValue
-        persistentContainer.persistentStoreDescriptions = [desc]
-        
-        persistentContainer.loadPersistentStores(completionHandler: { (storeDescription, error) in
-            if let error = error as NSError? {
-                fatalError("Unresolved error \(error), \(error.userInfo)")
-            } else {
-                print("Succcessfully Load CoreData : \(storeDescription.description)")
-            }
-        })
+    let cd = CoreDataManager.shared
+    var context: NSManagedObjectContext {
+        return cd.context
     }
     
-    // Container Handler
-    lazy var managedObjectContext: NSManagedObjectContext = {
-        return persistentContainer.viewContext
-    }()
-    
-    
     //================================
-    // MARK: - Get MyChallenge
+    // MARK: - Get Challenge
     //================================
-    func getMyChallengeCoredata() async -> [ChallengeObject]{
+    //TODO: Exception Handling
+    func getChallengeCoredata() async -> [ChallengeObject]{
         
         // parameter setting
-        let context: NSManagedObjectContext = managedObjectContext
         let fetchReq: NSFetchRequest<ChallengeEntity> = ChallengeEntity.fetchRequest()
         
-        // Request Query
-        fetchReq.predicate = NSPredicate(format: "chlg_selected == %@", NSNumber(value: true))
-        
-        // TODO: Exception Handling
         do{
             let chlgEntities = try context.fetch(fetchReq)
             return chlgEntities.map{ ChallengeObject(chlgEntity: $0) }
         } catch {
             print("Failed to fetch Challenges: \(error)")
             return []
+        }
+    }
+    
+    //================================
+    // MARK: - Get MyChallenge
+    //================================
+    //TODO: Exception Handling
+    func getMyChallengeCoredata() async -> [ChallengeObject]{
+        
+        // parameter setting
+        let fetchReq: NSFetchRequest<ChallengeEntity> = ChallengeEntity.fetchRequest()
+        
+        // Request Query
+        fetchReq.predicate = NSPredicate(format: "chlg_selected == %@", NSNumber(value: true))
+        
+        do{
+            let chlgEntities = try context.fetch(fetchReq)
+            return chlgEntities.map{ ChallengeObject(chlgEntity: $0) }
+        } catch {
+            print("Failed to fetch MyChallenges: \(error)")
+            return []
+        }
+    }
+    
+    //================================
+    // MARK: - Select MyChallenge (Update)
+    //================================
+    //TODO: Exception Handling
+    func selectMyChallenge(chlg_id: Int, status: Bool) -> Bool {
+        
+        // parameter setting
+        let fetchReq: NSFetchRequest<ChallengeEntity> = ChallengeEntity.fetchRequest()
+        
+        // Request Query
+        fetchReq.predicate = NSPredicate(format: "chlg_id == %@", chlg_id)
+        fetchReq.fetchLimit = 1
+        
+        do{
+            // Get Challenge Entities
+            let chlgEntities = try context.fetch(fetchReq)
+            
+            // Extract Entity by 'chlg_id'
+            if let chlgEntity = chlgEntities.first {
+                
+                // update 'MyChallenge Selected' status
+                chlgEntity.chlg_selected = status
+                
+                // update selected Date
+                if(status == true){
+                    chlgEntity.chlg_selected_at = Date()
+                } else {
+                    chlgEntity.chlg_unselected_at = Date()
+                }
+                
+                // save update
+                try context.save()
+                
+                // return status
+                return true
+                
+            } else {
+                print("No ChallengeEntity found with chlg_id: \(chlg_id)")
+                return false
+            }
+        } catch {
+            print("Failed to fetch or update ChallengeEntity: \(error)")
+            return false
         }
     }
 }
