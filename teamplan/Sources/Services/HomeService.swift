@@ -8,7 +8,7 @@
 
 import Foundation
 
-final class HomeService{
+final class HomeService {
     
     let projectCD = ProjectServicesCoredata(storeType: .binary)
     let userCD = UserServicesCoredata(storeType: .binary)
@@ -30,7 +30,7 @@ final class HomeService{
     }
     
     func getDummyUser() ->UserHomeResDTO{
-    
+        
         let dummyUser = genDummy.createDummyUser()
         
         return UserHomeResDTO(userObject: dummyUser)
@@ -47,7 +47,7 @@ final class HomeService{
         
         // sorted by 'deadline'
         let sortedProjects = fetchProjects.sorted{ $0.proj_deadline > $1.proj_deadline }
-    
+        
         // convert to DTO
         let convertedProjects = sortedProjects.map{ProjectHomeLocalResDTO(from: $0)}
         

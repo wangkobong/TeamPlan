@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import KeychainSwift
 
 struct HomeView: View {
     
@@ -15,6 +16,8 @@ struct HomeView: View {
         ChallengeCardModel(image: "applelogo", title: "프로젝트 완주", description: "프로젝트 한개 완주"),
         ChallengeCardModel(image: "applelogo", title: "화이팅!", description: "물방울 10개 모으기")
     ]
+    
+    @StateObject var homeViewModel = HomeViewModel()
     
     @State private var isChallenging: Bool = false
     @State private var isExistProject: Bool = true
@@ -79,13 +82,23 @@ extension HomeView {
                 .frame(width: 61, height: 27)
                 .padding(.leading, -10)
             Spacer()
+            
+            Button {
+                do {
+                    let google = AuthGoogleServices()
+                    try google.logout()
+                } catch {
+                    print(error)
+                }
+            } label: {
+                Text("로그아웃")
+            }
+
             NavigationLink(destination: NotificationView(), isActive: $isNotificationViewActive) {
                 Image(systemName: "bell")
                     .foregroundColor(.black)
             }
-            
         }
-
     }
     
     private var guideArea: some View {
@@ -164,7 +177,7 @@ extension HomeView {
     private var userNameArea: some View {
         VStack(alignment: .leading) {
             HStack {
-                Text("김하나님,")
+                Text("\(homeViewModel.user?.user_name ?? "사용자이름없음")" + "님")
                     .font(.appleSDGothicNeo(.bold, size: 20))
                     .foregroundColor(.theme.blackColor)
                 Spacer()
@@ -345,7 +358,8 @@ extension HomeView {
         ZStack {
             HStack(spacing: 17) {
                 ForEach(challengeCards, id: \.self) { challenge in
-                    ChallengeCardView(challenge: challenge)
+                    let screenWidth = UIScreen.main.bounds.size.width
+                    ChallengeCardView(challenge: challenge, parentsWidth: screenWidth)
                         .background(.white)
                         .cornerRadius(4)
                         .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 0)
