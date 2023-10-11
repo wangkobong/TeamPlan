@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import KeychainSwift
 
 struct HomeView: View {
     
@@ -16,17 +17,24 @@ struct HomeView: View {
         ChallengeCardModel(image: "applelogo", title: "화이팅!", description: "물방울 10개 모으기")
     ]
     
+    @StateObject var homeViewModel = HomeViewModel()
+    
     @State private var isChallenging: Bool = false
     @State private var isExistProject: Bool = true
     @State private var percent: CGFloat = 0.65
     @State private var isNotificationViewActive = false
     @State private var showingTutorial = false
+    @State private var isGuideViewActive = false
+    @State private var isChallengesViewActive = false
     
     var body: some View {
         NavigationStack {
             VStack {
+                Spacer()
+                    .frame(height: 21)
                 navigationArea
                     .padding(.horizontal, 30)
+                    .padding(.bottom, 5)
                 
                 ScrollView {
                     guideArea
@@ -70,17 +78,27 @@ struct HomeView_Previews: PreviewProvider {
 extension HomeView {
     private var navigationArea: some View {
         HStack {
-            Text("투두팡")
-                .font(.appleSDGothicNeo(.regular, size: 20))
-                .foregroundColor(.theme.mainPurpleColor)
+            Image("title_home")
+                .frame(width: 61, height: 27)
+                .padding(.leading, -10)
             Spacer()
+            
+            Button {
+                do {
+                    let google = AuthGoogleServices()
+                    try google.logout()
+                } catch {
+                    print(error)
+                }
+            } label: {
+                Text("로그아웃")
+            }
+
             NavigationLink(destination: NotificationView(), isActive: $isNotificationViewActive) {
                 Image(systemName: "bell")
                     .foregroundColor(.black)
             }
-            
         }
-
     }
     
     private var guideArea: some View {
@@ -125,7 +143,9 @@ extension HomeView {
                         Image("bomb")
                         Spacer()
                         HStack {
-                            Text("읽으러 가기")
+                            NavigationLink(destination: GuideView(), isActive: $isGuideViewActive) {
+                                Text("읽으러 가기")
+                            }
                                 .font(.appleSDGothicNeo(.bold, size: 12))
                                 .foregroundColor(.theme.whiteColor)
                                 .padding(.trailing, -6)
@@ -140,7 +160,7 @@ extension HomeView {
                         .padding(.trailing, -7)
                         .padding(.bottom, 10)
                         .onTapGesture {
-                            showingTutorial.toggle()
+//                            showingTutorial.toggle()
                         }
 
                         Image("waterdrop_side")
@@ -157,7 +177,7 @@ extension HomeView {
     private var userNameArea: some View {
         VStack(alignment: .leading) {
             HStack {
-                Text("김하나님,")
+                Text("\(homeViewModel.user?.user_name ?? "사용자이름없음")" + "님")
                     .font(.appleSDGothicNeo(.bold, size: 20))
                     .foregroundColor(.theme.blackColor)
                 Spacer()
@@ -318,7 +338,9 @@ extension HomeView {
             Spacer()
             
             HStack {
-                Text("전체보기")
+                NavigationLink(destination: ChallengesView(), isActive: $isChallengesViewActive) {
+                    Text("전체보기")
+                }
                 Image("right_arrow_home")
                     .frame(width: 15, height: 15)
                     .padding(.leading, -5)
@@ -336,7 +358,8 @@ extension HomeView {
         ZStack {
             HStack(spacing: 17) {
                 ForEach(challengeCards, id: \.self) { challenge in
-                    ChallengeCardView(challenge: challenge)
+                    let screenWidth = UIScreen.main.bounds.size.width
+                    ChallengeCardView(challenge: challenge, parentsWidth: screenWidth)
                         .background(.white)
                         .cornerRadius(4)
                         .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 0)

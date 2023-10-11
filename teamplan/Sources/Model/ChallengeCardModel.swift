@@ -13,4 +13,5 @@ struct ChallengeCardModel: Identifiable, Hashable {
     let image: String
     let title: String
     let description: String
+    let isFinished: Bool = false
 }

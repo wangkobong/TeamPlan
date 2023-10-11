@@ -7,6 +7,7 @@
 
 import SwiftUI
 import GoogleSignInSwift
+import AuthenticationServices
 
 struct LoginView: View {
     
@@ -52,7 +53,39 @@ extension LoginView {
     private var buttons: some View {
         VStack(spacing: 18) {
 
-            
+            SignInWithAppleButton(
+                onRequest: { request in
+                    // 사용자 정보 요청 설정
+                    request.requestedScopes = [.fullName, .email]
+                },
+                onCompletion: { result in
+                    switch result {
+                    case .success(let authResults):
+                        switch authResults.credential {
+                        case let appleIDCredential as ASAuthorizationAppleIDCredential:
+                            // Apple ID Credential을 사용하여 로그인 정보 처리
+                            let userIdentifier = appleIDCredential.user
+                            
+                            // 사용자 식별자(userIdentifier)를 사용하여 로그인 후의 작업 수행
+                        default:
+                            break
+                        }
+                    case .failure(let error):
+                        // 로그인 실패 처리
+                        print("Apple 로그인 실패: \(error.localizedDescription)")
+                    }
+                }
+            )
+            .padding(.horizontal)
+            .frame(height: 48)
+            .frame(maxWidth: .infinity)
+            .foregroundColor(.theme.blackColor)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(SwiftUI.Color.theme.blackColor, lineWidth: 1)
+            )
+
+
             Button(action: {}) {
                 HStack {
                     Image("appleLogo")
@@ -73,9 +106,11 @@ extension LoginView {
             GoogleSignInButton(viewModel: GoogleSignInButtonViewModel(scheme: .dark, style: .standard, state: .normal)) {
                 print("구글버튼클릭")
                 Task {
-                    do {
+                    do {  
                         try await authViewModel.signInGoogle()
                         print("구글로그인 성공")
+                        let signupService = SignupService()
+                   
                         showTermsView = true
                     } catch {
                         print(error)
