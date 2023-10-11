@@ -12,7 +12,7 @@ import Foundation
 // MARK: Signup - Local
 //============================
 /// Request DTO : View -> Service
-struct UserSignupLocalReqDTO{
+struct UserSignupReqDTO{
     // content
     let name: String
     let socialType: String
@@ -53,7 +53,7 @@ struct UserSignupServerReqDTO{
     var user_updated_at: Date
     
     // Constructor
-    init(reqUser: UserSignupLocalReqDTO, identifier: String) {
+    init(reqUser: UserSignupReqDTO, identifier: String) {
         let currentDate = Date()
         
         self.user_id = identifier

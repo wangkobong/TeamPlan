@@ -13,7 +13,7 @@ import Foundation
 //============================
 struct ChallengeObject{
     // id
-    let chlg_id: Int64
+    let chlg_id: Int
     
     // category
     let chlg_type: ChallengeType
@@ -21,7 +21,7 @@ struct ChallengeObject{
     // content
     let chlg_title: String
     let chlg_desc: String
-    let chlg_goal: Int64
+    let chlg_goal: Int
     let chlg_reward: Int
     
     // status
@@ -38,11 +38,11 @@ struct ChallengeObject{
     // Constructor
     // Get Coredata
     init(chlgEntity: ChallengeEntity) {
-        self.chlg_id = chlgEntity.chlg_id
-        self.chlg_type = ChallengeType(rawValue: chlgEntity.chlg_type!) ?? .unkown
+        self.chlg_id = Int(chlgEntity.chlg_id)
+        self.chlg_type = ChallengeType(rawValue: Int(chlgEntity.chlg_type)) ?? .unknownType
         self.chlg_title = chlgEntity.chlg_title!
         self.chlg_desc = chlgEntity.chlg_desc!
-        self.chlg_goal = chlgEntity.chlg_goal
+        self.chlg_goal = Int(chlgEntity.chlg_goal)
         self.chlg_reward = Int(chlgEntity.chlg_reward)
         self.chlg_step = Int(chlgEntity.chlg_step)
         self.chlg_selected = chlgEntity.chlg_selected
@@ -55,11 +55,11 @@ struct ChallengeObject{
     
     // Get Dummy
     init(chlg_id: Int64, chlg_type: ChallengeType, chlg_title: String, chlg_desc: String, chlg_goal: Int64, chlg_reward: Int, chlg_step: Int, chlg_selected: Bool, chlg_status: Bool, chlg_lock: Bool, chlg_selected_at: Date, chlg_unselected_at: Date, chlg_finished_at: Date) {
-        self.chlg_id = chlg_id
+        self.chlg_id = Int(chlg_id)
         self.chlg_type = chlg_type
         self.chlg_title = chlg_title
         self.chlg_desc = chlg_desc
-        self.chlg_goal = chlg_goal
+        self.chlg_goal = Int(chlg_goal)
         self.chlg_reward = chlg_reward
         self.chlg_step = chlg_step
         self.chlg_selected = chlg_selected
@@ -71,11 +71,12 @@ struct ChallengeObject{
     }
 }
 
-enum ChallengeType: String{
-    case term = "Service Usage Term"
-    case totTodo = "Total Regist Todo"
-    case regiProj = "Total Regist Project"
-    case finProj = "Total finished Project"
-    case drop = "Total WaterDrop"
-    case unkown = "Unkown Type"
+enum ChallengeType: Int{
+    case onboarding = 0
+    case serviceTerm = 1
+    case totalTodo = 2
+    case projectRegist = 3
+    case projectFinish = 4
+    case waterDrop = 5
+    case unknownType = 6
 }

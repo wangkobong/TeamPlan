@@ -9,10 +9,10 @@
 import Foundation
 
 //============================
-// MARK: Home - Local
+// MARK: Card - Home/Project
 //============================
 /// Service -> View/ViewModel
-struct ProjectHomeLocalResDTO{
+struct ProjectCardResDTO{
     // content
     let title: String
     

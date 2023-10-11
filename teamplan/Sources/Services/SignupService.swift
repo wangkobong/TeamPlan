@@ -10,7 +10,7 @@ import Foundation
 
 final class SignupService{
     
-    let cd = UserServicesCoredata(storeType: .binary)
+    let cd = UserServicesCoredata()
     let fs = UserServicesFirestore()
     
     //===============================
@@ -22,7 +22,7 @@ final class SignupService{
     ///   * "Successfully Set NewUser"
     /// * Failed Output(String)
     ///   * "Invalid Email Format!" or "An Unknown Error Occurred"
-    func setUser(reqUser: UserSignupLocalReqDTO) async -> String {
+    func setUser(reqUser: UserSignupReqDTO) async -> String {
         
         var docsId: String = "nil"
         
@@ -61,7 +61,7 @@ final class SignupService{
         return "Successfully Set NewUser"
     }
     
-    func structNewUser(reqUser: UserSignupLocalReqDTO) throws -> UserSignupServerReqDTO{
+    func structNewUser(reqUser: UserSignupReqDTO) throws -> UserSignupServerReqDTO{
         
         let identifier = "\(reqUser.socialType)_\(try extractIdentifier(email: reqUser.email))"
         
