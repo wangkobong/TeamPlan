@@ -13,6 +13,7 @@ import KeychainSwift
 
 final class AuthGoogleServices{
     
+    // 이 친구로 로직 변경하고 AuthenticationManager, GoogleLoginService deprecated 시키기
     static let shared = AuthGoogleServices()
     private var keychain = KeychainSwift()
     init(){}

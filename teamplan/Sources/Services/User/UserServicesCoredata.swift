@@ -29,7 +29,7 @@ final class UserServicesCoredata{
             if let error = error as NSError? {
                 fatalError("Unresolved error \(error), \(error.userInfo)")
             } else {
-                print("Succcessfully Load CoreData : \(storeDescription.description)")
+                print("Succcessfully User Load CoreData : \(storeDescription.description)")
             }
         })
     }

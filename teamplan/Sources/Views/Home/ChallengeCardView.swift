@@ -11,6 +11,7 @@ import SwiftUI
 struct ChallengeCardView: View {
     
     let challenge: ChallengeCardModel
+    let parentsWidth: CGFloat
     
     var body: some View {
         VStack {
@@ -33,12 +34,19 @@ struct ChallengeCardView: View {
                 .foregroundColor(.theme.greyColor)
         
         }
-        .frame(width: 108, height: 144)
+        .frame(width: setCardWidth(screenWidth: parentsWidth),height: 144)
     }
 }
 
 struct ChallengeCardView_Previews: PreviewProvider {
     static var previews: some View {
-        ChallengeCardView(challenge: ChallengeCardModel(image: "applelogo", title: "목표달성의 쾌감!", description: "물방울 3개 모으기"))
+        ChallengeCardView(challenge: ChallengeCardModel(image: "applelogo", title: "목표달성의 쾌감!", description: "물방울 3개 모으기"), parentsWidth: 400)
+    }
+}
+
+extension ChallengeCardView {
+    func setCardWidth(screenWidth: CGFloat) -> CGFloat {
+        let cardsWidth = screenWidth / 3 - 24
+        return cardsWidth
     }
 }

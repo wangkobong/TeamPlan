@@ -101,7 +101,7 @@ extension TutorialView {
                 )
 
             }
-            .frame(width: .infinity)
+//            .frame(width: .infinity)
             
         }
         .foregroundColor(.theme.whiteColor)

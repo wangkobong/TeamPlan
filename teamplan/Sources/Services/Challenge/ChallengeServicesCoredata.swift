@@ -28,7 +28,7 @@ final class ChallengeServicesCoredata{
             if let error = error as NSError? {
                 fatalError("Unresolved error \(error), \(error.userInfo)")
             } else {
-                print("Succcessfully Load CoreData : \(storeDescription.description)")
+                print("Succcessfully Challenge Load CoreData : \(storeDescription.description)")
             }
         })
     }
