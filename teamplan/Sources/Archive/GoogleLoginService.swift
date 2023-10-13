@@ -4,7 +4,7 @@
 //
 //  Created by sungyeon kim on 2023/06/01.
 //  Copyright © 2023 team1os. All rights reserved.
-//
+/*
 
 import Foundation
 import GoogleSignIn
@@ -38,3 +38,5 @@ final class GoogleLoginService {
         return tokens
     }
 }
+
+*/

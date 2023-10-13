@@ -14,35 +14,8 @@ final class AuthenticationViewModel: ObservableObject{
     //====================
     // Parameter
     //====================
-    // (구글)소셜로그인 기능
-    private var googleAuthenticator: GoogleLoginService
-    
-    // FireBase 인증
-    private var firebaseAuthenticator: AuthenticationManager
-    
-    // UserLogin 상태
-    @Published var state: State
-    
-    // 인증정보 저장모델
-    private var user: AuthenticatedUser
-    
-    
-    //====================
-    // Constructor
-    //====================
-    init(){
-        if let currentUser = GIDSignIn.sharedInstance.currentUser{
-            let authUser = AuthenticatedUser(user: currentUser)
-            self.user = authUser
-            self.state = .signedIn(authUser)
-        } else {
-            self.user = AuthenticatedUser()
-            self.state = .signedOut
-        }
-        self.googleAuthenticator = GoogleLoginService()
-        self.firebaseAuthenticator = AuthenticationManager()
-    }
-    
+    let loginService = LoginService()
+    init(){}
     
     //====================
     // Google Login
@@ -50,11 +23,44 @@ final class AuthenticationViewModel: ObservableObject{
     @MainActor
     func signInGoogle() async throws {
         
-        // 로그인 & 인증
-        let googleSignInUser = try await googleAuthenticator.signIn()
-        let authUser = try await firebaseAuthenticator.signInWithGoogle(user: googleSignInUser)
-        
-        // 유저정보 저장
+        await loginService.loginGoogle() { loginResult in
+            switch loginResult {
+            case .success(let user):
+                
+                // Login Success
+                switch user.status{
+                case .exist:
+                    print("########### Exist User ###########")
+                    print(user.provider)
+                    print(user.email)
+                    print(user.status)
+                    print("##################################")
+                    break
+                case .new:
+                    print("########### New User ###########")
+                    print(user.provider)
+                    print(user.email)
+                    print(user.status)
+                    print("##################################")
+                    break
+                case .unknown:
+                    print("########### UNKNOWN ###########")
+                    print(user.provider)
+                    print(user.email)
+                    print(user.status)
+                    print("##################################")
+                    break
+                }
+                break
+            case .failure(let error):
+                // Login Fail
+                print("########### Error ###########")
+                print(error)
+                print("##################################")
+                break
+            }
+        }
+        /* UserInfo Save
         self.user = authUser
         self.state = .signedIn(authUser)
         print("idToken: \(googleSignInUser.idToken)")
@@ -62,16 +68,18 @@ final class AuthenticationViewModel: ObservableObject{
         let keychain = KeychainSwift()
         keychain.set(googleSignInUser.idToken, forKey: "idToken")
         keychain.set(googleSignInUser.accessToken, forKey: "accessToken")
+         */
     }
     
     
-    //====================
+    /*====================
     // Authenticate
     //====================
     func logout() async throws {
         try firebaseAuthenticator.logout()
         self.user = AuthenticatedUser()
     }
+    */
 }
 
 
@@ -80,7 +88,7 @@ final class AuthenticationViewModel: ObservableObject{
 //====================
 extension AuthenticationViewModel{
     enum State{
-        case signedIn(AuthenticatedUser)
+        case signedIn
         case signedOut
     }
 }
