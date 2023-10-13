@@ -89,5 +89,21 @@ final class Authenticator: NSObject, ObservableObject {
             self.signOut()
         }
     }
+    
+    // 구글로그인 이전상태 복구함수
+    private func restorePreviousGoogleSignIn() {
+        GIDSignIn.sharedInstance.restorePreviousSignIn { restoreUser, error in
+            if let user = restoreUser {
+                authViewModel.state = .signedIn(AuthenticatedUser(user: user))
+                print("Previous login info recovered.")
+            } else if let error = error {
+                authViewModel.state = .signedOut
+                print("Error restoring previous login: \(error)")
+            } else {
+                authViewModel.state = .signedOut
+                print("No previous login data.")
+            }
+        }
+    }
 }
 */

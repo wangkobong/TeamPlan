@@ -18,7 +18,7 @@ final class GoogleLoginService {
     
     @MainActor
     func signIn() async throws -> GoogleSignInUser {
-        guard let topVC = Utilities.shared.topViewController() else {
+        guard let topVC = GoogleLoginHelper.shared.topViewController() else {
             throw URLError(.cannotFindHost)
         }
         

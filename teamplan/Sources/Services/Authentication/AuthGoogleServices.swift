@@ -24,7 +24,7 @@ final class AuthGoogleServices{
     func login(result: @escaping(Result<AuthGoogleLoginResDTO, Error>) -> Void) async {
         
         do{
-            guard let topVC = await Utilities.shared.topViewController() else {
+            guard let topVC = await GoogleLoginHelper.shared.topViewController() else {
                 result(.failure(URLError(.cannotFindHost)))
                 return
             }

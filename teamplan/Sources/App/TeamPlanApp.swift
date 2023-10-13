@@ -47,26 +47,11 @@ struct TeamPlanApp: App {
     //====================
     private func initializeApp() {
         configureFirebase()
-        restorePreviousGoogleSignIn()
+        //restorePreviousGoogleSignIn()
     }
     
     private func configureFirebase(){
         FirebaseApp.configure()
-    }
-
-    private func restorePreviousGoogleSignIn() {
-        GIDSignIn.sharedInstance.restorePreviousSignIn { restoreUser, error in
-            if let user = restoreUser {
-                authViewModel.state = .signedIn(AuthenticatedUser(user: user))
-                print("Previous login info recovered.")
-            } else if let error = error {
-                authViewModel.state = .signedOut
-                print("Error restoring previous login: \(error)")
-            } else {
-                authViewModel.state = .signedOut
-                print("No previous login data.")
-            }
-        }
     }
 
     private func handelOpenURL(_ url: URL){
