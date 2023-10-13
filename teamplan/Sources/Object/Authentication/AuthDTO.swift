@@ -35,6 +35,15 @@ struct AuthSocialLoginResDTO{
         self.accessToken = loginResult.user.accessToken.tokenString
         self.status = status
     }
+    
+    // Apple Authentication: NewUser | ExistUser
+    init(loginResult: User, idToken: String, status: UserStatus){
+        self.provider = .apple
+        self.email = loginResult.email!
+        self.idToken = idToken
+        self.accessToken = ""
+        self.status = status
+    }
 }
 
 //============================
