@@ -4,7 +4,7 @@
 //
 //  Created by 주찬혁 on 2023/07/04.
 //  Copyright © 2023 team1os. All rights reserved.
-//
+/*
 
 import Foundation
 import FirebaseAuth
@@ -50,3 +50,5 @@ struct AuthenticatedUser{
         self.photoUrl = user.photoURL?.absoluteString
     }
 }
+
+*/

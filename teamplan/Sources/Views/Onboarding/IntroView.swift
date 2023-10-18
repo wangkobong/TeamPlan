@@ -40,13 +40,16 @@ struct IntroView_Previews: PreviewProvider {
 extension IntroView {
     private func isLoggedIn() -> Bool {
         let keychain = KeychainSwift()
-//        let accessToken = keychain.get("accessToken")
+        return false
+        /* Lock for Social Login Test
+        let accessToken = keychain.get("accessToken")
         
         if let idToken = keychain.get("idToken"), !idToken.isEmpty {
             return true
         } else {
             return false
         }
+         */
     }
     
     private var tabView: some View {

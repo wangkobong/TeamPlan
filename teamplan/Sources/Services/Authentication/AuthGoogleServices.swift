@@ -13,7 +13,6 @@ import KeychainSwift
 
 final class AuthGoogleServices{
     
-    // 이 친구로 로직 변경하고 AuthenticationManager, GoogleLoginService deprecated 시키기
     static let shared = AuthGoogleServices()
     private var keychain = KeychainSwift()
     init(){}
@@ -21,37 +20,45 @@ final class AuthGoogleServices{
     //====================
     // MARK: Login
     //====================
-    func login(result: @escaping(Result<AuthGoogleLoginResDTO, Error>) -> Void) async {
+    func login(result: @escaping(Result<AuthSocialLoginResDTO, Error>) -> Void) async {
         
         do{
-            guard let topVC = await Utilities.shared.topViewController() else {
-                result(.failure(URLError(.cannotFindHost)))
-                return
+            // Google Social Setting
+            guard let topVC = await GoogleLoginHelper.shared.topViewController() else {
+                throw URLError(.cannotFindHost)
             }
             
             // Google Social Login
             let googleLoginResult = try await GIDSignIn.sharedInstance.signIn(withPresenting: topVC)
-            let googleLoginUser = AuthGoogleLoginResDTO(loginResult: googleLoginResult)
             
-            // Token Authentication
-            do{
-                let authUser = try await tokenAuth(candidate: googleLoginUser)
-                return result(.success(authUser))
-            } catch let authError {
-                result(.failure(authError))
-            }
+            // Firebase Authorization
+            let authResult = try await firebaseAuth(loginResult: googleLoginResult)
+            return result(.success(AuthSocialLoginResDTO(loginResult: googleLoginResult, status: authResult)))
             
-        } catch let gidError {
-            result(.failure(gidError))
+            // Excpetion
+        } catch let GIDError as GIDSignInError {
+            result(.failure(GIDError))
+        } catch let FBError as FirebaseAuth.AuthErrorCode {
+            result(.failure(FBError))
+        } catch {
+            result(.failure(FirebaseAuth.AuthErrorCode.internalError as! Error))
         }
     }
     
-    @discardableResult
-    private func tokenAuth(candidate: AuthGoogleLoginResDTO) async throws -> AuthGoogleLoginResDTO {
-        let credential = GoogleAuthProvider.credential(withIDToken: candidate.idToken, accessToken: candidate.accessToken)
-        let authResult = try await Auth.auth().signIn(with: credential)
+    // Token Authorization & NewUser Check
+    private func firebaseAuth(loginResult: GIDSignInResult) async throws -> UserStatus {
         
-        return AuthGoogleLoginResDTO(authResult: authResult.user, loginResult: candidate)
+        let credential = GoogleAuthProvider.credential(
+            withIDToken: loginResult.user.idToken!.tokenString,
+            accessToken: loginResult.user.accessToken.tokenString
+        )
+        do{
+            let authResult = try await Auth.auth().signIn(with: credential)
+            return authResult.additionalUserInfo?.isNewUser == true ? UserStatus.new : UserStatus.exist
+        } catch {
+            print(FirebaseAuth.AuthErrorCode.internalError as! Error)
+            return UserStatus.unknown
+        }
     }
     
     

@@ -11,40 +11,51 @@ import FirebaseAuth
 import GoogleSignIn
 
 //============================
-// MARK: Google Login
+// MARK: DTO
 //============================
-
-struct AuthGoogleLoginResDTO{
-    
-    // id
-    let uid: String
+struct AuthSocialLoginResDTO{
     
     // login info
     let email: String
+    let provider: Providers
     
     // Token
     let idToken: String
     let accessToken: String
     
     // status
-    let isAuth: Bool
+    var status: UserStatus
     
     // Constructor
-    // Login
-    init(loginResult: GIDSignInResult){
-        self.uid = ""
-        self.email = loginResult.user.profile?.email ?? "Unkown Email"
-        self.idToken = loginResult.user.idToken?.tokenString ?? "Unknown idToken"
+    // Google Authentication: NewUser | ExistUser
+    init(loginResult: GIDSignInResult, status: UserStatus){
+        self.provider = .google
+        self.email = loginResult.user.profile!.email
+        self.idToken = loginResult.user.idToken!.tokenString
         self.accessToken = loginResult.user.accessToken.tokenString
-        self.isAuth = false
+        self.status = status
     }
     
-    // Authentication
-    init(authResult: User, loginResult: AuthGoogleLoginResDTO){
-        self.uid = authResult.uid
-        self.email = authResult.email ?? "Unkown Email"
-        self.idToken = loginResult.idToken
-        self.accessToken = loginResult.accessToken
-        self.isAuth = true
+    // Apple Authentication: NewUser | ExistUser
+    init(loginResult: User, idToken: String, status: UserStatus){
+        self.provider = .apple
+        self.email = loginResult.email!
+        self.idToken = idToken
+        self.accessToken = ""
+        self.status = status
     }
+}
+
+//============================
+// MARK: Enum
+//============================
+enum Providers{
+    case apple
+    case google
+}
+
+enum UserStatus{
+    case new
+    case exist
+    case unknown
 }

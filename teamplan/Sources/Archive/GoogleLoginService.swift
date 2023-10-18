@@ -4,7 +4,7 @@
 //
 //  Created by sungyeon kim on 2023/06/01.
 //  Copyright © 2023 team1os. All rights reserved.
-//
+/*
 
 import Foundation
 import GoogleSignIn
@@ -18,7 +18,7 @@ final class GoogleLoginService {
     
     @MainActor
     func signIn() async throws -> GoogleSignInUser {
-        guard let topVC = Utilities.shared.topViewController() else {
+        guard let topVC = GoogleLoginHelper.shared.topViewController() else {
             throw URLError(.cannotFindHost)
         }
         
@@ -38,3 +38,5 @@ final class GoogleLoginService {
         return tokens
     }
 }
+
+*/
