@@ -19,6 +19,7 @@
         <attribute name="chlg_title" optional="YES" attributeType="String"/>
         <attribute name="chlg_type" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="chlg_unselected_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="chlg_user_id" optional="YES" attributeType="String"/>
     </entity>
     <entity name="ChallengeLogEntity" representedClassName="ChallengeLogEntity" syncable="YES" codeGenerationType="class">
         <attribute name="log_complete" optional="YES" attributeType="Transformable"/>

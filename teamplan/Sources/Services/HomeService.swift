@@ -89,12 +89,20 @@ final class HomeService {
     // MARK: - get MyChallenge
     //===============================
     
-    func getMyChallenge() async -> [ChallengeCardResDTO]{
+    func getMyChallenge(result: @escaping(Result<[ChallengeCardResDTO], Error>) -> Void) {
         
-        let myChallenge = await challengeCD.getMyChallengeCoredata()
-        let myChallengeDTO = myChallenge.map{ ChallengeCardResDTO(chlgObject: $0) }
-        
-        return Array(myChallengeDTO)
+        challengeCD.getMyChallengeCoredata(identifier: self.identifier) { cdResult in
+            switch cdResult {
+            
+            case .success(let cardObjects):
+                let cardList = cardObjects.map { ChallengeCardResDTO(chlgObject: $0) }
+                return result(.success(cardList))
+                
+            // Exception Handling: Failed to Get MyChallenge
+            case .failure(let error):
+                return result(.failure(error))
+            }
+        }
     }
     
     func getDummyMyChallenge() -> [ChallengeCardResDTO]{

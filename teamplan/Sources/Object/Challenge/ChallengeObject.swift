@@ -14,6 +14,7 @@ import Foundation
 struct ChallengeObject{
     // id
     let chlg_id: Int
+    let chlg_user_id: String
     
     // category
     let chlg_type: ChallengeType
@@ -39,6 +40,7 @@ struct ChallengeObject{
     // Get Coredata
     init(chlgEntity: ChallengeEntity) {
         self.chlg_id = Int(chlgEntity.chlg_id)
+        self.chlg_user_id = chlgEntity.chlg_user_id ?? "Unknown"
         self.chlg_type = ChallengeType(rawValue: Int(chlgEntity.chlg_type)) ?? .unknownType
         self.chlg_title = chlgEntity.chlg_title!
         self.chlg_desc = chlgEntity.chlg_desc!
@@ -56,6 +58,7 @@ struct ChallengeObject{
     // Get Dummy
     init(chlg_id: Int64, chlg_type: ChallengeType, chlg_title: String, chlg_desc: String, chlg_goal: Int64, chlg_reward: Int, chlg_step: Int, chlg_selected: Bool, chlg_status: Bool, chlg_lock: Bool, chlg_selected_at: Date, chlg_unselected_at: Date, chlg_finished_at: Date) {
         self.chlg_id = Int(chlg_id)
+        self.chlg_user_id = "Dummy"
         self.chlg_type = chlg_type
         self.chlg_title = chlg_title
         self.chlg_desc = chlg_desc
