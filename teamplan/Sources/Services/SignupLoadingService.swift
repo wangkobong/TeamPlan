@@ -16,10 +16,13 @@ final class SignupLoadingService{
     let statCD = StatisticsServicesCoredata()
     let aclogFS = AccessLogServicesFirestore()
     let aclogCD = AccessLogServicesCoredata()
+    let chlglogFS = ChallengeLogServicesFirestore()
+    let chlglogCD = ChallengeLogServicesCoredata()
     
     var newProfile: UserObject
     var newStat: StatisticsObject
     var newAccessLog: AccessLog
+    var newChallengeLog: ChallengeLog
     
     //===============================
     // MARK: - Constructor
@@ -29,6 +32,7 @@ final class SignupLoadingService{
         self.newProfile = UserObject(newUser: newUser, signupDate: signupDate)
         self.newStat = StatisticsObject(identifier: newUser.identifier, signupDate: signupDate)
         self.newAccessLog = AccessLog(identifier: newUser.identifier, signupDate: signupDate)
+        self.newChallengeLog = ChallengeLog(identifier: newUser.identifier, signupDate: signupDate)
     }
     
     //===============================
@@ -94,7 +98,19 @@ final class SignupLoadingService{
     //===============================
     // MARK: - Set ChallengeLog
     //===============================
-
+    // : Firestore
+    func setChallengeLogFS(result: @escaping(Result<Bool, Error>) -> Void) {
+        chlglogFS.setChallengeLogFS(reqLog: self.newChallengeLog) { fsResult in
+            self.handleServiceResult(fsResult, with: result)
+        }
+    }
+    
+    // ; Coredata
+    func setChallengeLogCD(result: @escaping(Result<Bool, Error>) -> Void) {
+        chlglogCD.setChallengeLog(reqLog: self.newChallengeLog) { cdResult in
+            self.handleServiceResult(cdResult, with: result)
+        }
+    }
     
     //===============================
     // MARK: - Result Handler
