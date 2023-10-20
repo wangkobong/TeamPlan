@@ -12,8 +12,11 @@ final class SignupLoadingService{
     
     let userFS = UserServicesFirestore()
     let userCD = UserServicesCoredata()
+    let statFS = StatisticsServicesFirestore()
+    let statCD = StatisticsServicesCoredata()
     
     var newProfile: UserObject
+    var newStat: StatisticsObject
     
     //===============================
     // MARK: - Constructor
@@ -21,6 +24,7 @@ final class SignupLoadingService{
     init(newUser: UserSignupReqDTO){
         let signupDate = Date()
         self.newProfile = UserObject(newUser: newUser, signupDate: signupDate)
+        self.newStat = StatisticsObject(identifier: newUser.identifier, signupDate: signupDate)
     }
     
     //===============================
@@ -52,7 +56,19 @@ final class SignupLoadingService{
     //===============================
     // MARK: - Set Statistics
     //===============================
+    // : Firestore
+    func setStatisticsFS(result: @escaping(Result<Bool, Error>) -> Void) {
+        statFS.setStatisticsFS(reqStat: self.newStat) { fsResult in
+            self.handleServiceResult(fsResult, with: result)
+        }
+    }
     
+    // : Coredata
+    func setStatisticsCD(result: @escaping(Result<Bool, Error>) -> Void) {
+        statCD.setStatCoredata(reqStat: self.newStat) { cdResult in
+            self.handleServiceResult(cdResult, with: result)
+        }
+    }
     
     //===============================
     // MARK: - Set AccessLog
