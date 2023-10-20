@@ -24,7 +24,7 @@ final class ChallengeService{
     }
     
     // StatisticsCenter
-    let statCenter = StatisticsCenter()
+    let statCenter = StatisticsCenter(identifier: "Working Progress")
     
     //===============================
     // MARK: - MyChallenge: Total Get
@@ -40,7 +40,7 @@ final class ChallengeService{
     //===============================
     // MARK: - MyChallenge: Detail Get
     //===============================
-    //TODO: Exception Handling
+    /*TODO: Exception Handling
     func getMyChallengeDetail(challengeID: Int) -> MyChallengeDetailResDTO {
 
         let myChallengeDetail = challengeArray.first { $0.chlg_id == challengeID }
@@ -49,6 +49,7 @@ final class ChallengeService{
         
         return MyChallengeDetailResDTO( chlgObject: myChallengeDetail!, userProgress: userProgress )
     }
+     */
     
     
     //===============================
