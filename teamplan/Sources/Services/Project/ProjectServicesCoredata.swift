@@ -22,17 +22,50 @@ final class ProjectServicesCoredata{
     //================================
     // MARK: - Get Project
     //================================
-    func getProjectCoredata() async -> [ProjectObject] {
+    func getProjectCoredata(identifier: String,
+                            result: @escaping(Result<[ProjectObject], Error>) -> Void) {
         
         // parameter setting
         let fetchReq: NSFetchRequest<ProjectEntity> = ProjectEntity.fetchRequest()
         
-        do{
-            let projectEntities = try context.fetch(fetchReq)
-            return projectEntities.map{ ProjectObject(projectEntity: $0 )}
+        // Request Query
+        fetchReq.predicate = NSPredicate(format: "proj_user_id == %@", identifier)
+        
+        do {
+            let fetchProj = try context.fetch(fetchReq)
+            
+            // Exception Handling: Identifier
+            if fetchProj.isEmpty {
+                return result(.failure(ProjCDError.IdentifierFetchFailed))
+            }
+            
+            // extract projects
+            let reqProjects = fetchProj.map { ProjectObject(projectEntity: $0) }
+            return result(.success(reqProjects))
+            
+        // Eception Handling: Unknown
         } catch {
-            print("Failed to fetch projects: \(error)")
-            return []
+            return result(.failure(ProjCDError.GetFailed))
+        }
+    }
+    
+    //===============================
+    // MARK: - Exception
+    //===============================
+    enum ProjCDError: LocalizedError {
+        case IdentifierFetchFailed
+        case SetFailed
+        case GetFailed
+        
+        var errorDescription: String?{
+            switch self {
+            case .IdentifierFetchFailed:
+                return "Failed to Fetch Project by identifier"
+            case .SetFailed:
+                return "Failed to Set Project at CoreData"
+            case .GetFailed:
+                return "Failed to Get Project for Unknown reason"
+            }
         }
     }
 }

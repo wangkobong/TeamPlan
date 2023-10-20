@@ -36,6 +36,7 @@
         <attribute name="proj_title" attributeType="String"/>
         <attribute name="proj_todo_finished" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="proj_todo_registed" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="proj_user_id" optional="YES" attributeType="String"/>
         <relationship name="todo_relationship" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="TodoEntity" inverseName="project_relationship" inverseEntity="TodoEntity"/>
     </entity>
     <entity name="StatisticsEntity" representedClassName="StatisticsEntity" syncable="YES" codeGenerationType="class">

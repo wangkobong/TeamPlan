@@ -47,20 +47,27 @@ final class HomeService {
     //===============================
     // MARK: - get Project
     //===============================
-    // TODO: Add logic - No ProjectData case
-    func getProject() async -> [ ProjectCardResDTO ]{
+    func getProject(result: @escaping(Result<[ProjectCardResDTO], Error>) -> Void) {
         
         // extract all project info
-        let fetchProjects = await projectCD.getProjectCoredata()
-        
-        // sorted by 'deadline'
-        let sortedProjects = fetchProjects.sorted{ $0.proj_deadline > $1.proj_deadline }
-        
-        // convert to DTO
-        let convertedProjects = sortedProjects.map{ ProjectCardResDTO(from: $0) }
-        
-        // return top3 project Info
-        return Array(convertedProjects.prefix(3))
+        projectCD.getProjectCoredata(identifier: self.identifier) { cdResult in
+            switch cdResult {
+            case .success(let reqProjects):
+                
+                // sorted by 'deadline'
+                let sortedProjects = reqProjects.sorted { $0.proj_deadline > $1.proj_deadline }
+                
+                // convert to DTO
+                let convertedProjects = sortedProjects.map{ ProjectCardResDTO(from: $0) }
+                
+                // return top3 project Info
+                return result(.success(Array(convertedProjects.prefix(3))))
+              
+            // Exception Error: Projects fetch Failed
+            case .failure(let error):
+                return result(.failure(error))
+            }
+        }
     }
     
     
