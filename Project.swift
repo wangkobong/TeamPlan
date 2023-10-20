@@ -9,7 +9,7 @@ let project = Project(
             requirement: .upToNextMajor(from: "7.0.0")),
         .remote(
             url: "https://github.com/firebase/firebase-ios-sdk",
-            requirement: .upToNextMajor(from: "9.0.0")),
+            requirement: .upToNextMajor(from: "10.15.0")),
         .remote(
             url: "https://github.com/dkk/WrappingHStack",
             requirement: .upToNextMajor(from: "2.0.0")),

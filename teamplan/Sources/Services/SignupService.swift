@@ -2,7 +2,7 @@
 //  SignupService.swift
 //  teamplan
 //
-//  Created by 주찬혁 on 2023/08/22.
+//  Created by 주찬혁 on 2023/10/20.
 //  Copyright © 2023 team1os. All rights reserved.
 //
 
@@ -10,74 +10,44 @@ import Foundation
 
 final class SignupService{
     
-    let cd = UserServicesCoredata()
-    let fs = UserServicesFirestore()
+    let util = Utilities()
+    // Becuase of Struct 'UserSignupReqDTO' contain success/failure case, can't deploy init()
+    var userInfo: UserSignupReqDTO? = nil
+    init(){}
     
     //===============================
-    // MARK: - Set Profile: Signup
+    // MARK: - Get AccountInfo
     //===============================
-    /// * Input:
-    ///   * UserDTO/UserSignupLocalReqDTO
-    /// * Success Output(String)
-    ///   * "Successfully Set NewUser"
-    /// * Failed Output(String)
-    ///   * "Invalid Email Format!" or "An Unknown Error Occurred"
-    func setUser(reqUser: UserSignupReqDTO) async -> String {
+    func getAccountInfo(newUser: AuthSocialLoginResDTO,
+                        result: @escaping(Result<UserSignupInfoDTO, Error>) -> Void) {
         
-        var docsId: String = "nil"
-        
-        do{
-            let newUser = try structNewUser(reqUser: reqUser)
-            
-            // Set Firestore
-            fs.setUserFirestore(reqUser: newUser){ result in
-                switch result {
-                case .success(let addDocsId):
-                    docsId = addDocsId
-                    print("Successfully added user with document ID: \(docsId)")
-                case .failure(let error):
-                    print("Failed to add user: \(error)")
-                }
+        // extract AccountName from SocialLogin Result
+        util.getAccountName(userEmail: newUser.email){ getAccResult in
+            switch getAccResult {
+            case .success(let accName):
+                
+                // create identifier
+                let identifier = "\(accName)_\(newUser.provider.rawValue)"
+                
+                // set basic profile info for signup
+                self.userInfo = UserSignupReqDTO(identifier: identifier, email: newUser.email, provider: newUser.provider)
+                
+                // return UserInfo that require SignupView
+                return result(.success(UserSignupInfoDTO(accountName: accName, provider: newUser.provider)))
+                
+            // Exception Handling: Invalid Email Format
+            case .failure(let error):
+                return result(.failure(error))
             }
-            
-            // Create UserObject
-            let newUserObject = UserObject(newUser: newUser, docsId: docsId)
-            
-            // Set CoreData
-            await cd.setUserCoredata(userObject: newUserObject)
-            
-            // Exception : Invalid Email Type
-        } catch EmailError.invalidFormat {
-            print("Invalid Email Format!")
-            return "Invalid Email Format!"
-            
-            // Exception : Unknown
-        } catch let error {
-            print("An error occurred: \(error.localizedDescription)")
-            return "An Unknown Error Occurred"
         }
-        
-        // Success
-        return "Successfully Set NewUser"
     }
     
-    func structNewUser(reqUser: UserSignupReqDTO) throws -> UserSignupServerReqDTO{
+    //===============================
+    // MARK: - Set NickName
+    //===============================
+    func setNickName(nickName: String) -> UserSignupReqDTO {
         
-        let identifier = "\(reqUser.socialType)_\(try extractIdentifier(email: reqUser.email))"
-        
-        return UserSignupServerReqDTO(reqUser: reqUser, identifier: identifier)
-    }
-    
-    func extractIdentifier(email: String) throws -> String {
-        guard let atIndex = email.firstIndex(of: "@"),
-              atIndex != email.startIndex else {
-            throw EmailError.invalidFormat
-        }
-        return String(email.prefix(upTo: atIndex))
-    }
-    
-    enum EmailError: Error {
-        case invalidFormat
+        self.userInfo?.addNickName(nickName: nickName)
+        return self.userInfo!
     }
 }
-

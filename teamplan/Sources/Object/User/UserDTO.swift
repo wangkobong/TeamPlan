@@ -9,80 +9,48 @@
 import Foundation
 
 //============================
-// MARK: Signup - Local
+// MARK: Signup/SignupLoading
 //============================
 /// Request DTO : View -> Service
 struct UserSignupReqDTO{
-    // content
-    let name: String
-    let socialType: String
+    // info
+    let identifier: String
     let email: String
+    let provider: Providers
+    var nickName: String
     
     // Constructor
     init(
-        name: String,
-        socialType: String,
-        email: String
+        identifier: String,
+        email: String,
+        provider: Providers
     ) {
-        self.name = name
-        self.socialType = socialType
+        self.identifier = identifier
         self.email = email
+        self.provider = provider
+        self.nickName = ""
+    }
+    
+    // func
+    mutating func addNickName(nickName: String){
+        self.nickName = nickName
     }
 }
 
-
-//============================
-// MARK: Signup - Server
-//============================
-/// Request DTO : Service -> Firestore
-struct UserSignupServerReqDTO{
-    // id
-    let user_id: String
-    
-    // content
-    let user_email: String
-    var user_name: String
-    
-    // status
-    let user_social_type: String
-    var user_status: UserType
-    
-    // maintenance
-    let user_created_at: Date
-    var user_login_at: Date
-    var user_updated_at: Date
+struct UserSignupInfoDTO{
+    // info
+    let accountName: String
+    let provider: Providers
     
     // Constructor
-    init(reqUser: UserSignupReqDTO, identifier: String) {
-        let currentDate = Date()
-        
-        self.user_id = identifier
-        self.user_email = reqUser.email
-        self.user_name = reqUser.name
-        self.user_social_type = reqUser.socialType
-        self.user_status = .active
-        self.user_created_at = currentDate
-        self.user_login_at = currentDate
-        self.user_updated_at = currentDate
+    init(accountName: String, provider: Providers){
+        self.accountName = accountName
+        self.provider = provider
     }
-    
-    // Firestore Extension
-    func toDictionary() -> [String: Any] {
-            return [
-                "user_id": self.user_id,
-                "user_email": self.user_email,
-                "user_name": self.user_name,
-                "user_social_type": self.user_social_type,
-                "user_status": self.user_status.rawValue,
-                "user_created_at": self.user_created_at,
-                "user_login_at": self.user_login_at,
-                "user_updated_at": self.user_updated_at
-            ]
-        }
 }
 
 //============================
-// MARK: Home - Local
+// MARK: Home
 //============================
 struct UserHomeResDTO{
     // id

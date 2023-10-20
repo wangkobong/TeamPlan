@@ -10,11 +10,15 @@ import Foundation
 
 final class HomeService {
     
-    let projectCD = ProjectServicesCoredata()
     let userCD = UserServicesCoredata()
+    let projectCD = ProjectServicesCoredata()
     let challengeCD = ChallengeServicesCoredata()
-    
     let genDummy = GenerateDummy()
+    
+    var identifier: String
+    init(identifer: String){
+        self.identifier = identifer
+    }
     
     //===============================
     // MARK: - get User
@@ -22,11 +26,15 @@ final class HomeService {
     /// * Return Type : UserDTO / UserHomeResDTO
     ///    * success : 'user_id' & 'user_name' return
     ///    * exception : filled error message in 'user_id' & 'user_name'
-    func getUser(identifier: String) async -> UserHomeResDTO {
-        
-        let requestUser = await userCD.getUserCoredata(identifier: identifier)
-        
-        return UserHomeResDTO(userObject: requestUser)
+    func getUser(result: @escaping(Result<String, Error>) -> Void) {
+        userCD.getUserCoredata(identifier: self.identifier) { cdResult in
+            switch cdResult {
+            case .success(let userInfo):
+                return result(.success(userInfo.user_name))
+            case .failure(let error):
+                return result(.failure(error))
+            }
+        }
     }
     
     func getDummyUser() ->UserHomeResDTO{
