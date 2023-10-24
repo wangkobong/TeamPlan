@@ -11,13 +11,16 @@ import Combine
 
 final class HomeViewModel: ObservableObject {
     
-    @Published var user: UserHomeResDTO?
+    @Published var userName: String = ""
     
-    private let homeService = HomeService(identifer: "dummy")
+    private let homeService = HomeService(identifer: <#T##String#>)
     private var cancellables = Set<AnyCancellable>()
     
     init() {
         self.addSubscribers()
+        Task {
+            await self.getUser()
+        }
     }
     
     private func addSubscribers() {
@@ -25,6 +28,13 @@ final class HomeViewModel: ObservableObject {
     }
     
     private func getUser() async {
-        self.user = await homeService.getDummyUser()
+        homeService.getUser { result in
+            switch result {
+            case .success(let user):
+                self.userName = user
+            case .failure(let error):
+                print(error.localizedDescription)
+            }
+        }
     }
 }

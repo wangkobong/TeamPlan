@@ -177,7 +177,7 @@ extension HomeView {
     private var userNameArea: some View {
         VStack(alignment: .leading) {
             HStack {
-                Text("\(homeViewModel.user?.user_name ?? "사용자이름없음")" + "님")
+                Text("\(homeViewModel.userName)" + "님")
                     .font(.appleSDGothicNeo(.bold, size: 20))
                     .foregroundColor(.theme.blackColor)
                 Spacer()
