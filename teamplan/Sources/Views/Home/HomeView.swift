@@ -20,12 +20,13 @@ struct HomeView: View {
     @StateObject var homeViewModel = HomeViewModel()
     
     @State private var isChallenging: Bool = false
-    @State private var isExistProject: Bool = true
+    @State private var isExistProject: Bool = false
     @State private var percent: CGFloat = 0.65
     @State private var isNotificationViewActive = false
     @State private var showingTutorial = false
     @State private var isGuideViewActive = false
     @State private var isChallengesViewActive = false
+    @State private var pageControlCount = 1
     
     var body: some View {
         NavigationStack {
@@ -65,6 +66,10 @@ struct HomeView: View {
             .fullScreenCover(isPresented: $showingTutorial) {
                 TutorialView()
             }
+        }
+        .onAppear {
+            isExistProject = !homeViewModel.myChallenges.isEmpty
+            pageControlCount = max(homeViewModel.myChallenges.count, 1)
         }
     }
 }
@@ -321,7 +326,7 @@ extension HomeView {
     
     private var pageControl: some View {
         HStack(spacing: 4) {
-            ForEach(0..<3, id: \.self) { index in
+            ForEach(0..<pageControlCount, id: \.self) { index in
                 Circle()
                     .frame(width: 6, height: 6)
                     .foregroundColor(index == 0 ? .theme.mainBlueColor : Color.init(hex: "D9D9D9"))

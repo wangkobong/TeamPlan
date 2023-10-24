@@ -22,12 +22,23 @@ final class ChallengeService{
     // Identifier
     var identifier: String
     
+    @Published var myChallenges: [ChallengeCardResDTO] = []
+    
     //===============================
     // MARK: - Constructor
     //===============================
     init(identifier: String){
         self.identifier = identifier
         self.statCenter = StatisticsCenter(identifier: identifier)
+        
+        self.getMyChallenge { result in
+            switch result {
+            case .success(let challenges):
+                self.myChallenges = challenges
+            case .failure(_):
+                self.myChallenges = []
+            }
+        }
     }
     
     // Pre Load Challenge Data

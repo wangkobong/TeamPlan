@@ -16,8 +16,8 @@ final class HomeService {
     let genDummy = GenerateDummy()
     
     var identifier: String
-    init(identifer: String){
-        self.identifier = identifer
+    init(identifier: String){
+        self.identifier = identifier
     }
     
     //===============================
