@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22222" systemVersion="22G90" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="AccessLogEntity" representedClassName="AccessLogEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="log_access" optional="YES" attributeType="Transformable"/>
+        <attribute name="log_user_id" optional="YES" attributeType="String"/>
+    </entity>
     <entity name="ChallengeEntity" representedClassName="ChallengeEntity" syncable="YES" codeGenerationType="class">
         <attribute name="chlg_desc" optional="YES" attributeType="String"/>
         <attribute name="chlg_finished_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
@@ -15,6 +19,12 @@
         <attribute name="chlg_title" optional="YES" attributeType="String"/>
         <attribute name="chlg_type" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="chlg_unselected_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="chlg_user_id" optional="YES" attributeType="String"/>
+    </entity>
+    <entity name="ChallengeLogEntity" representedClassName="ChallengeLogEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="log_complete" optional="YES" attributeType="Transformable"/>
+        <attribute name="log_update_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="log_user_id" optional="YES" attributeType="String"/>
     </entity>
     <entity name="ProjectEntity" representedClassName="ProjectEntity" syncable="YES" codeGenerationType="class">
         <attribute name="proj_changed_at" attributeType="Date" usesScalarValueType="NO"/>
@@ -27,6 +37,7 @@
         <attribute name="proj_title" attributeType="String"/>
         <attribute name="proj_todo_finished" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="proj_todo_registed" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="proj_user_id" optional="YES" attributeType="String"/>
         <relationship name="todo_relationship" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="TodoEntity" inverseName="project_relationship" inverseEntity="TodoEntity"/>
     </entity>
     <entity name="StatisticsEntity" representedClassName="StatisticsEntity" syncable="YES" codeGenerationType="class">

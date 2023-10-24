@@ -10,11 +10,15 @@ import Foundation
 
 final class HomeService {
     
-    let projectCD = ProjectServicesCoredata()
     let userCD = UserServicesCoredata()
+    let projectCD = ProjectServicesCoredata()
     let challengeCD = ChallengeServicesCoredata()
-    
     let genDummy = GenerateDummy()
+    
+    var identifier: String
+    init(identifer: String){
+        self.identifier = identifer
+    }
     
     //===============================
     // MARK: - get User
@@ -22,11 +26,15 @@ final class HomeService {
     /// * Return Type : UserDTO / UserHomeResDTO
     ///    * success : 'user_id' & 'user_name' return
     ///    * exception : filled error message in 'user_id' & 'user_name'
-    func getUser(identifier: String) async -> UserHomeResDTO {
-        
-        let requestUser = await userCD.getUserCoredata(identifier: identifier)
-        
-        return UserHomeResDTO(userObject: requestUser)
+    func getUser(result: @escaping(Result<String, Error>) -> Void) {
+        userCD.getUserCoredata(identifier: self.identifier) { cdResult in
+            switch cdResult {
+            case .success(let userInfo):
+                return result(.success(userInfo.user_name))
+            case .failure(let error):
+                return result(.failure(error))
+            }
+        }
     }
     
     func getDummyUser() ->UserHomeResDTO{
@@ -39,20 +47,27 @@ final class HomeService {
     //===============================
     // MARK: - get Project
     //===============================
-    // TODO: Add logic - No ProjectData case
-    func getProject() async -> [ ProjectCardResDTO ]{
+    func getProject(result: @escaping(Result<[ProjectCardResDTO], Error>) -> Void) {
         
         // extract all project info
-        let fetchProjects = await projectCD.getProjectCoredata()
-        
-        // sorted by 'deadline'
-        let sortedProjects = fetchProjects.sorted{ $0.proj_deadline > $1.proj_deadline }
-        
-        // convert to DTO
-        let convertedProjects = sortedProjects.map{ ProjectCardResDTO(from: $0) }
-        
-        // return top3 project Info
-        return Array(convertedProjects.prefix(3))
+        projectCD.getProjectCoredata(identifier: self.identifier) { cdResult in
+            switch cdResult {
+            case .success(let reqProjects):
+                
+                // sorted by 'deadline'
+                let sortedProjects = reqProjects.sorted { $0.proj_deadline > $1.proj_deadline }
+                
+                // convert to DTO
+                let convertedProjects = sortedProjects.map{ ProjectCardResDTO(from: $0) }
+                
+                // return top3 project Info
+                return result(.success(Array(convertedProjects.prefix(3))))
+              
+            // Exception Error: Projects fetch Failed
+            case .failure(let error):
+                return result(.failure(error))
+            }
+        }
     }
     
     
@@ -74,12 +89,20 @@ final class HomeService {
     // MARK: - get MyChallenge
     //===============================
     
-    func getMyChallenge() async -> [ChallengeCardResDTO]{
+    func getMyChallenge(result: @escaping(Result<[ChallengeCardResDTO], Error>) -> Void) {
         
-        let myChallenge = await challengeCD.getMyChallengeCoredata()
-        let myChallengeDTO = myChallenge.map{ ChallengeCardResDTO(chlgObject: $0) }
-        
-        return Array(myChallengeDTO)
+        challengeCD.getMyChallengeCoredata(identifier: self.identifier) { cdResult in
+            switch cdResult {
+            
+            case .success(let cardObjects):
+                let cardList = cardObjects.map { ChallengeCardResDTO(chlgObject: $0) }
+                return result(.success(cardList))
+                
+            // Exception Handling: Failed to Get MyChallenge
+            case .failure(let error):
+                return result(.failure(error))
+            }
+        }
     }
     
     func getDummyMyChallenge() -> [ChallengeCardResDTO]{

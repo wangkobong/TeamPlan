@@ -49,9 +49,9 @@ struct AuthSocialLoginResDTO{
 //============================
 // MARK: Enum
 //============================
-enum Providers{
-    case apple
-    case google
+enum Providers: String{
+    case apple = "Apple"
+    case google = "Google"
 }
 
 enum UserStatus{

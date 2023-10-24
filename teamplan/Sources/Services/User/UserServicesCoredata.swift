@@ -22,7 +22,8 @@ final class UserServicesCoredata{
     //================================
     // MARK: - Get User
     //================================
-    func getUserCoredata(identifier: String) async -> UserObject {
+    func getUserCoredata(identifier: String,
+                         result: @escaping(Result<UserObject, Error>) -> Void) {
         
         // parameter setting
         let fetchReq: NSFetchRequest<UserEntity> = UserEntity.fetchRequest()
@@ -32,20 +33,27 @@ final class UserServicesCoredata{
         fetchReq.fetchLimit = 1
         
         do{
-            let reqUser = try context.fetch(fetchReq)
-            return UserObject(userEntity: reqUser.first!)
-        } catch let error as NSError {
-            let errorMessage = "Failed to get User by identifier"
-            print("Failed to get User by identifier: \(identifier) \n \(error)")
-            return UserObject(error: errorMessage)
+            let fetchUser = try context.fetch(fetchReq)
+            
+            // Exception Handling: Identifier
+            guard let reqUser = fetchUser.first else {
+                return result(.failure(UserServiceCDError.IdentifierFetchFailed))
+            }
+            return result(.success(UserObject(userEntity: reqUser)))
+            
+            // Eception Handling: Unknown
+        } catch {
+            return result(.failure(UserServiceCDError.GetFailed))
         }
     }
-
+    
     //================================
     // MARK: - Set User
     //================================
-    
-    func setUserCoredata(userObject: UserObject) async {
+    func setUserCoredata(userObject: UserObject,
+                         result: @escaping(Result<String, Error>) -> Void) {
+        
+        // Create New UserEntity
         let user = UserEntity(context: context)
         
         user.user_id = userObject.user_id
@@ -53,16 +61,16 @@ final class UserServicesCoredata{
         user.user_email = userObject.user_email
         user.user_name = userObject.user_name
         user.user_social_type = userObject.user_social_type
-        user.user_status = userObject.user_status.rawValue
+        user.user_status = userObject.user_status
         user.user_created_at = userObject.user_created_at
         user.user_login_at = userObject.user_login_at
         user.user_updated_at = userObject.user_updated_at
         
         do{
             try context.save()
-            print("Successfully Saved User Data")
+            return result(.success("Successfully set User Data at CoreData"))
         } catch {
-            print("Failed to Save User Data: \(error)")
+            return result(.failure(UserServiceCDError.SetFailed))
         }
     }
     
@@ -75,6 +83,26 @@ final class UserServicesCoredata{
     // MARK: - Delete User
     //================================
     
+    
+    //===============================
+    // MARK: - Exception
+    //===============================
+    enum UserServiceCDError: LocalizedError {
+        case IdentifierFetchFailed
+        case SetFailed
+        case GetFailed
+        
+        var errorDescription: String?{
+            switch self {
+            case .IdentifierFetchFailed:
+                return "Failed to Fetch User by identifier"
+            case .SetFailed:
+                return "Failed to Set User Data at CoreData"
+            case .GetFailed:
+                return "Failed to Get User for Unknown reason"
+            }
+        }
+    }
 }
 
 
