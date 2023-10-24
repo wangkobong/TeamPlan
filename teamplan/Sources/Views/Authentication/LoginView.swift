@@ -74,8 +74,9 @@ extension LoginView {
                         case let appleIDCredential as ASAuthorizationAppleIDCredential:
                             // Apple ID Credential을 사용하여 로그인 정보 처리
                             let userIdentifier = appleIDCredential.user
-                            
+                            print("userIdentifier: \(userIdentifier)")
                             // 사용자 식별자(userIdentifier)를 사용하여 로그인 후의 작업 수행
+                            showHomeView = true
                         default:
                             break
                         }
