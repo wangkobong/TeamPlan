@@ -12,6 +12,7 @@ import AuthenticationServices
 struct LoginView: View {
     
     @State private var showTermsView: Bool = false
+    @State private var showHomeView: Bool = false
     @State private var showUserProfile: Bool = false
 
     @ObservedObject var vm = GoogleSignInButtonViewModel()
@@ -23,6 +24,14 @@ struct LoginView: View {
                 NavigationLink(
                     destination: TermsView().defaultNavigationMFormatting(),
                      isActive: $showTermsView) {
+                          Text("")
+                               .hidden()
+                     }
+                     .navigationBarBackButtonHidden(true)
+                
+                NavigationLink(
+                    destination: MainTapView().defaultNavigationMFormatting(),
+                     isActive: $showHomeView) {
                           Text("")
                                .hidden()
                      }
@@ -104,16 +113,25 @@ extension LoginView {
             }
             
             GoogleSignInButton(viewModel: GoogleSignInButtonViewModel(scheme: .dark, style: .standard, state: .normal)) {
-                print("구글버튼클릭")
                 Task {
                     do {  
-                        try await authViewModel.signInGoogle()
-                        print("구글로그인 성공")
-                        let signupService = SignupService()
-                   
-                        showTermsView = true
-                    } catch {
-                        print(error)
+                        await authViewModel.signInGoogle { result in
+                            switch result {
+                            case .success(let user):
+                                switch user.status {
+                                case .exist:
+                                    showHomeView = true
+                                case .new:
+                                    showTermsView = true
+                                case .unknown:
+                                    break
+                                }
+                            case .failure(let error):
+                                print(error.localizedDescription)
+                                break
+                            }
+                        }
+     
                     }
                 }
             }
