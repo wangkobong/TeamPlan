@@ -27,7 +27,7 @@ final class HomeService {
     ///    * success : 'user_id' & 'user_name' return
     ///    * exception : filled error message in 'user_id' & 'user_name'
     func getUser(result: @escaping(Result<String, Error>) -> Void) {
-        userCD.getUserCoredata(identifier: self.identifier) { cdResult in
+        userCD.getUser(identifier: self.identifier) { cdResult in
             switch cdResult {
             case .success(let userInfo):
                 return result(.success(userInfo.user_name))

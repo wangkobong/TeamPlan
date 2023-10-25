@@ -22,7 +22,7 @@ final class UserServicesCoredata{
     //================================
     // MARK: - Get User
     //================================
-    func getUserCoredata(identifier: String,
+    func getUser(identifier: String,
                          result: @escaping(Result<UserObject, Error>) -> Void) {
         
         // parameter setting
@@ -33,24 +33,22 @@ final class UserServicesCoredata{
         fetchReq.fetchLimit = 1
         
         do{
-            let fetchUser = try context.fetch(fetchReq)
-            
             // Exception Handling: Identifier
-            guard let reqUser = fetchUser.first else {
-                return result(.failure(UserServiceCDError.IdentifierFetchFailed))
+            guard let userEntity = try context.fetch(fetchReq).first else {
+                return result(.failure(UserServiceCDError.UserRetrievalByIdentifierFailed))
             }
-            return result(.success(UserObject(userEntity: reqUser)))
+            return result(.success(UserObject(userEntity: userEntity)))
             
-            // Eception Handling: Unknown
+        // Eception Handling: Internal Error (Coredata)
         } catch {
-            return result(.failure(UserServiceCDError.GetFailed))
+            return result(.failure(UserServiceCDError.UnexpectedGetError))
         }
     }
     
     //================================
     // MARK: - Set User
     //================================
-    func setUserCoredata(userObject: UserObject,
+    func setUser(userObject: UserObject,
                          result: @escaping(Result<String, Error>) -> Void) {
         
         // Create New UserEntity
@@ -70,7 +68,7 @@ final class UserServicesCoredata{
             try context.save()
             return result(.success("Successfully set User Data at CoreData"))
         } catch {
-            return result(.failure(UserServiceCDError.SetFailed))
+            return result(.failure(UserServiceCDError.UnexpectedSetError))
         }
     }
     
@@ -82,25 +80,24 @@ final class UserServicesCoredata{
     //================================
     // MARK: - Delete User
     //================================
+}
+
+//===============================
+// MARK: - Exception
+//===============================
+enum UserServiceCDError: LocalizedError {
+    case UserRetrievalByIdentifierFailed
+    case UnexpectedSetError
+    case UnexpectedGetError
     
-    
-    //===============================
-    // MARK: - Exception
-    //===============================
-    enum UserServiceCDError: LocalizedError {
-        case IdentifierFetchFailed
-        case SetFailed
-        case GetFailed
-        
-        var errorDescription: String?{
-            switch self {
-            case .IdentifierFetchFailed:
-                return "Failed to Fetch User by identifier"
-            case .SetFailed:
-                return "Failed to Set User Data at CoreData"
-            case .GetFailed:
-                return "Failed to Get User for Unknown reason"
-            }
+    var errorDescription: String?{
+        switch self {
+        case .UserRetrievalByIdentifierFailed:
+            return "CoreData: Unable to retrieve 'User' data using the provided identifier."
+        case .UnexpectedSetError:
+            return "Coredata: There was an unexpected error while Set 'User' details"
+        case .UnexpectedGetError:
+            return "Coredata: There was an unexpected error while Get 'User' details"
         }
     }
 }

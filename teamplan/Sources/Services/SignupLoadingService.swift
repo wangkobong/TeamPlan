@@ -40,7 +40,7 @@ final class SignupLoadingService{
     //===============================
     // : Firestore
     func setUserFS(result: @escaping(Result<Bool, Error>) -> Void) {
-        userFS.setUserFirestore(reqUser: self.newProfile) { fsResult in
+        userFS.setUser(reqUser: self.newProfile) { fsResult in
             switch fsResult {
     
             case .success(let docsId):
@@ -56,7 +56,7 @@ final class SignupLoadingService{
     
     // : Coredata
     func setUserCD(result: @escaping(Result<Bool, Error>) -> Void) {
-        userCD.setUserCoredata(userObject: self.newProfile) { cdResult in
+        userCD.setUser(userObject: self.newProfile) { cdResult in
             self.handleServiceResult(cdResult, with: result)
         }
     }

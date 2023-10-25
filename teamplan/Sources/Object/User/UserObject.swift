@@ -32,8 +32,8 @@ struct UserObject{
     
     
     // Constructor
-    // : SignupService Constructor
-    init(newUser: UserSignupReqDTO, signupDate: Date){
+    // : SignupService
+    init(newUser: UserSignupReqDTO, signupDate: Date) {
         self.user_id = newUser.identifier
         self.user_fb_id = ""
         self.user_email = newUser.email
@@ -46,7 +46,7 @@ struct UserObject{
     }
     
     // : Get Coredata
-    init(userEntity: UserEntity){
+    init(userEntity: UserEntity) {
         self.user_id = userEntity.user_id ?? "Unknown"
         self.user_fb_id = userEntity.user_fb_id ?? "Unknown"
         self.user_email = userEntity.user_email ?? "Unknown"
@@ -56,6 +56,32 @@ struct UserObject{
         self.user_created_at = userEntity.user_created_at ?? Date()
         self.user_login_at = userEntity.user_login_at ?? Date()
         self.user_updated_at = userEntity.user_updated_at ?? Date()
+    }
+    
+    // : Get Firestore
+    init?(userData: [String : Any], docsId: String){
+        guard let user_id = userData["user_id"] as? String,
+              let user_email = userData["user_email"] as? String,
+              let user_name = userData["user_name"] as? String,
+              let user_social_type = userData["user_social_type"] as? String,
+              let user_status = userData["user_status"] as? String,
+              let user_created_at = userData["user_created_at"] as? Date,
+              let user_login_at = userData["user_login_at"] as? Date,
+              let user_updated_at = userData["user_updated_at"] as? Date
+        else {
+            return nil
+        }
+        
+        // Assigning values
+        self.user_id = user_id
+        self.user_fb_id = docsId
+        self.user_email = user_email
+        self.user_name = user_name
+        self.user_social_type = user_social_type
+        self.user_status = user_status
+        self.user_created_at = user_created_at
+        self.user_login_at = user_login_at
+        self.user_updated_at = user_updated_at
     }
     
     // : Get Dummy
@@ -91,19 +117,19 @@ struct UserObject{
             "user_updated_at" : self.user_updated_at
         ]
     }
-    
-    
-    //============================
-    // MARK: Enum
-    //============================
-    enum UserType: String{
-        case active = "Activated"
-        case dormant = "Dormanted"
-        case unknown = "Unknowned"
-    }
-    
 }
 
+//============================
+// MARK: Enum
+//============================
+enum UserType: String{
+    case active = "Normal: Active User"
+    case dormant = "Noraml: Dormant User"
+    case unknown = "Caution: Unknown User"
+}
 
-
-
+enum Providers: String{
+    case apple = "Apple"
+    case google = "Google"
+    case unknown = "Unknown Providers"
+}

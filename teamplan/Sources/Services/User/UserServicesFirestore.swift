@@ -17,7 +17,7 @@ final class UserServicesFirestore{
     //================================
     // MARK: - Set User: SignUp
     //================================
-    func setUserFirestore(reqUser: UserObject,
+    func setUser(reqUser: UserObject,
                           result: @escaping(Result<String, Error>) -> Void) {
         // Target Table
         let collectionRef = fs.collection("User")
@@ -36,6 +36,68 @@ final class UserServicesFirestore{
             }
         }
     }
+    
+    //================================
+    // MARK: - Get User
+    //================================
+    func getUser(identifier: String,
+                 result: @escaping(Result<UserObject, Error>) -> Void) {
+        
+        // Target Table
+        let collectionRef = fs.collection("User")
+        
+        
+        // Search User
+        collectionRef.whereField("user_id", isEqualTo: identifier).getDocuments() { (snapShot, error) in
+            
+            if let error = error {
+                return result(.failure(error))
+            }
+            
+            guard let response = snapShot else {
+                return result(.failure(UserFSError.UserRetrievalByIdentifierFailed))
+            }
+            
+            switch response.documents.count {
+                
+            case 1:
+                let docs = response.documents.first!
+                if let user = UserObject(userData: docs.data(), docsId: docs.documentID) {
+                    return result(.success(user))
+                }
+                
+            case let count where count > 1:
+                return result(.failure(UserFSError.MultipleUserFound))
+                
+            default:
+                return result(.failure(UserFSError.InternalError))
+            }
+        }
+    }
 }
 
-
+//================================
+// MARK: - Exception
+//================================
+enum UserFSError: LocalizedError {
+    case UnexpectedSetError
+    case UnexpectedGetError
+    case UserRetrievalByIdentifierFailed
+    case MultipleUserFound
+    case InternalError
+    
+    var errorDescription: String?{
+        switch self {
+        case .UnexpectedSetError:
+            return "Firestore: There was an unexpected error while Set 'User' details"
+        case .UnexpectedGetError:
+            return "Firestore: There was an unexpected error while Get 'User' details"
+        case .UserRetrievalByIdentifierFailed:
+            return "Firestore: Unable to retrieve 'User' data using the provided identifier."
+        case .MultipleUserFound:
+            return "Firestore: Multiple 'User' found. Expected only one."
+        case .InternalError:
+            return "Firestore: Internal Error Occurred while process 'User' details"
+        }
+    }
+}

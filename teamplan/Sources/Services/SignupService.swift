@@ -19,7 +19,7 @@ final class SignupService{
     // MARK: - Get AccountInfo
     //===============================
     func getAccountInfo(newUser: AuthSocialLoginResDTO,
-                        result: @escaping(Result<UserSignupInfoDTO, Error>) -> Void) {
+                        result: @escaping(Result<UserSignupResDTO, Error>) -> Void) {
         
         // extract AccountName from SocialLogin Result
         util.getAccountName(userEmail: newUser.email){ getAccResult in
@@ -33,7 +33,7 @@ final class SignupService{
                 self.userInfo = UserSignupReqDTO(identifier: identifier, email: newUser.email, provider: newUser.provider)
                 
                 // return UserInfo that require SignupView
-                return result(.success(UserSignupInfoDTO(accountName: accName, provider: newUser.provider)))
+                return result(.success(UserSignupResDTO(accountName: accName, provider: newUser.provider)))
                 
             // Exception Handling: Invalid Email Format
             case .failure(let error):
