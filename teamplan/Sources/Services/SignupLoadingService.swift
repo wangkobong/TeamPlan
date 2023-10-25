@@ -66,14 +66,14 @@ final class SignupLoadingService{
     //===============================
     // : Firestore
     func setStatisticsFS(result: @escaping(Result<Bool, Error>) -> Void) {
-        statFS.setStatisticsFS(reqStat: self.newStat) { fsResult in
+        statFS.setStatistics(reqStat: self.newStat) { fsResult in
             self.handleServiceResult(fsResult, with: result)
         }
     }
     
     // : Coredata
     func setStatisticsCD(result: @escaping(Result<Bool, Error>) -> Void) {
-        statCD.setStatCoredata(reqStat: self.newStat) { cdResult in
+        statCD.setStatistics(reqStat: self.newStat) { cdResult in
             self.handleServiceResult(cdResult, with: result)
         }
     }

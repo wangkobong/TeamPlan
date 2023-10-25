@@ -30,7 +30,7 @@ struct StatisticsObject{
     // maintenance
     var stat_upload_at: Date
     
-    // Constructor
+    // Service Constructor
     // : Signup
     init(identifier: String, signupDate: Date){
         self.stat_user_id = identifier
@@ -52,7 +52,8 @@ struct StatisticsObject{
         self.stat_upload_at = signupDate
     }
     
-    // : CoreData
+    // Store Constructor
+    // : Get (CoreData)
     init(statEntity: StatisticsEntity) {
         self.stat_user_id = statEntity.stat_user_id ?? "Unknown"
         self.stat_term = Int(statEntity.stat_term)
@@ -65,6 +66,52 @@ struct StatisticsObject{
         self.stat_chlg_step = statEntity.stat_chlg_step as! [[Int : Int]]
         self.stat_mychlg = statEntity.stat_mychlg as! [Int : Int]
         self.stat_upload_at = statEntity.stat_upload_at ?? Date()
+    }
+    
+    // : Update (Coredata)
+    init(updatedStat: StatisticsDTO){
+        self.stat_user_id = updatedStat.stat_user_id
+        self.stat_term = updatedStat.stat_term
+        self.stat_drop = updatedStat.stat_drop
+        self.stat_proj_reg = updatedStat.stat_proj_reg
+        self.stat_proj_fin = updatedStat.stat_proj_fin
+        self.stat_proj_alert = updatedStat.stat_proj_alert
+        self.stat_proj_ext = updatedStat.stat_proj_ext
+        self.stat_todo_reg = updatedStat.stat_todo_reg
+        self.stat_chlg_step = updatedStat.stat_chlg_step
+        self.stat_mychlg = updatedStat.stat_mychlg
+        self.stat_upload_at = updatedStat.stat_upload_at
+    }
+    
+    // : Get (Firestore)
+    init?(statData: [String : Any]){
+        guard let stat_user_id = statData["stat_user_id"] as? String,
+              let stat_term = statData["stat_term"] as? Int,
+              let stat_drop = statData["stat_drop"] as? Int,
+              let stat_proj_reg = statData["stat_proj_reg"] as? Int,
+              let stat_proj_fin = statData["stat_proj_fin"] as? Int,
+              let stat_proj_alert = statData["stat_proj_alert"] as? Int,
+              let stat_proj_ext = statData["stat_proj_ext"] as? Int,
+              let stat_todo_reg = statData["stat_todo_reg"] as? Int,
+              let stat_chlg_step = statData["stat_chlg_step"] as? [[Int : Int]],
+              let stat_mychlg = statData["stat_mychlg"] as? [Int : Int],
+              let stat_upload_at = statData["stat_upload_at"] as? Date
+        else {
+            return nil
+        }
+        
+        // Assigning values
+        self.stat_user_id = stat_user_id
+        self.stat_term = stat_term
+        self.stat_drop = stat_drop
+        self.stat_proj_reg = stat_proj_reg
+        self.stat_proj_fin = stat_proj_fin
+        self.stat_proj_alert = stat_proj_alert
+        self.stat_proj_ext = stat_proj_ext
+        self.stat_todo_reg = stat_todo_reg
+        self.stat_chlg_step = stat_chlg_step
+        self.stat_mychlg = stat_mychlg
+        self.stat_upload_at = stat_upload_at
     }
     
     //============================
