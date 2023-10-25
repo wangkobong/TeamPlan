@@ -85,7 +85,7 @@ final class LoginLoadingService{
     func updateStatistics(identifier: String, stat: StatisticsDTO, loginDate: Date,
                           result: @escaping(Result<Bool, Error>) -> Void) {
         
-        // loginDate Check
+        // Check AccessLog
         guard let lastLoginDate = self.accLog?.log_access.last else {
             return result(.failure(LoginLoadingServiceError.EmptyAccessLog))
         }
@@ -114,6 +114,36 @@ final class LoginLoadingService{
     }
     
     // Step4-2. Update AccessLog
+    func updateAccessLog(identifier: String, serviceTerm: Int, loginDate: Date,
+                         result: @escaping(Result<Bool, Error>) -> Void) {
+        
+        // Check AccessLog
+        guard var accessLog = self.accLog else {
+            return result(.failure(LoginLoadingServiceError.EmptyAccessLog))
+        }
+        
+        // Manage AccessLog size
+        if accessLog.log_access.count > 365 {
+            accessLog.log_access.removeAll()
+        }
+        
+        // Update AccessLog
+        accessLog.log_access.append(loginDate)
+        
+        // Update Coredata & Firestore
+        self.updateAccessLogStore(identifier: identifier, serviceTerm: serviceTerm, updatedAcclog: accessLog) { response in
+            switch response {
+                
+            // Successfully Update Statistics
+            case .success(_):
+                return result(.success(true))
+                
+            // Exception Handling : UnExpected error while Update Statistics from Coredata or Firestore
+            case .failure(let error):
+                return result(.failure(error))
+            }
+        }
+    }
 }
 
 //==============================
@@ -369,6 +399,46 @@ extension LoginLoadingService{
                                        result: @escaping(Result<String, Error>) -> Void) {
         statFS.updateStatistics(identifier: identifier, updatedStatInfo: updatedStatInfo, result: result)
     }
+}
+
+//==============================
+// MARK: Update AccessLog
+//==============================
+extension LoginLoadingService{
+    
+    func updateAccessLogStore(identifier: String, serviceTerm: Int, updatedAcclog: AccessLog,
+                         result: @escaping(Result<String, Error>) -> Void) {
+        
+        // Step1. Update Coredata
+        self.updateAcclogToCoredata(identifier: identifier, updatedAcclog: updatedAcclog) { cdResponse in
+            switch cdResponse {
+            case .success(let msg):
+                print(msg)
+                
+                // Step2. Update Firestore
+                // If the Coredata update was successful and the stat_term is a multiple of 7, then update Firestore
+                if serviceTerm % 7 == 0 {
+                    self.updateAcclogToFirestore(identifier: identifier, updatedAcclog: updatedAcclog, result: result)
+                } else {
+                    result(.success("Successfully updated Coredata only."))
+                }
+                
+            // ExceptionHandling : Failed to Update (Coredata)
+            case .failure(let error):
+                return result(.failure(error))
+            }
+        }
+    }
+    
+    private func updateAcclogToCoredata(identifier: String, updatedAcclog: AccessLog,
+                                        result: @escaping(Result<String, Error>) -> Void) {
+        acclogCD.updateAccessLog(identifier: identifier, updatedAcclog: updatedAcclog, result: result)
+    }
+    
+    private func updateAcclogToFirestore(identifier: String, updatedAcclog: AccessLog,
+                                         result: @escaping(Result<String, Error>) -> Void) {
+        acclogFS.updateAccessLog(identifier: identifier, updateAcclog: updatedAcclog, result: result)
+     }
 }
 
 //================================
