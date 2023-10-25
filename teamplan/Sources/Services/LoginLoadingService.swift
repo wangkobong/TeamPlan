@@ -82,6 +82,36 @@ final class LoginLoadingService{
     }
     
     // Step4-1. Update Statistics (ServiceTerm)
+    func updateStatistics(identifier: String, stat: StatisticsDTO, loginDate: Date,
+                          result: @escaping(Result<Bool, Error>) -> Void) {
+        
+        // loginDate Check
+        guard let lastLoginDate = self.accLog?.log_access.last else {
+            return result(.failure(LoginLoadingServiceError.EmptyAccessLog))
+        }
+        // User has login record of that day
+        if util.calcTime(currentTime: loginDate, lastTime: lastLoginDate) {
+            return result(.success(false))
+        }
+        
+        // Update Statistics
+        var updatedStat = stat
+        updatedStat.updateServiceTerm(updatedTerm: stat.stat_term + 1)
+        
+        // Update Coredata & Firestore
+        self.updateStatisticsStore(identifier: identifier, updatedStat: updatedStat) { response in
+            switch response {
+                
+            // Successfully Update Statistics
+            case .success(_):
+                return result(.success(true))
+                
+            // Exception Handling : UnExpected error while Update Statistics from Coredata or Firestore
+            case .failure(let error):
+                return result(.failure(error))
+            }
+        }
+    }
     
     // Step4-2. Update AccessLog
 }
@@ -298,5 +328,59 @@ extension LoginLoadingService{
     private func storeLogToCoredata(log: AccessLog,
                                     result: @escaping(Result<String, Error>) -> Void) {
         acclogCD.setAccessLog(reqLog: log, result: result)
+    }
+}
+
+//==============================
+// MARK: Update Statistics
+//==============================
+extension LoginLoadingService{
+    
+    func updateStatisticsStore(identifier: String, updatedStat: StatisticsDTO,
+                           result: @escaping(Result<String, Error>) -> Void) {
+            
+        // Step1. Update Coredata
+        self.updateStatToCoredata(identifier: identifier, updatedStatInfo: updatedStat) { cdResponse in
+            switch cdResponse {
+            case .success(let msg):
+                print(msg)
+                
+                // Step2. (Option) Update Firestore
+                // If the Coredata update was successful and the stat_term is a multiple of 7, then update Firestore
+                if updatedStat.stat_term % 7 == 0 {
+                    self.updateStatToFirestore(identifier: identifier, updatedStatInfo: updatedStat, result: result)
+                } else {
+                    result(.success("Successfully updated Coredata only."))
+                }
+                
+                // ExceptionHandling : Failed to Update (Coredata)
+            case .failure(let error):
+                result(.failure(error))
+            }
+        }
+    }
+    
+    private func updateStatToCoredata(identifier: String, updatedStatInfo: StatisticsDTO,
+                                      result: @escaping(Result<String, Error>) -> Void) {
+        statCD.updateStatistics(identifier: identifier, updatedStatInfo: updatedStatInfo, result: result)
+    }
+    
+    private func updateStatToFirestore(identifier: String, updatedStatInfo: StatisticsDTO,
+                                       result: @escaping(Result<String, Error>) -> Void) {
+        statFS.updateStatistics(identifier: identifier, updatedStatInfo: updatedStatInfo, result: result)
+    }
+}
+
+//================================
+// MARK: - Exception
+//================================
+enum LoginLoadingServiceError: LocalizedError {
+    case EmptyAccessLog
+    
+    var errorDescription: String? {
+        switch self {
+        case .EmptyAccessLog:
+            return "AccessLog Not Found"
+        }
     }
 }

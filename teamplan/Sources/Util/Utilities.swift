@@ -52,4 +52,23 @@ final class Utilities {
             }
         }
     }
+    
+    //============================
+    // MARK: Time Calculation
+    //============================
+    func calcTime(currentTime: Date, lastTime: Date) -> Bool {
+        
+        let calendar = Calendar.current
+        let lastTimeComp = calendar.dateComponents([.year, .month, .day], from: lastTime)
+        let currentTimeComp = calendar.dateComponents([.year, .month, .day], from: currentTime)
+        
+        if let lastTimeDay = calendar.date(from: lastTimeComp),
+           let currentTimeDay = calendar.date(from: currentTimeComp),
+           
+            currentTimeDay <= lastTimeDay {
+            return true
+        } else {
+            return false
+        }
+    }
 }
