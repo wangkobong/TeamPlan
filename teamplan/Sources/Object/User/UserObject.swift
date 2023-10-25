@@ -39,7 +39,7 @@ struct UserObject{
         self.user_email = newUser.email
         self.user_name = newUser.nickName
         self.user_social_type = newUser.provider.rawValue
-        self.user_status = UserType.active.rawValue
+        self.user_status = UserStatus.active.rawValue
         self.user_created_at = signupDate
         self.user_login_at = signupDate
         self.user_updated_at = signupDate
@@ -85,7 +85,7 @@ struct UserObject{
     }
     
     // : Get Dummy
-    init(user_id: String, user_fb_id: String, user_email: String, user_name: String, user_social_type: String, user_status: UserType, user_created_at: Date, user_login_at: Date, user_updated_at: Date) {
+    init(user_id: String, user_fb_id: String, user_email: String, user_name: String, user_social_type: String, user_status: UserStatus, user_created_at: Date, user_login_at: Date, user_updated_at: Date) {
         self.user_id = user_id
         self.user_fb_id = user_fb_id
         self.user_email = user_email
@@ -122,7 +122,7 @@ struct UserObject{
 //============================
 // MARK: Enum
 //============================
-enum UserType: String{
+enum UserStatus: String{
     case active = "Normal: Active User"
     case dormant = "Noraml: Dormant User"
     case unknown = "Caution: Unknown User"

@@ -33,7 +33,7 @@ final class AuthGoogleServices{
             
             // Firebase Authorization
             let authResult = try await firebaseAuth(loginResult: googleLoginResult)
-            return result(.success(AuthSocialLoginResDTO(loginResult: googleLoginResult, status: authResult)))
+            return result(.success(AuthSocialLoginResDTO(loginResult: googleLoginResult, userType: authResult)))
             
             // Excpetion
         } catch let GIDError as GIDSignInError {
@@ -46,7 +46,7 @@ final class AuthGoogleServices{
     }
     
     // Token Authorization & NewUser Check
-    private func firebaseAuth(loginResult: GIDSignInResult) async throws -> UserStatus {
+    private func firebaseAuth(loginResult: GIDSignInResult) async throws -> UserType {
         
         let credential = GoogleAuthProvider.credential(
             withIDToken: loginResult.user.idToken!.tokenString,
@@ -54,10 +54,10 @@ final class AuthGoogleServices{
         )
         do{
             let authResult = try await Auth.auth().signIn(with: credential)
-            return authResult.additionalUserInfo?.isNewUser == true ? UserStatus.new : UserStatus.exist
+            return authResult.additionalUserInfo?.isNewUser == true ? UserType.new : UserType.exist
         } catch {
             print(FirebaseAuth.AuthErrorCode.internalError as! Error)
-            return UserStatus.unknown
+            return UserType.unknown
         }
     }
     

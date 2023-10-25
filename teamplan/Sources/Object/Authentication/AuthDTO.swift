@@ -24,32 +24,32 @@ struct AuthSocialLoginResDTO{
     let accessToken: String
     
     // status
-    var status: UserStatus
+    var status: UserType
     
     // Constructor
     // Google Authentication: NewUser | ExistUser
-    init(loginResult: GIDSignInResult, status: UserStatus){
+    init(loginResult: GIDSignInResult, userType: UserType){
         self.provider = .google
         self.email = loginResult.user.profile!.email
         self.idToken = loginResult.user.idToken!.tokenString
         self.accessToken = loginResult.user.accessToken.tokenString
-        self.status = status
+        self.status = userType
     }
     
     // Apple Authentication: NewUser | ExistUser
-    init(loginResult: User, idToken: String, status: UserStatus){
+    init(loginResult: User, idToken: String, userType: UserType){
         self.provider = .apple
         self.email = loginResult.email!
         self.idToken = idToken
         self.accessToken = ""
-        self.status = status
+        self.status = userType
     }
 }
 
 //============================
 // MARK: Enum
 //============================
-enum UserStatus: String{
+enum UserType: String{
     case new = "Normal: User User"
     case exist = "Normal: Exist User"
     case unknown = "Caution: Unknown User"
