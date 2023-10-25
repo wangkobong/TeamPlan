@@ -8,6 +8,9 @@
 
 import Foundation
 
+//============================
+// MARK: Entity
+//============================
 struct AccessLog{
     // id
     let log_user_id: String
@@ -15,13 +18,34 @@ struct AccessLog{
     // content
     var log_access: [Date]
     
-    // constructor
+    // Constructor
+    // : Signup
     init(identifier: String, signupDate: Date){
         self.log_user_id = identifier
         self.log_access = [signupDate]
     }
     
-    // func
+    // : Get (Coredata)
+    init(acclogEntity: AccessLogEntity) {
+        self.log_user_id = acclogEntity.log_user_id!
+        self.log_access = acclogEntity.log_access as! [Date]
+    }
+    
+    // : Get (Firestore)
+    init?(acclogData: [String : Any]){
+        guard let log_user_id = acclogData["log_user_id"] as? String,
+              let log_access = acclogData["log_access"] as? [Date]
+        else {
+            return nil
+        }
+        // Assigning values
+        self.log_user_id = log_user_id
+        self.log_access = log_access
+    }
+    
+    //============================
+    // MARK: Func
+    //============================
     func toDictionary() -> [String : Any] {
         return [
             "log_user_id" : self.log_user_id,
