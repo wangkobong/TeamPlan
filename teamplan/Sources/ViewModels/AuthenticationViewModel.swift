@@ -21,54 +21,39 @@ final class AuthenticationViewModel: ObservableObject{
     // Google Login
     //====================
     @MainActor
-    func signInGoogle() async throws {
-        
-        await loginService.loginGoogle() { loginResult in
-            switch loginResult {
-            case .success(let user):
-                
-                // Login Success
-                switch user.status{
-                case .exist:
-                    print("########### Exist User ###########")
+    func signInGoogle(completion: @escaping (Result<AuthSocialLoginResDTO, Error>) -> Void) async {
+        do {
+            
+            await loginService.loginGoogle { result in
+                switch result {
+                case .success(let user):
+                    switch user.status {
+                    case .exist:
+                        print("########### Exist User ###########")
+                    case .new:
+                        print("########### New User ###########")
+                    case .unknown:
+                        print("########### UNKNOWN ###########")
+                    }
+                    
                     print(user.provider)
                     print(user.email)
                     print(user.status)
-                    print("##################################")
-                    break
-                case .new:
-                    print("########### New User ###########")
-                    print(user.provider)
-                    print(user.email)
-                    print(user.status)
-                    print("##################################")
-                    break
-                case .unknown:
-                    print("########### UNKNOWN ###########")
-                    print(user.provider)
-                    print(user.email)
-                    print(user.status)
-                    print("##################################")
-                    break
+                    completion(.success(user))
+                    print("idToken: \(user.idToken)")
+                    print("accessToken: \(user.accessToken)")
+                    let keychain = KeychainSwift()
+                    keychain.set(user.idToken, forKey: "idToken")
+                    keychain.set(user.accessToken, forKey: "accessToken")
+
+                case .failure(let error):
+                    // Login Fail
+                    print("########### Error ###########")
+                    print(error)
+                    completion(.failure(error))
                 }
-                break
-            case .failure(let error):
-                // Login Fail
-                print("########### Error ###########")
-                print(error)
-                print("##################################")
-                break
             }
         }
-        /* UserInfo Save
-        self.user = authUser
-        self.state = .signedIn(authUser)
-        print("idToken: \(googleSignInUser.idToken)")
-        print("accessToken: \(googleSignInUser.accessToken)")
-        let keychain = KeychainSwift()
-        keychain.set(googleSignInUser.idToken, forKey: "idToken")
-        keychain.set(googleSignInUser.accessToken, forKey: "accessToken")
-         */
     }
     
     
