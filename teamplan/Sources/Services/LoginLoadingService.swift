@@ -15,6 +15,10 @@ final class LoginLoadingService{
     let userFS = UserServicesFirestore()
     let statCD = StatisticsServicesCoredata()
     let statFS = StatisticsServicesFirestore()
+    let acclogCD = AccessLogServicesCoredata()
+    let acclogFS = AccessLogServicesFirestore()
+    
+    var accLog: AccessLog? = nil
     
     //==============================
     // MARK: Core Function
@@ -58,6 +62,24 @@ final class LoginLoadingService{
     }
     
     // Step3. Get AccessLog
+    func getAccessLog(identifier: String,
+                      result: @escaping(Result<Bool, Error>) -> Void) {
+        
+        // Retrive AccessLog by Identifier
+        self.fetchAccessLog(identifier: identifier) { response in
+            switch response {
+                
+            // Successfully get AccessLog
+            case .success(let log):
+                self.accLog = log
+                return result(.success(true))
+                
+            // Exception Handling : UnExpected error while get AccessLog from Coredata or Firestore
+            case .failure(let error):
+                return result(.failure(error))
+            }
+        }
+    }
     
     // Step4-1. Update Statistics (ServiceTerm)
     
@@ -172,7 +194,7 @@ extension LoginLoadingService{
         statCD.getStatistics(identifier: identifier, result: result)
     }
     
-    // Step1-2. Get from Firestore
+    // Step1-2. (Option) Get from Firestore
     private func fetchStatFromFirestore(identifier: String,
                                         result: @escaping(Result<StatisticsDTO, Error>) -> Void) {
         
@@ -209,3 +231,72 @@ extension LoginLoadingService{
     }
 }
 
+//==============================
+// MARK: Get Access Log
+//==============================
+extension LoginLoadingService{
+    
+    // Step1. Fetch AccessLog from Coredata or Firestore
+    func fetchAccessLog(identifier: String,
+                      result: @escaping(Result<AccessLog, Error>) -> Void) {
+        
+        self.fetchAcclogFromCoredata(identifier: identifier) { response in
+            switch response {
+                
+            // Successfully get AccessLog from CoreData
+            case .success(let acclog):
+                return result(.success(acclog))
+               
+            // No AccessLog at CoreData => Jump to Firestore
+            case .failure(let error as AccessLogError) where error == .AccLogRetrievalByIdentifierFailed:
+                self.fetchAcclogFromFirestore(identifier: identifier, result: result)
+                
+            // ExceptionHandling : Internal Error (Coredata)
+            case .failure(let error):
+                return result(.failure(error))
+            }
+        }
+    }
+    
+    // Step1-1. Get from Coredata
+    private func fetchAcclogFromCoredata(identifier: String,
+                                         result: @escaping(Result<AccessLog, Error>) -> Void) {
+        acclogCD.getAccessLog(identifier: identifier, result: result)
+    }
+    
+    // Step1-2. (Option) Get from Firestore
+    private func fetchAcclogFromFirestore(identifier: String,
+                                          result: @escaping(Result<AccessLog, Error>) -> Void) {
+        
+        // Successgully get AccessLog from Firestore
+        acclogFS.getAccessLog(identifier: identifier) { fsResponse in
+            switch fsResponse {
+                
+            case .success(let log):
+                
+                // Set AccessLog to Coredata
+                self.storeLogToCoredata(log: log) { cdResponse in
+                    switch cdResponse {
+                    case .success(let msg):
+                        print(msg)
+                        return result(.success(log))
+                        
+                    // ExceptionHandling : Internal Error (Coredata)
+                    case .failure(let error):
+                        return result(.failure(error))
+                    }
+                }
+                
+            // ExceptionHandling : Failed to Search (Firestore)
+            case .failure(let error):
+                return result(.failure(error))
+            }
+        }
+    }
+    
+    // Step1-3. (Option) Store to Coredata
+    private func storeLogToCoredata(log: AccessLog,
+                                    result: @escaping(Result<String, Error>) -> Void) {
+        acclogCD.setAccessLog(reqLog: log, result: result)
+    }
+}
