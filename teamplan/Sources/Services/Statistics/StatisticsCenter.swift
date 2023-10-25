@@ -24,7 +24,7 @@ final class StatisticsCenter{
     func returnUserProgress(challengeType: ChallengeType,
                             result: @escaping(Result<Int, Error>) -> Void) {
         
-        statCD.getStatCoredata(identifier: self.identifier) { getRes in
+        statCD.getStatistics(identifier: self.identifier) { getRes in
             switch getRes{
             case .success(let reqStat):
                 

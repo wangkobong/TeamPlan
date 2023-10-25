@@ -37,16 +37,15 @@ final class AccessLogServicesCoredata{
             try context.save()
             return result(.success("Successfully Set AccessLog"))
         } catch {
-            return result(.failure(AccessLogError.UpdateFailed))
+            return result(.failure(AccessLogError.UnexpectedSetError))
         }
     }
     
-    
     //================================
-    // MARK: - Update AccessLog
+    // MARK: - Get AccessLog
     //================================
-    func updateAccessLog(identifier: String, serviceTerm: Int, loginDate: Date,
-                           result: @escaping(Result<String, Error>) -> Void) {
+    func getAccessLog(identifier: String,
+                      result: @escaping(Result<AccessLog, Error>) -> Void) {
         
         // parameter setting
         let fetchReq: NSFetchRequest<AccessLogEntity> = AccessLogEntity.fetchRequest()
@@ -56,58 +55,74 @@ final class AccessLogServicesCoredata{
         fetchReq.fetchLimit = 1
         
         do{
-            let fetchedLog = try context.fetch(fetchReq)
-            
             // Exception Handling: Idnetifier
-            guard let reqLog = fetchedLog.first else {
-                return result(.failure(AccessLogError.IdentifierFetchFailed))
+            guard let reqLog = try context.fetch(fetchReq).first else {
+                return result(.failure(AccessLogError.AccLogRetrievalByIdentifierFailed))
             }
             
-            // extract LoginLog Info
-            var accessLog = reqLog.log_access as! [Date]
+            // Successfully Get AccessLog from Coredata
+            return result(.success(AccessLog(acclogEntity: reqLog)))
             
-            // Service Term Exceeded Check
-            if serviceTerm > 365 {
-                // Reset LoginLog
-                accessLog.removeAll()
-            }
-            
-            // Add LoginLog
-            accessLog.append(loginDate)
-            reqLog.log_access = accessLog as NSObject
-            
-            // Update Log
-            do{
-                try context.save()
-                return result(.success("Successfully Update AccessLog"))
-            } catch {
-                return result(.failure(AccessLogError.UpdateFailed))
-            }
+        // Exception Handling: Internal Error (Coredata)
         } catch {
-            return result(.failure(AccessLogError.UnknownFetchFailed))
+            return result(.failure(AccessLogError.UnexpectedError))
         }
     }
     
-    //===============================
-    // MARK: - Exception
-    //===============================
-    enum AccessLogError: LocalizedError {
-        case UnknownFetchFailed
-        case IdentifierFetchFailed
-        case SetFailed
-        case UpdateFailed
+    //================================
+    // MARK: - Update AccessLog
+    //================================
+    func updateAccessLog(identifier: String, updatedAcclog: AccessLog,
+                         result: @escaping(Result<String, Error>) -> Void) {
         
-        var errorDescription: String? {
-            switch self {
-            case .UnknownFetchFailed:
-                return "Failed to Fetch AccessLog by Unknown Reason"
-            case .IdentifierFetchFailed:
-                return "Failed to Fetch AccessLog by identifier"
-            case .SetFailed:
-                return "Failed to Set AccessLog at Coredata"
-            case .UpdateFailed:
-                return "Failed to Update AccessLog at Coredata"
+        // parameter setting
+        let fetchReq: NSFetchRequest<AccessLogEntity> = AccessLogEntity.fetchRequest()
+        
+        // Request Query
+        fetchReq.predicate = NSPredicate(format: "log_user_id == %@", identifier)
+        fetchReq.fetchLimit = 1
+        
+        do {
+            // Exception Handling: Idnetifier
+            guard let acclogEntity = try self.context.fetch(fetchReq).first else {
+                return result(.failure(AccessLogError.AccLogRetrievalByIdentifierFailed))
             }
+            
+            // Update AccessLog
+            acclogEntity.log_access = updatedAcclog.log_access as NSObject
+            try self.context.save()
+            
+            result(.success("Successfully Set AccessLog"))
+            
+        // Eception Handling: Internal Error
+        } catch {
+            result(.failure(AccessLogError.UnexpectedUpdateError))
+        }
+    }
+}
+
+//===============================
+// MARK: - Exception
+//===============================
+enum AccessLogError: LocalizedError {
+    case AccLogRetrievalByIdentifierFailed
+    case UnexpectedError
+    case UnexpectedSetError
+    case UnexpectedGetError
+    case UnexpectedUpdateError
+    
+    var errorDescription: String?{
+        switch self {
+        case .AccLogRetrievalByIdentifierFailed:
+            return "Coredata: Unable to retrieve 'AccessLog' data using the provided identifier."
+        case .UnexpectedError:
+            return "Coredata: There was an unexpected error about 'AccessLog'"
+        case .UnexpectedSetError:
+            return "Coredata: There was an unexpected error while Set 'AccessLog' details"
+        case .UnexpectedGetError:
+            return "Coredata: There was an unexpected error while Get 'AccessLog' details"
+        case .UnexpectedUpdateError:
+            return "Coredata: There was an unexpected error while Update 'AccessLog' details"
         }
     }
 }

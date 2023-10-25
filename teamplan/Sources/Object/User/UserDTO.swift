@@ -9,6 +9,34 @@
 import Foundation
 
 //============================
+// MARK: After Auth
+//============================
+struct UserDTO{
+    // id
+    let user_id: String
+    
+    // content
+    let user_email: String
+    let user_name: String
+    
+    // status:
+    let user_social_type: Providers
+    let user_status: UserStatus
+    
+    // maintenance:
+    let user_updated_at: Date
+    
+    init(userObject: UserObject){
+        self.user_id = userObject.user_id
+        self.user_email = userObject.user_email
+        self.user_name = userObject.user_name
+        self.user_social_type = Providers(rawValue: userObject.user_social_type) ?? .unknown
+        self.user_status = UserStatus(rawValue: userObject.user_status) ?? .unknown
+        self.user_updated_at = userObject.user_updated_at
+    }
+}
+
+//============================
 // MARK: Signup/SignupLoading
 //============================
 /// Request DTO : View -> Service
@@ -37,7 +65,7 @@ struct UserSignupReqDTO{
     }
 }
 
-struct UserSignupInfoDTO{
+struct UserSignupResDTO{
     // info
     let accountName: String
     let provider: Providers

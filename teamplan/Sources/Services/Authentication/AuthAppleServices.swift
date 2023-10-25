@@ -47,9 +47,9 @@ final class AuthAppleServices{
         
         do{
             let authResult = try await Auth.auth().signIn(with: credential)
-            let userStatus = authResult.additionalUserInfo?.isNewUser == true ? UserStatus.new : UserStatus.exist
+            let userType = authResult.additionalUserInfo?.isNewUser == true ? UserType.new : UserType.exist
             
-            completion(.success(AuthSocialLoginResDTO(loginResult: authResult.user, idToken: idTokenString, status: userStatus)))
+            completion(.success(AuthSocialLoginResDTO(loginResult: authResult.user, idToken: idTokenString, userType: userType)))
         } catch {
             completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unknown error occurred"])))
         }
