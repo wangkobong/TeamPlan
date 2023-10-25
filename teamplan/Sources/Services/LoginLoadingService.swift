@@ -13,6 +13,8 @@ final class LoginLoadingService{
     let util = Utilities()
     let userCD = UserServicesCoredata()
     let userFS = UserServicesFirestore()
+    let statCD = StatisticsServicesCoredata()
+    let statFS = StatisticsServicesFirestore()
     
     //==============================
     // MARK: Core Function
@@ -35,7 +37,25 @@ final class LoginLoadingService{
             }
         }
     }
+    
     // Step2. Get Statistics
+    func getStatistics(identifier: String,
+                       result: @escaping(Result<StatisticsDTO, Error>) -> Void) {
+        
+        // Retrive Statistics by Identifier
+        self.fetchStatistics(identifier: identifier) { response in
+            switch response {
+                
+            // Successfully get Statistics
+            case .success(let statInfo):
+                return result(.success(statInfo))
+                
+            // Exception Handling : UnExpected error while fetching Statistics from Coredata or Firestore
+            case .failure(let error):
+                return result(.failure(error))
+            }
+        }
+    }
     
     // Step3. Get AccessLog
     
@@ -119,3 +139,73 @@ extension LoginLoadingService{
         userCD.setUser(userObject: user, result: result)
     }
 }
+
+//==============================
+// MARK: Get Statistics
+//==============================
+extension LoginLoadingService{
+    
+    // Step1. Fetch Stattistics From Coredata or Firestore
+    private func fetchStatistics(identifier: String,
+                                 result: @escaping(Result<StatisticsDTO, Error>) -> Void) {
+        self.fetchStatFromCoredata(identifier: identifier) { response in
+            switch response {
+                
+            // Successfully get StatInfo from CoreData
+            case .success(let statInfo):
+                return result(.success(StatisticsDTO(statObject: statInfo)))
+                
+            // No StatInfo at CoreData => Jump to Firestore
+            case .failure(let error as StatCDError) where error == .StatRetrievalByIdentifierFailed:
+                self.fetchStatFromFirestore(identifier: identifier, result: result)
+                
+            // ExceptionHandling : Internal Error (Coredata)
+            case .failure(let error):
+                return result(.failure(error))
+            }
+        }
+    }
+    
+    // Step1-1. Get from Coredata
+    private func fetchStatFromCoredata(identifier: String,
+                                       result: @escaping(Result<StatisticsObject, Error>) -> Void) {
+        statCD.getStatistics(identifier: identifier, result: result)
+    }
+    
+    // Step1-2. Get from Firestore
+    private func fetchStatFromFirestore(identifier: String,
+                                        result: @escaping(Result<StatisticsDTO, Error>) -> Void) {
+        
+        statFS.getStatistics(identifier: identifier) { [weak self] fsResponse in
+            switch fsResponse {
+                
+            // Successgully get UserInfo from Firestore
+            case .success(let statInfo):
+                
+                // Set StatInfo to Coredata
+                self?.storeStatToCoredata(statInfo: statInfo) { cdResponse in
+                    switch cdResponse {
+                    case .success(let msg):
+                        print(msg)
+                        return result(.success(StatisticsDTO(statObject: statInfo)))
+                        
+                    // ExceptionHandling : Internal Error (Coredata)
+                    case .failure(let error):
+                        return result(.failure(error))
+                    }
+                }
+                
+            // ExceptionHandling : Failed to Search (Firestore)
+            case .failure(let error):
+                return result(.failure(error))
+            }
+        }
+    }
+    
+    // Step1-3. (Option) Store to Coredata
+    private func storeStatToCoredata(statInfo: StatisticsObject,
+                                     result: @escaping(Result<String, Error>) -> Void) {
+        statCD.setStatistics(reqStat: statInfo, result: result)
+    }
+}
+
