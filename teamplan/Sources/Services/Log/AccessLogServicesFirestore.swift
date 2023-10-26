@@ -63,13 +63,12 @@ final class AccessLogServicesFirestore{
             // Successfully Get AccessLog from Firestore
             case 1:
                 let docs = response.documents.first!
-                if let log = AccessLog(acclogData: docs.data()){
-                    return result(.success(log))
+                guard let log = AccessLog(acclogData: docs.data()) else {
                     
-                // Exception Handling : Failed to fetch AccessLog from Docs
-                } else {
+                    // Exception Handling : Failed to fetch AccessLog from Docs
                     return result(.failure(AcclogFSError.UnexpectedFetchError))
                 }
+                return result(.success(log))
                 
             // Exception Handling : Multiple AccessLog Found
             case let count where count > 1:

@@ -62,13 +62,12 @@ final class StatisticsServicesFirestore{
             // Successfully Get Statistics from Firestore
             case 1:
                 let docs = response.documents.first!
-                if let stat = StatisticsObject(statData: docs.data()) {
-                    return result(.success(stat))
+                guard let stat = StatisticsObject(statData: docs.data()) else {
                     
-                // Exception Handling : Failed to fetch Statistics from Docs
-                } else {
-                    return result(.failure(StatFSError.UnexpectedGetError))
+                    // Exception Handling : Failed to fetch Statistics from Docs
+                    return result(.failure(StatFSError.UnexpectedConvertError))
                 }
+                return result(.success(stat))
                 
             // Exception Handling : Multiple User Found
             case let count where count > 1:
@@ -137,6 +136,7 @@ final class StatisticsServicesFirestore{
 //================================
 enum StatFSError: LocalizedError {
     case UnexpectedGetError
+    case UnexpectedConvertError
     case StatRetrievalByIdentifierFailed
     case MultipleStatFound
     
@@ -144,6 +144,8 @@ enum StatFSError: LocalizedError {
         switch self {
         case .UnexpectedGetError:
             return "Firestore: There was an unexpected error while Get 'Statistics' details"
+        case .UnexpectedConvertError:
+            return "Firestore: There was an unexpected error while Convert 'Statistics' details"
         case .StatRetrievalByIdentifierFailed:
             return "Firestore: Unable to retrieve 'Statistics' data using the provided identifier."
         case .MultipleStatFound:

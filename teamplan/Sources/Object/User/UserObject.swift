@@ -30,7 +30,6 @@ struct UserObject{
     var user_updated_at: Date
     
     
-    
     // Constructor
     // : SignupService
     init(newUser: UserSignupReqDTO, signupDate: Date) {
@@ -59,18 +58,21 @@ struct UserObject{
     }
     
     // : Get Firestore
-    init?(userData: [String : Any], docsId: String){
+    init?(userData: [String : Any], docsId: String) {
         guard let user_id = userData["user_id"] as? String,
               let user_email = userData["user_email"] as? String,
               let user_name = userData["user_name"] as? String,
               let user_social_type = userData["user_social_type"] as? String,
               let user_status = userData["user_status"] as? String,
-              let user_created_at = userData["user_created_at"] as? Date,
-              let user_login_at = userData["user_login_at"] as? Date,
-              let user_updated_at = userData["user_updated_at"] as? Date
+              let user_created_at = userData["user_created_at"] as? String,
+              let user_login_at = userData["user_login_at"] as? String,
+              let user_updated_at = userData["user_updated_at"] as? String
         else {
             return nil
         }
+        // Date Converter
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
         
         // Assigning values
         self.user_id = user_id
@@ -79,9 +81,9 @@ struct UserObject{
         self.user_name = user_name
         self.user_social_type = user_social_type
         self.user_status = user_status
-        self.user_created_at = user_created_at
-        self.user_login_at = user_login_at
-        self.user_updated_at = user_updated_at
+        self.user_created_at = formatter.date(from: user_created_at)!
+        self.user_login_at = formatter.date(from: user_login_at)!
+        self.user_updated_at = formatter.date(from: user_updated_at)!
     }
     
     // : Get Dummy
@@ -106,15 +108,18 @@ struct UserObject{
     }
     
     func toDictionary() -> [String: Any] {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
+        
         return [
             "user_id" : self.user_id,
             "user_email" : self.user_email,
             "user_name" : self.user_name,
             "user_social_type" : self.user_social_type,
             "user_status" : self.user_status,
-            "user_created_at" : self.user_created_at,
-            "user_login_at" : self.user_login_at,
-            "user_updated_at" : self.user_updated_at
+            "user_created_at" : formatter.string(from: self.user_created_at),
+            "user_login_at" : formatter.string(from: self.user_login_at),
+            "user_updated_at" : formatter.string(from: self.user_updated_at)
         ]
     }
 }

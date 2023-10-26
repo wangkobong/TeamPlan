@@ -17,18 +17,52 @@ struct ChallengeLog{
     let log_update_at: Date
     
     // constructor
+    // : SignupService
     init(identifier: String, signupDate: Date){
         self.log_user_id = identifier
         self.log_complete = [:]
         self.log_update_at = signupDate
     }
     
-    // func
+    init?(challengeData: [String : Any]) {
+        guard let log_user_id = challengeData["log_user_id"] as? String,
+              let log_complete_string = challengeData["log_complete"] as? [Int : String],
+              let log_update_at_string = challengeData["log_update_at"] as? String
+        else {
+            return nil
+        }
+        // Date Converter
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
+        
+        var log_complete: [Int: Date] = [:]
+        for (key, dateString) in log_complete_string {
+            log_complete[key] = formatter.date(from: dateString)
+        }
+        guard let log_update_at = formatter.date(from: log_update_at_string) else {
+                return nil
+        }
+        
+        // Assigning values
+        self.log_user_id = log_user_id
+        self.log_complete = log_complete
+        self.log_update_at = log_update_at
+    }
+    
+    //============================
+    // MARK: Func
+    //============================
     func toDictionary() -> [String : Any] {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
+        
+        let logCompleteStrings = self.log_complete.mapValues { formatter.string(from: $0) }
+        let logUpdateStrings = formatter.string(from: self.log_update_at)
+        
         return [
             "log_user_id" : self.log_user_id,
-            "log_complete" : self.log_complete,
-            "log_update_at" : self.log_update_at
+            "log_complete" : logCompleteStrings,
+            "log_update_at" : logUpdateStrings
         ]
     }
 }
