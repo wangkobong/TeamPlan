@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import FirebaseFirestore
 
 //============================
 // MARK: Entity
@@ -32,24 +33,38 @@ struct AccessLog{
     }
     
     // : Get (Firestore)
-    init?(acclogData: [String : Any]){
+    init?(acclogData: [String : Any]) {
         guard let log_user_id = acclogData["log_user_id"] as? String,
-              let log_access = acclogData["log_access"] as? [Date]
+              let log_access_string = acclogData["log_access"] as? [String]
         else {
             return nil
         }
+        // Date Converter
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
+        
+        let logDates = log_access_string.compactMap { formatter.date(from: $0) }
+        guard logDates.count == log_access_string.count else {
+            return nil
+        }
+        
         // Assigning values
         self.log_user_id = log_user_id
-        self.log_access = log_access
+        self.log_access = logDates
     }
     
     //============================
     // MARK: Func
     //============================
     func toDictionary() -> [String : Any] {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
+        
+        let logStrings = self.log_access.map { formatter.string(from: $0) }
+        
         return [
             "log_user_id" : self.log_user_id,
-            "log_access" : self.log_access
+            "log_access" : logStrings
         ]
     }
 }

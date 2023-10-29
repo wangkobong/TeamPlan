@@ -95,10 +95,13 @@ struct StatisticsObject{
               let stat_todo_reg = statData["stat_todo_reg"] as? Int,
               let stat_chlg_step = statData["stat_chlg_step"] as? [[Int : Int]],
               let stat_mychlg = statData["stat_mychlg"] as? [Int : Int],
-              let stat_upload_at = statData["stat_upload_at"] as? Date
+              let stat_upload_at = statData["stat_upload_at"] as? String
         else {
             return nil
         }
+        // Date Converter
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
         
         // Assigning values
         self.stat_user_id = stat_user_id
@@ -111,13 +114,16 @@ struct StatisticsObject{
         self.stat_todo_reg = stat_todo_reg
         self.stat_chlg_step = stat_chlg_step
         self.stat_mychlg = stat_mychlg
-        self.stat_upload_at = stat_upload_at
+        self.stat_upload_at = formatter.date(from: stat_upload_at)!
     }
     
     //============================
     // MARK: Func
     //============================
     func toDictionary() -> [String : Any] {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
+        
         return [
             "stat_user_id": self.stat_user_id,
             "stat_term": self.stat_term,
@@ -129,7 +135,7 @@ struct StatisticsObject{
             "stat_todo_reg": self.stat_todo_reg,
             "stat_chlg_step": self.stat_chlg_step,
             "stat_mychlg": self.stat_mychlg,
-            "stat_upload_at": self.stat_upload_at
+            "stat_upload_at": formatter.string(from: self.stat_upload_at)
         ]
     }
 }
