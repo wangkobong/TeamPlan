@@ -71,4 +71,15 @@ final class Utilities {
             return false
         }
     }
+    
+    //============================
+    // MARK: Updated Field Check
+    //============================
+    func updateFieldIfNeeded<T: Equatable>(_ currentValue: inout T, newValue: T) -> Bool {
+        if currentValue != newValue {
+            currentValue = newValue
+            return true
+        }
+        return false
+    }
 }

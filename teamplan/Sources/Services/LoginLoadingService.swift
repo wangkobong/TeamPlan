@@ -169,7 +169,7 @@ extension LoginLoadingService{
                 return result(.success(UserDTO(userObject: userInfo)))
                 
                 // No userInfo at CoreData => Jump to Firestore
-            case .failure(let error as UserServiceCDError) where error == .UserRetrievalByIdentifierFailed:
+            case .failure(let error as UserCDError) where error == .UserRetrievalByIdentifierFailed:
                 self?.fetchUserFromFirestore(identifier: identifier, result: result)
                 
                 // ExceptionHandling : Internal Error (Coredata)
