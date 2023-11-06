@@ -34,14 +34,8 @@ final class HomeViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
+    @MainActor
     private func getUser() async {
-        homeService.getUser { result in
-            switch result {
-            case .success(let user):
-                self.userName = user
-            case .failure(let error):
-                print(error.localizedDescription)
-            }
-        }
+
     }
 }

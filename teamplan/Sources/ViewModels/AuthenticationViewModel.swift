@@ -36,23 +36,13 @@ final class AuthenticationViewModel: ObservableObject{
                     switch user.status {
                     case .exist:
                         print("########### Exist User ###########")
-//                        self.loginLoadingService.getUser(authResult: user) { result in
-//                            switch result {
-//                            case .success(let loginedUser):
-//                                print(loginedUser)
-//                            case .failure(let error):
-//                                print(error.localizedDescription)
-//                            }
-//                        }
-                        
-                        DispatchQueue.main.async {
-                            self.signupUser = user
-                        }
+
 
                     case .new:
                         print("########### New User ###########")
-
-
+                        DispatchQueue.main.async {
+                            self.signupUser = user
+                        }
                     case .unknown:
                         print("########### UNKNOWN ###########")
                     }

@@ -69,18 +69,8 @@ struct SignupView: View {
                 }
                 
                 Spacer()
-                NavigationLink(
-                    destination: HomeView().defaultNavigationMFormatting(),
-                     isActive: $showHome) {
-                          Text("")
-                               .hidden()
-                               .frame(height: 0)
-                 }
                 
                 bottomButton
-                
-
-                
 
             }
             .toolbar {

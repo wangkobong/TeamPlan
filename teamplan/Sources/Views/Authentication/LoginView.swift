@@ -9,8 +9,8 @@ import SwiftUI
 import GoogleSignInSwift
 import AuthenticationServices
 
-enum LoginCase {
-    case tryLogin
+enum LoginViewState {
+    case login
     case toHome
     case toSignup
 }
@@ -22,7 +22,7 @@ struct LoginView: View {
     @State private var showSignUpView: Bool = false
     @State private var isLoading: Bool = false
     @State private var isLogin: Bool = false
-    @State private var viewState: LoginCase = .tryLogin
+    @State private var viewState: LoginViewState = .login
 
     @ObservedObject var vm = GoogleSignInButtonViewModel()
     @EnvironmentObject var authViewModel: AuthenticationViewModel
@@ -34,22 +34,16 @@ struct LoginView: View {
             LoadingView(isShowing: $isLoading) {
                 ZStack {
                     switch viewState {
-                    case .tryLogin:
-                        VStack {
-                            HStack {
-                                Image("loginView")
-                                    .padding(.trailing, 51)
-                                    .padding(.leading, 16)
-                            }
-                            Spacer()
-                                .frame(height: 100)
-                            
-                            buttons
-                        }
-                        .transition(transition)
-                    case .toHome:
-                        HomeView()
+                    case .login:
+                        loginView
                             .transition(transition)
+                    case .toHome:
+                        if let binding = $authViewModel.signupUser.optionalBinding() {
+                            HomeView(user: binding)
+                                .transition(transition)
+                        } else {
+                            Text("df")
+                        }
                     case .toSignup:
                         SignupView()
                             .transition(transition)
@@ -68,6 +62,20 @@ struct LoginView_Previews: PreviewProvider {
 }
 
 extension LoginView {
+    
+    private var loginView: some View {
+        VStack {
+            HStack {
+                Image("loginView")
+                    .padding(.trailing, 51)
+                    .padding(.leading, 16)
+            }
+            Spacer()
+                .frame(height: 100)
+            
+            buttons
+        }
+    }
     
     private var buttons: some View {
         VStack(spacing: 18) {
@@ -134,7 +142,7 @@ extension LoginView {
                                 switch user.status {
                                 case .exist:
                                     withAnimation(.spring()) {
-                                        viewState = .toSignup
+                                        viewState = .toHome
                                     }
                                 case .new:
                                     withAnimation(.spring()) {

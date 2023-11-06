@@ -28,6 +28,7 @@ struct HomeView: View {
     @State private var isChallengesViewActive = false
     @State private var pageControlCount = 1
     @State private var isLoading = false
+    @Binding var user: AuthSocialLoginResDTO
     
     var body: some View {
         NavigationStack {
@@ -77,11 +78,11 @@ struct HomeView: View {
     }
 }
 
-struct HomeView_Previews: PreviewProvider {
-    static var previews: some View {
-        HomeView()
-    }
-}
+//struct HomeView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        HomeView()
+//    }
+//}
 
 extension HomeView {
     private var navigationArea: some View {
