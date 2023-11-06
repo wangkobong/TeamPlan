@@ -14,38 +14,41 @@ struct LoginView: View {
     @State private var showTermsView: Bool = false
     @State private var showHomeView: Bool = false
     @State private var showUserProfile: Bool = false
+    @State private var isLoading: Bool = false
 
     @ObservedObject var vm = GoogleSignInButtonViewModel()
     @EnvironmentObject var authViewModel: AuthenticationViewModel
     
     var body: some View {
         NavigationView {
-            VStack {
-                NavigationLink(
-                    destination: TermsView().defaultNavigationMFormatting(),
-                     isActive: $showTermsView) {
-                          Text("")
-                               .hidden()
-                     }
-                     .navigationBarBackButtonHidden(true)
-                
-                NavigationLink(
-                    destination: MainTapView().defaultNavigationMFormatting(),
-                     isActive: $showHomeView) {
-                          Text("")
-                               .hidden()
-                     }
-                     .navigationBarBackButtonHidden(true)
-                
-                HStack {
-                    Image("loginView")
-                        .padding(.trailing, 51)
-                        .padding(.leading, 16)
+            LoadingView(isShowing: $isLoading) {
+                VStack {
+                    NavigationLink(
+                        destination: TermsView().defaultNavigationMFormatting(),
+                         isActive: $showTermsView) {
+                              Text("")
+                                   .hidden()
+                         }
+                         .navigationBarBackButtonHidden(true)
+                    
+                    NavigationLink(
+                        destination: MainTapView().defaultNavigationMFormatting(),
+                         isActive: $showHomeView) {
+                              Text("")
+                                   .hidden()
+                         }
+                         .navigationBarBackButtonHidden(true)
+                    
+                    HStack {
+                        Image("loginView")
+                            .padding(.trailing, 51)
+                            .padding(.leading, 16)
+                    }
+                    Spacer()
+                        .frame(height: 100)
+                    
+                    buttons
                 }
-                Spacer()
-                    .frame(height: 100)
-                
-                buttons
             }
         }
     }
@@ -115,24 +118,29 @@ extension LoginView {
             
             GoogleSignInButton(viewModel: GoogleSignInButtonViewModel(scheme: .dark, style: .standard, state: .normal)) {
                 Task {
-                    do {  
+                    do {
+                        isLoading = true
                         await authViewModel.signInGoogle { result in
                             switch result {
                             case .success(let user):
+                                isLoading = false
                                 switch user.status {
                                 case .exist:
                                     showHomeView = true
                                 case .new:
+                                    isLoading = false
                                     showTermsView = true
                                 case .unknown:
+                                    isLoading = false
                                     break
                                 }
+                                
                             case .failure(let error):
                                 print(error.localizedDescription)
+                                isLoading = false
                                 break
                             }
                         }
-     
                     }
                 }
             }

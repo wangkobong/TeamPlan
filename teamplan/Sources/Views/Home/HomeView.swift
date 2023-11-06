@@ -9,7 +9,6 @@
 import SwiftUI
 import KeychainSwift
 
-//테스트커밋
 struct HomeView: View {
     
     private let challengeCards: [ChallengeCardModel] = [
@@ -28,44 +27,47 @@ struct HomeView: View {
     @State private var isGuideViewActive = false
     @State private var isChallengesViewActive = false
     @State private var pageControlCount = 1
+    @State private var isLoading = false
     
     var body: some View {
         NavigationStack {
-            VStack {
-                Spacer()
-                    .frame(height: 21)
-                navigationArea
-                    .padding(.horizontal, 30)
-                    .padding(.bottom, 5)
-                
-                ScrollView {
-                    guideArea
-                    
-                    userNameArea
-                        .padding(.top, 40)
-
-                    if isExistProject {
-                        myProjectCardView
-                            .padding(.horizontal, 16)
-                    } else {
-                        noProjectView
-                            .padding(.horizontal, 16)
-                    }
-                        
-                    pageControl
-                        .padding(.top, 12)
-                    
-                    myChallengeArea
-                        .padding(.top, 20)
-                    
-                    challengeCardsArea
-
+            LoadingView(isShowing: $isLoading) {
+                VStack {
                     Spacer()
-                }
+                        .frame(height: 21)
+                    navigationArea
+                        .padding(.horizontal, 30)
+                        .padding(.bottom, 5)
+                    
+                    ScrollView {
+                        guideArea
+                        
+                        userNameArea
+                            .padding(.top, 40)
 
-            }
-            .fullScreenCover(isPresented: $showingTutorial) {
-                TutorialView()
+                        if isExistProject {
+                            myProjectCardView
+                                .padding(.horizontal, 16)
+                        } else {
+                            noProjectView
+                                .padding(.horizontal, 16)
+                        }
+                            
+                        pageControl
+                            .padding(.top, 12)
+                        
+                        myChallengeArea
+                            .padding(.top, 20)
+                        
+                        challengeCardsArea
+
+                        Spacer()
+                    }
+
+                }
+                .fullScreenCover(isPresented: $showingTutorial) {
+                    TutorialView()
+                }
             }
         }
         .onAppear {
