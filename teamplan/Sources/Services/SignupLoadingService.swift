@@ -33,6 +33,32 @@ final class SignupLoadingService{
         self.newStat = StatisticsObject(identifier: newUser.identifier, signupDate: signupDate)
         self.newAccessLog = AccessLog(identifier: newUser.identifier, signupDate: signupDate)
         self.newChallengeLog = ChallengeLog(identifier: newUser.identifier, signupDate: signupDate)
+        
+        self.setUserFS { fsResult in
+            switch fsResult {
+    
+            case .success(let docsId):
+                self.setUserCD { cdResult in
+                    switch cdResult {
+                    case .success(let success):
+                        self.setStatisticsCD { statisticsFSResult in
+                            switch statisticsFSResult {
+                            case .success(let success):
+                                print("success: \(success)")
+                            case .failure(let error):
+                                print(error.localizedDescription)
+                            }
+                        }
+                    case .failure(let error):
+                        print(error.localizedDescription)
+                    }
+                }
+
+            case .failure(let error):
+                print(error.localizedDescription)
+
+            }
+        }
     }
     
     //===============================
@@ -42,8 +68,9 @@ final class SignupLoadingService{
     func setUserFS(result: @escaping(Result<Bool, Error>) -> Void) {
         userFS.setUser(reqUser: self.newProfile) { fsResult in
             switch fsResult {
-    
+            
             case .success(let docsId):
+                print("newProfile: \(self.newProfile)")
                 self.newProfile.addDocsId(docsId: docsId)
                 return result(.success(true))
                 

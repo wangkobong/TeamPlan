@@ -15,6 +15,7 @@ final class HomeViewModel: ObservableObject {
     @Published var myChallenges: [ChallengeCardResDTO] = []
     
     private let homeService = HomeService(identifier: "")
+    private let loginService = LoginLoadingService()
     private let challengeService = ChallengeService(identifier: "")
     private var cancellables = Set<AnyCancellable>()
     

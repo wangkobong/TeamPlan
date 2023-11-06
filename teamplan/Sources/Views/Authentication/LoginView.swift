@@ -9,46 +9,53 @@ import SwiftUI
 import GoogleSignInSwift
 import AuthenticationServices
 
+enum LoginCase {
+    case tryLogin
+    case toHome
+    case toSignup
+}
+
 struct LoginView: View {
     
     @State private var showTermsView: Bool = false
     @State private var showHomeView: Bool = false
-    @State private var showUserProfile: Bool = false
+    @State private var showSignUpView: Bool = false
     @State private var isLoading: Bool = false
+    @State private var isLogin: Bool = false
+    @State private var viewState: LoginCase = .tryLogin
 
     @ObservedObject var vm = GoogleSignInButtonViewModel()
     @EnvironmentObject var authViewModel: AuthenticationViewModel
     
+    let transition: AnyTransition = .asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading))
+
     var body: some View {
         NavigationView {
             LoadingView(isShowing: $isLoading) {
-                VStack {
-                    NavigationLink(
-                        destination: TermsView().defaultNavigationMFormatting(),
-                         isActive: $showTermsView) {
-                              Text("")
-                                   .hidden()
-                         }
-                         .navigationBarBackButtonHidden(true)
-                    
-                    NavigationLink(
-                        destination: MainTapView().defaultNavigationMFormatting(),
-                         isActive: $showHomeView) {
-                              Text("")
-                                   .hidden()
-                         }
-                         .navigationBarBackButtonHidden(true)
-                    
-                    HStack {
-                        Image("loginView")
-                            .padding(.trailing, 51)
-                            .padding(.leading, 16)
+                ZStack {
+                    switch viewState {
+                    case .tryLogin:
+                        VStack {
+                            HStack {
+                                Image("loginView")
+                                    .padding(.trailing, 51)
+                                    .padding(.leading, 16)
+                            }
+                            Spacer()
+                                .frame(height: 100)
+                            
+                            buttons
+                        }
+                        .transition(transition)
+                    case .toHome:
+                        HomeView()
+                            .transition(transition)
+                    case .toSignup:
+                        SignupView()
+                            .transition(transition)
                     }
-                    Spacer()
-                        .frame(height: 100)
-                    
-                    buttons
                 }
+                
             }
         }
     }
@@ -126,15 +133,16 @@ extension LoginView {
                                 isLoading = false
                                 switch user.status {
                                 case .exist:
-                                    showHomeView = true
+                                    withAnimation(.spring()) {
+                                        viewState = .toSignup
+                                    }
                                 case .new:
-                                    isLoading = false
-                                    showTermsView = true
+                                    withAnimation(.spring()) {
+                                        viewState = .toSignup
+                                    }
                                 case .unknown:
-                                    isLoading = false
                                     break
                                 }
-                                
                             case .failure(let error):
                                 print(error.localizedDescription)
                                 isLoading = false
