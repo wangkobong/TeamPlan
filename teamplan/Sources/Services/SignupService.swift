@@ -22,23 +22,19 @@ final class SignupService{
                         result: @escaping(Result<UserSignupResDTO, Error>) -> Void) {
         
         // extract AccountName from SocialLogin Result
-        util.getAccountName(userEmail: newUser.email){ getAccResult in
-            switch getAccResult {
-            case .success(let accName):
-                
-                // create identifier
-                let identifier = "\(accName)_\(newUser.provider.rawValue)"
-                
-                // set basic profile info for signup
-                self.userInfo = UserSignupReqDTO(identifier: identifier, email: newUser.email, provider: newUser.provider)
-                
-                // return UserInfo that require SignupView
-                return result(.success(UserSignupResDTO(accountName: accName, provider: newUser.provider)))
-                
-            // Exception Handling: Invalid Email Format
-            case .failure(let error):
-                return result(.failure(error))
-            }
+        let accName = util.getAccountName(userEmail: newUser.email)
+        
+        if accName == "" {
+            return result(.failure(EmailError.invalidEmailFormat))
+        } else {
+            // create identifier
+            let identifier = "\(accName)_\(newUser.provider.rawValue)"
+            
+            // set basic profile info for signup
+            self.userInfo = UserSignupReqDTO(identifier: identifier, email: newUser.email, provider: newUser.provider)
+            
+            // return UserInfo that require SignupView
+            return result(.success(UserSignupResDTO(accountName: accName, provider: newUser.provider)))
         }
     }
     

@@ -38,12 +38,8 @@ struct LoginView: View {
                         loginView
                             .transition(transition)
                     case .toHome:
-                        if let binding = $authViewModel.signupUser.optionalBinding() {
-                            HomeView(user: binding)
-                                .transition(transition)
-                        } else {
-                            Text("df")
-                        }
+                        HomeView()
+                            .transition(transition)
                     case .toSignup:
                         SignupView()
                             .transition(transition)

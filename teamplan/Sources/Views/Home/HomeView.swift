@@ -28,7 +28,6 @@ struct HomeView: View {
     @State private var isChallengesViewActive = false
     @State private var pageControlCount = 1
     @State private var isLoading = false
-    @Binding var user: AuthSocialLoginResDTO
     
     var body: some View {
         NavigationStack {

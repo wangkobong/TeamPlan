@@ -36,15 +36,24 @@ final class SignupLoadingService{
         
         self.setUserFS { fsResult in
             switch fsResult {
-    
-            case .success(let docsId):
+            case .success(let fsResult):
+                print("fsResult: \(fsResult)")
                 self.setUserCD { cdResult in
                     switch cdResult {
-                    case .success(let success):
-                        self.setStatisticsCD { statisticsFSResult in
-                            switch statisticsFSResult {
-                            case .success(let success):
-                                print("success: \(success)")
+                    case .success(let cdResultResult):
+                        print("cdResultResult: \(cdResultResult)")
+                        self.setStatisticsFS { result in
+                            switch result {
+                            case .success(let statisticsFSResult):
+                                print("statisticsFSResult: \(statisticsFSResult)")
+                                self.setStatisticsCD { result in
+                                    switch result {
+                                    case .success(let statisticsCDResult):
+                                        print("statisticsCDResult: \(statisticsCDResult)")
+                                    case .failure(let error):
+                                        print(error.localizedDescription)
+                                    }
+                                }
                             case .failure(let error):
                                 print(error.localizedDescription)
                             }

@@ -15,6 +15,7 @@ final class AuthenticationViewModel: ObservableObject{
     // Parameter
     //====================
     let loginService = LoginService()
+    let util = Utilities()
     lazy var loginLoadingService = LoginLoadingService()
     
     @Published var nickName: String = ""
@@ -36,6 +37,37 @@ final class AuthenticationViewModel: ObservableObject{
                     switch user.status {
                     case .exist:
                         print("########### Exist User ###########")
+                        DispatchQueue.main.async {
+                            self.loginLoadingService.getUser(authResult: user) { result in
+                                switch result {
+                                case .success(let loginUser):
+                                    print("loginUser: \(loginUser)")
+                                    let accountName = self.util.getAccountName(userEmail: loginUser.user_email)
+                                    let identifier = "\(accountName)_\(loginUser.user_social_type.rawValue)"
+                                    self.loginLoadingService.getStatistics(identifier: identifier) { result in
+                                        switch result {
+                                        case .success(let statistics):
+                                            print("statistics: \(statistics)")
+//                                            self.loginLoadingService.getAccessLog(identifier: identifier) { result in
+//                                                switch result {
+//                                                case .success(let accessLog):
+//                                                    print("accessLog: \(accessLog)")
+//                                                case .failure(let error):
+//                                                    print(error.localizedDescription)
+//                                                }
+//                                            }
+                                        case .failure(let error):
+                                            print(error.localizedDescription)
+                                        }
+                                    }
+                                case .failure(let error):
+                                    print(error.localizedDescription)
+                                }
+                            }
+
+                            
+                            
+                        }
 
 
                     case .new:
@@ -46,13 +78,7 @@ final class AuthenticationViewModel: ObservableObject{
                     case .unknown:
                         print("########### UNKNOWN ###########")
                     }
-                    
-                    print(user.provider)
-                    print(user.email)
-                    print(user.status)
                     completion(.success(user))
-                    print("idToken: \(user.idToken)")
-                    print("accessToken: \(user.accessToken)")
                     let keychain = KeychainSwift()
                     keychain.set(user.idToken, forKey: "idToken")
                     keychain.set(user.accessToken, forKey: "accessToken")
