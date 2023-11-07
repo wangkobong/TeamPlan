@@ -147,10 +147,11 @@ struct UserObject{
 // MARK: Enum
 //============================
 enum UserStatus: String{
-    case active = "Normal: Active User"
-    case dormant = "Noraml: Dormant User"
-    case unknown = "Caution: Unknown User"
-    case unStable = "Caution: Unstable User"
+    case active = "Active"
+    case dormant = "Dormant"
+    case unknown = "Unknown"
+    case unStableCD = "FailedToSetCoredata"
+    case unStableFS = "FailedToSetFirestore"
 }
 
 enum Providers: String{

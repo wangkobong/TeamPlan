@@ -26,6 +26,7 @@ struct UserDTO{
     // maintenance:
     let user_updated_at: Date
     
+    // Signup
     init(userObject: UserObject){
         self.user_id = userObject.user_id
         self.user_email = userObject.user_email
