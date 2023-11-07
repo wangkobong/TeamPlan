@@ -24,38 +24,41 @@ final class UserServicesCoredata{
     // MARK: - Set User
     //================================
     //##### Async/Await #####
-    func setUser(reqUser: UserObject) async throws -> String {
+    func setUser(reqUser: UserObject) async throws {
         
         // Create New UserEntity
-        let userEntity = UserEntity(context: context)
+        let userEntity = setUserEntity(from: reqUser)
         
-        userEntity.user_id = reqUser.user_id
-        userEntity.user_fb_id = reqUser.user_fb_id
-        userEntity.user_email = reqUser.user_email
-        userEntity.user_name = reqUser.user_name
-        userEntity.user_social_type = reqUser.user_social_type
-        userEntity.user_status = reqUser.user_status
-        userEntity.user_created_at = reqUser.user_created_at
-        userEntity.user_login_at = reqUser.user_login_at
-        userEntity.user_updated_at = reqUser.user_updated_at
-        
-        // Add User
+        // Set User
         do{
             try context.save()
-            return "Successfully set User Data at CoreData"
         } catch {
-            print(error)
+            print("(CoreData) Error Set User : \(error)")
             throw UserCDError.UnexpectedSetError
         }
     }
     
     //##### Result #####
-    func setUser(userObject: UserObject,
+    func setUser(reqUser: UserObject,
                          result: @escaping(Result<String, Error>) -> Void) {
         
         // Create New UserEntity
-        let user = UserEntity(context: context)
+        let userEntity = setUserEntity(from: reqUser)
         
+        // Set User
+        do{
+            try context.save()
+            return result(.success("Successfully set User Data at CoreData"))
+        } catch {
+            print("(CoreData) Error Set User : \(error)")
+            return result(.failure(UserCDError.UnexpectedSetError))
+        }
+    }
+    
+    // Support Function
+    private func setUserEntity(from userObject: UserObject) -> UserEntity {
+        let user = UserEntity(context: context)
+
         user.user_id = userObject.user_id
         user.user_fb_id = userObject.user_fb_id
         user.user_email = userObject.user_email
@@ -66,13 +69,7 @@ final class UserServicesCoredata{
         user.user_login_at = userObject.user_login_at
         user.user_updated_at = userObject.user_updated_at
         
-        do{
-            try context.save()
-            return result(.success("Successfully set User Data at CoreData"))
-        } catch {
-            print(error)
-            return result(.failure(UserCDError.UnexpectedSetError))
-        }
+        return user
     }
     
     //================================
@@ -89,19 +86,21 @@ final class UserServicesCoredata{
         fetchReq.predicate = NSPredicate(format: "user_id == %@", identifier)
         fetchReq.fetchLimit = 1
         
+        // Search User
         do{
-            // Exception Handling: Identifier
             guard let userEntity = try context.fetch(fetchReq).first else {
+                // Exception Handling: Identifier
                 return result(.failure(UserCDError.UserRetrievalByIdentifierFailed))
             }
             guard let userData = UserObject(userEntity: userEntity) else {
+                // Exception Handling: Fetch Error
                 return result(.failure(UserCDError.UnexpectedFetchError))
             }
             return result(.success(userData))
             
-        // Eception Handling: Internal Error (Coredata)
+        // Exception Handling: Internal Error (Coredata)
         } catch {
-            print(error)
+            print("(CoreData) Error Get User : \(error)")
             return result(.failure(UserCDError.UnexpectedGetError))
         }
     }
@@ -143,7 +142,7 @@ final class UserServicesCoredata{
             
         } catch {
             // Eception Handling: Internal Error (Coredata)
-            print(error)
+            print("(CoreData) Error Update User : \(error)")
             throw UserCDError.UnexpectedUpdateError
         }
     }
@@ -173,7 +172,7 @@ final class UserServicesCoredata{
             try self.context.save()
             
         } catch {
-            print(error)
+            print("(CoreData) Error Delete User : \(error)")
             throw UserCDError.UnexpectedDeleteError
         }
     }

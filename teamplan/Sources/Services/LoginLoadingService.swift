@@ -218,7 +218,7 @@ extension LoginLoadingService{
     // Step1-3. (Option) Store to Coredata
     private func storeUserToCoredata(user: UserObject,
                                      result: @escaping(Result<String, Error>) -> Void) {
-        userCD.setUser(userObject: user, result: result)
+        userCD.setUser(reqUser: user, result: result)
     }
 }
 
@@ -370,7 +370,7 @@ extension LoginLoadingService{
                            result: @escaping(Result<String, Error>) -> Void) {
             
         // Step1. Update Coredata
-        self.updateStatToCoredata(identifier: identifier, updatedStatInfo: updatedStat) { cdResponse in
+        self.updateStatToCoredata(identifier: identifier, updatedStat: updatedStat) { cdResponse in
             switch cdResponse {
             case .success(let msg):
                 print(msg)
@@ -378,7 +378,7 @@ extension LoginLoadingService{
                 // Step2. (Option) Update Firestore
                 // If the Coredata update was successful and the stat_term is a multiple of 7, then update Firestore
                 if updatedStat.stat_term % 7 == 0 {
-                    self.updateStatToFirestore(identifier: identifier, updatedStatInfo: updatedStat, result: result)
+                    self.updateStatToFirestore(identifier: identifier, updatedStat: updatedStat, result: result)
                 } else {
                     result(.success("Successfully updated Coredata only."))
                 }
@@ -390,14 +390,15 @@ extension LoginLoadingService{
         }
     }
     
-    private func updateStatToCoredata(identifier: String, updatedStatInfo: StatisticsDTO,
+    private func updateStatToCoredata(identifier: String, updatedStat: StatisticsDTO,
                                       result: @escaping(Result<String, Error>) -> Void) {
-        statCD.updateStatistics(identifier: identifier, updatedStatInfo: updatedStatInfo, result: result)
+        
+        statCD.updateStatistics(identifier: identifier, updatedStat: updatedStat, result: result)
     }
     
-    private func updateStatToFirestore(identifier: String, updatedStatInfo: StatisticsDTO,
+    private func updateStatToFirestore(identifier: String, updatedStat: StatisticsDTO,
                                        result: @escaping(Result<String, Error>) -> Void) {
-        statFS.updateStatistics(identifier: identifier, updatedStatInfo: updatedStatInfo, result: result)
+        statFS.updateStatistics(identifier: identifier, updatedStat: updatedStat, result: result)
     }
 }
 

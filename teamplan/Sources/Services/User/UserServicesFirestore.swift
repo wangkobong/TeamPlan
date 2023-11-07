@@ -28,7 +28,7 @@ final class UserServicesFirestore{
         let collectionRef = fs.collection("User")
         
         do {
-            // Add User
+            // Set User
             let docsRef = try await collectionRef.addDocument(data: reqUser.toDictionary())
             
             // Successfully add User and Return DocsID
@@ -36,7 +36,7 @@ final class UserServicesFirestore{
             
         } catch {
             // Exception Handling: Internal Error (Firestore)
-            print("Error Set user: \(error)")
+            print("(Firestore) Error Set User : \(error)")
             throw UserFSError.UnexpectedSetError
         }
     }
@@ -47,13 +47,13 @@ final class UserServicesFirestore{
         // Target Table
         let collectionRef = fs.collection("User")
         
-        // Add User
+        // Set User
         var docsRef: DocumentReference? = nil
         docsRef = collectionRef.addDocument(data: reqUser.toDictionary()){ error in
             
             // Exception Handling: Firestore
             if let error = error {
-                print("Error Set user: \(error)")
+                print("(Firestore) Error Set User : \(error)")
                 result(.failure(error))
                 
             // Return Firestore DocumnetID
@@ -97,7 +97,7 @@ final class UserServicesFirestore{
                 }
             }
             
-            // Convert UserData to Object
+            // Convert DocsData to Object
             let docs = response.documents.first!
             guard let user = UserObject(userData: docs.data(), docsId: docs.documentID) else {
                 
@@ -145,11 +145,11 @@ final class UserServicesFirestore{
             isUpdated = util.updateFieldIfNeeded(&userEntity.user_login_at, newValue: updatedUser.user_login_at) || isUpdated
             isUpdated = util.updateFieldIfNeeded(&userEntity.user_updated_at, newValue: updatedUser.user_updated_at) || isUpdated
             
-            // Update Firestore
+            // Update User
             try await docs.reference.setData(userEntity.toDictionary())
             
         } catch {
-            print("Error Update user: \(error)")
+            print("(Firestore) Error Update User : \(error)")
             throw UserFSError.UnexpectedUpdateError
         }
     }
@@ -182,7 +182,7 @@ final class UserServicesFirestore{
             // Delete User
             try await docs.reference.delete()
         } catch {
-            print("Error Delete user: \(error)")
+            print("(Firestore) Error Delete User : \(error)")
             throw UserFSError.UnexpectedDeleteError
         }
     }

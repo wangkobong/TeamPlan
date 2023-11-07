@@ -8,26 +8,48 @@
 
 import Foundation
 import FirebaseFirestore
+import FirebaseFirestoreSwift
 
 final class StatisticsServicesFirestore{
     
-    // Firestore setting
+    //================================
+    // MARK: - Parameter Setting
+    //================================
+    let util = Utilities()
     let fs = Firestore.firestore()
     
     //================================
     // MARK: - Set Statistics
     //================================
+    //##### Async/Await #####
+    func setStatistics(reqStat : StatisticsObject) async throws {
+        
+        // Target Table
+        let collectionRef = fs.collection("Stat")
+        
+        do {
+            // Set User
+            try await collectionRef.addDocument(data: reqStat.toDictionary())
+            
+        } catch {
+            print("(Firestore) Error Set Statistics : \(error)")
+            throw UserFSError.UnexpectedSetError
+        }
+    }
+    
+    //##### Result #####
     func setStatistics(reqStat: StatisticsObject,
                          result: @escaping(Result<String, Error>) -> Void) {
         
         // Target Table
         let collectionRef = fs.collection("Stat")
         
-        // Add Statistics
+        // Set Statistics
         collectionRef.addDocument(data: reqStat.toDictionary()){ error in
             
             // Exception Handling: Internal Error (FirestoreServer)
             if let error = error {
+                print("(Firestore) Error Set Statistics : \(error)")
                 result(.failure(error))
             } else {
                 result(.success("Successfully set Statistics at Firestore"))
@@ -38,6 +60,7 @@ final class StatisticsServicesFirestore{
     //================================
     // MARK: - Get Statistics
     //================================
+    //##### Result #####
     func getStatistics(identifier: String,
                        result: @escaping(Result<StatisticsObject, Error>) -> Void) {
         
@@ -52,41 +75,37 @@ final class StatisticsServicesFirestore{
                 return result(.failure(error))
             }
             
-            // Exception Handling : Docs Search Falied by Input Identifier
+            // Exception Handling : Identifier
             guard let response = snapShot else {
                 return result(.failure(StatFSError.StatRetrievalByIdentifierFailed))
             }
             
-            switch response.documents.count {
-                
-            // Successfully Get Statistics from Firestore
-            case 1:
-                let docs = response.documents.first!
-                guard let stat = StatisticsObject(statData: docs.data()) else {
-                    
-                    // Exception Handling : Failed to fetch Statistics from Docs
-                    return result(.failure(StatFSError.UnexpectedConvertError))
+            // Exception Handling : Search Error
+            guard response.documents.count == 1 else {
+                if response.documents.count > 1 {
+                    return result(.failure(StatFSError.MultipleStatFound))
+                } else {
+                    return result(.failure(StatFSError.InternalError))
                 }
-                return result(.success(stat))
-                
-            // Exception Handling : Multiple User Found
-            case let count where count > 1:
-                return result(.failure(StatFSError.MultipleStatFound))
-                
-            // Exception Handling : Internal Error (FetchDocument)
-            default:
-                return result(.failure(FirestoreErrorCode.internal as! Error))
             }
+            
+            // Convert DocsData to Object
+            let docs = response.documents.first!
+            guard let stat = StatisticsObject(statData: docs.data()) else {
+                
+                // Exception Handling : Convert Error
+                return result(.failure(StatFSError.UnexpectedConvertError))
+            }
+            return result(.success(stat))
         }
     }
     
     //================================
     // MARK: - Update Statistics
     //================================
-    func updateStatistics(identifier: String, updatedStatInfo: StatisticsDTO,
+    //##### Result #####
+    func updateStatistics(identifier: String, updatedStat: StatisticsDTO,
                           result: @escaping(Result<String, Error>) -> Void) {
-        
-        let updatedData = StatisticsObject(updatedStat: updatedStatInfo)
         
         // Target Table
         let collectionRef = fs.collection("Stat")
@@ -104,29 +123,77 @@ final class StatisticsServicesFirestore{
                 return result(.failure(StatFSError.StatRetrievalByIdentifierFailed))
             }
             
-            switch response.documents.count {
-                
-            // Successfully Get Statistics from Firestore
-            case 1:
-                let docs = response.documents.first!
-                
-                // Update Statistics
-                docs.reference.setData(updatedData.toDictionary()) { error in
-                    if let error = error {
-                        return result(.failure(error))
-                    } else {
-                        return result(.success("Successfully Update Statistics"))
-                    }
+            // Exception Handling: Search Error
+            guard response.documents.count == 1 else {
+                if response.documents.count > 1 {
+                    return result(.failure(StatFSError.MultipleStatFound))
+                } else {
+                    return result(.failure(StatFSError.InternalError))
                 }
-                
-            // Exception Handling : Multiple User Found
-            case let count where count > 1:
-                return result(.failure(StatFSError.MultipleStatFound))
-                
-            // Exception Handling : Internal Error (FetchDocument)
-            default:
-                return result(.failure(FirestoreErrorCode.internal as! Error))
             }
+            
+            // Get Entity
+            guard let docs = response.documents.first,
+                  var statEntity = StatisticsObject(statData: docs.data()) else {
+                return result(.failure(StatFSError.UnexpectedConvertError))
+            }
+            
+            // Updated field Check
+            var isUpdated = false
+            isUpdated = self.util.updateFieldIfNeeded(&statEntity.stat_term, newValue: updatedStat.stat_term) || isUpdated
+            isUpdated = self.util.updateFieldIfNeeded(&statEntity.stat_drop, newValue: updatedStat.stat_drop) || isUpdated
+            isUpdated = self.util.updateFieldIfNeeded(&statEntity.stat_proj_reg, newValue: updatedStat.stat_proj_reg) || isUpdated
+            isUpdated = self.util.updateFieldIfNeeded(&statEntity.stat_proj_fin, newValue: updatedStat.stat_proj_fin) || isUpdated
+            isUpdated = self.util.updateFieldIfNeeded(&statEntity.stat_proj_alert, newValue: updatedStat.stat_proj_alert) || isUpdated
+            isUpdated = self.util.updateFieldIfNeeded(&statEntity.stat_proj_ext, newValue: updatedStat.stat_proj_ext) || isUpdated
+            isUpdated = self.util.updateFieldIfNeeded(&statEntity.stat_todo_reg, newValue: updatedStat.stat_todo_reg) || isUpdated
+            isUpdated = self.util.updateFieldIfNeeded(&statEntity.stat_chlg_step, newValue: updatedStat.stat_chlg_step) || isUpdated
+            isUpdated = self.util.updateFieldIfNeeded(&statEntity.stat_mychlg, newValue: updatedStat.stat_mychlg) || isUpdated
+            isUpdated = self.util.updateFieldIfNeeded(&statEntity.stat_upload_at, newValue: updatedStat.stat_upload_at) || isUpdated
+            
+            // Update Statistics
+            docs.reference.setData(statEntity.toDictionary()) { error in
+                if let error = error {
+                    print("(Firestore) Error Update Statistics : \(error)")
+                    return result(.failure(error))
+                } else {
+                    return result(.success("Successfully Update Statistics"))
+                }
+            }
+        }
+    }
+    
+    //================================
+    // MARK: - Delete Statistics
+    //================================
+    //##### Async/Await #####
+    func deleteStatistics(identifier: String) async throws {
+        
+        // Target Table
+        let collectionRef = fs.collection("Stat")
+        
+        do {
+            let response = try await collectionRef.whereField("stat_user_id", isEqualTo: identifier).getDocuments()
+        
+            // Exception Handling : Search Error
+            guard response.documents.count == 1 else {
+                if response.documents.count > 1 {
+                    throw StatFSError.MultipleStatFound
+                } else {
+                    throw StatFSError.StatRetrievalByIdentifierFailed
+                }
+            }
+            // Fetch Document
+            guard let docs = response.documents.first else {
+                throw StatFSError.UnexpectedFetchError
+            }
+            
+            // Delete Statistics
+            try await docs.reference.delete()
+            
+        } catch {
+            print("(Firestore) Error Delete Statistics : \(error)")
+            throw StatFSError.InternalError
         }
     }
 }
@@ -135,21 +202,36 @@ final class StatisticsServicesFirestore{
 // MARK: - Exception
 //================================
 enum StatFSError: LocalizedError {
+    case UnexpectedSetError
     case UnexpectedGetError
+    case UnexpectedUpdateError
+    case UnexpectedDeleteError
     case UnexpectedConvertError
+    case UnexpectedFetchError
     case StatRetrievalByIdentifierFailed
     case MultipleStatFound
+    case InternalError
     
     var errorDescription: String? {
         switch self {
         case .UnexpectedGetError:
             return "Firestore: There was an unexpected error while Get 'Statistics' details"
+        case .UnexpectedSetError:
+            return "Firestore: There was an unexpected error while Set 'Statistics' details"
+        case .UnexpectedUpdateError:
+            return "Firestore: There was an unexpected error while Update 'Statistics' details"
+        case .UnexpectedDeleteError:
+            return "Firestore: There was an unexpected error while Delete 'Statistics' details"
         case .UnexpectedConvertError:
             return "Firestore: There was an unexpected error while Convert 'Statistics' details"
+        case .UnexpectedFetchError:
+            return "Firestore: There was an unexpected error while Fetch 'Statistics' details"
         case .StatRetrievalByIdentifierFailed:
             return "Firestore: Unable to retrieve 'Statistics' data using the provided identifier."
         case .MultipleStatFound:
             return "Firestore: Multiple 'Statistics' found. Expected only one."
+        case .InternalError:
+            return "Firestore: Internal Error Occurred while process 'Statistics' details"
         }
     }
 }

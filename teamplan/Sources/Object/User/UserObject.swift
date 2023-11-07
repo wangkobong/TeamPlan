@@ -46,7 +46,7 @@ struct UserObject{
         self.user_updated_at = signupDate
     }
     
-    // : Get Coredata
+    // : (Coredata) Get
     init?(userEntity: UserEntity) {
         guard let user_id = userEntity.user_id,
                 let user_email = userEntity.user_email,
@@ -72,7 +72,7 @@ struct UserObject{
         self.user_updated_at = user_updated_at
     }
     
-    // : Get Firestore
+    // : (Firestore) Get
     init?(userData: [String : Any], docsId: String) {
         guard let user_id = userData["user_id"] as? String,
               let user_email = userData["user_email"] as? String,
@@ -101,7 +101,7 @@ struct UserObject{
         self.user_updated_at = formatter.date(from: user_updated_at)!
     }
     
-    // : Get Dummy
+    // : (Dummy) Get
     init(user_id: String, user_fb_id: String, user_email: String, user_name: String, user_social_type: String, user_status: UserStatus, user_created_at: Date, user_login_at: Date, user_updated_at: Date) {
         self.user_id = user_id
         self.user_fb_id = user_fb_id
@@ -150,7 +150,7 @@ enum UserStatus: String{
     case active = "Normal: Active User"
     case dormant = "Noraml: Dormant User"
     case unknown = "Caution: Unknown User"
-    case unStable = "Caution: UserData has not been completely saved to the repository"
+    case unStable = "Caution: Unstable User"
 }
 
 enum Providers: String{

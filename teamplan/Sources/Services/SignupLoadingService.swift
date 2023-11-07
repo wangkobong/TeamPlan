@@ -56,7 +56,7 @@ final class SignupLoadingService{
     
     // : Coredata
     func setUserCD(result: @escaping(Result<Bool, Error>) -> Void) {
-        userCD.setUser(userObject: self.newProfile) { cdResult in
+        userCD.setUser(reqUser: newProfile) { cdResult in
             self.handleServiceResult(cdResult, with: result)
         }
     }
