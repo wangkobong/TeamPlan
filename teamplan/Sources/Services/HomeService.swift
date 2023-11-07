@@ -91,7 +91,7 @@ final class HomeService {
     
     func getMyChallenge(result: @escaping(Result<[ChallengeCardResDTO], Error>) -> Void) {
         
-        challengeCD.getMyChallengeCoredata(identifier: self.identifier) { cdResult in
+        challengeCD.getMyChallenge(selected: [1,2,3]) { cdResult in
             switch cdResult {
             
             case .success(let cardObjects):

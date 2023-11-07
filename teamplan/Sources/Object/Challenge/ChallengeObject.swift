@@ -36,23 +36,37 @@ struct ChallengeObject{
     let chlg_unselected_at: Date
     let chlg_finished_at: Date
     
-    // Constructor
-    // Get Coredata
-    init(chlgEntity: ChallengeEntity) {
+    //============================
+    // MARK: Constructor
+    //============================
+    // : (Coredata) Get
+    init?(chlgEntity: ChallengeEntity) {
+        guard let chlg_user_id = chlgEntity.chlg_user_id,
+              let chlg_type = ChallengeType(rawValue: Int(chlgEntity.chlg_type)),
+              let chlg_title = chlgEntity.chlg_title,
+              let chlg_desc = chlgEntity.chlg_desc,
+              let chlg_selected_at = chlgEntity.chlg_selected_at,
+              let chlg_unselected_at = chlgEntity.chlg_unselected_at,
+              let chlg_finished_at = chlgEntity.chlg_finished_at
+        else {
+            return nil
+        }
+        
+        // Assigning values
         self.chlg_id = Int(chlgEntity.chlg_id)
-        self.chlg_user_id = chlgEntity.chlg_user_id ?? "Unknown"
-        self.chlg_type = ChallengeType(rawValue: Int(chlgEntity.chlg_type)) ?? .unknownType
-        self.chlg_title = chlgEntity.chlg_title!
-        self.chlg_desc = chlgEntity.chlg_desc!
+        self.chlg_user_id = chlg_user_id
+        self.chlg_type = chlg_type
+        self.chlg_title = chlg_title
+        self.chlg_desc = chlg_desc
         self.chlg_goal = Int(chlgEntity.chlg_goal)
         self.chlg_reward = Int(chlgEntity.chlg_reward)
         self.chlg_step = Int(chlgEntity.chlg_step)
         self.chlg_selected = chlgEntity.chlg_selected
         self.chlg_status = chlgEntity.chlg_status
         self.chlg_lock = chlgEntity.chlg_lock
-        self.chlg_selected_at = chlgEntity.chlg_selected_at ?? Date()
-        self.chlg_unselected_at = chlgEntity.chlg_unselected_at ?? Date()
-        self.chlg_finished_at = chlgEntity.chlg_finished_at ?? Date()
+        self.chlg_selected_at = chlg_selected_at
+        self.chlg_unselected_at = chlg_unselected_at
+        self.chlg_finished_at = chlg_finished_at
     }
     
     // Get Dummy
