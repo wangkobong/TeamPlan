@@ -7,7 +7,6 @@
 //
 
 import Foundation
-import FirebaseFirestore
 
 //============================
 // MARK: Entity
@@ -27,15 +26,15 @@ struct AccessLog{
     }
     
     // : Get (Coredata)
-    init(acclogEntity: AccessLogEntity) {
-        self.log_user_id = acclogEntity.log_user_id!
-        self.log_access = acclogEntity.log_access as! [Date]
+    init(logEntity: AccessLogEntity) {
+        self.log_user_id = logEntity.log_user_id!
+        self.log_access = logEntity.log_access as! [Date]
     }
     
     // : Get (Firestore)
-    init?(acclogData: [String : Any]) {
-        guard let log_user_id = acclogData["log_user_id"] as? String,
-              let log_access_string = acclogData["log_access"] as? [String]
+    init?(logData: [String : Any]) {
+        guard let log_user_id = logData["log_user_id"] as? String,
+              let log_access_string = logData["log_access"] as? [String]
         else {
             return nil
         }

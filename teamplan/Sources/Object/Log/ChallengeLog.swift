@@ -24,6 +24,20 @@ struct ChallengeLog{
         self.log_update_at = signupDate
     }
     
+    // : Get (Coredatat)
+    init?(logEntity: ChallengeLogEntity){
+        guard let log_user_id = logEntity.log_user_id,
+              let log_complete = logEntity.log_complete as? [Int : Date],
+              let log_update_at = logEntity.log_update_at
+        else {
+            return nil
+        }
+        self.log_user_id = log_user_id
+        self.log_complete = log_complete
+        self.log_update_at = log_update_at
+    }
+    
+    // : Get (Firestore)
     init?(challengeData: [String : Any]) {
         guard let log_user_id = challengeData["log_user_id"] as? String,
               let log_complete_string = challengeData["log_complete"] as? [Int : String],

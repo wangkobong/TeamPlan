@@ -70,7 +70,7 @@ final class AccessLogServicesFirestore{
             // Exception Handling : Internal Error (FirestoreServer)
             if let error = error {
                 print("(Firestore) Error Get AccessLog : \(error)")
-                return result(.failure(error))
+                return result(.failure(AccessLogErrorFS.InternalError))
             }
             
             // Exception Handling : Identifier
@@ -89,7 +89,7 @@ final class AccessLogServicesFirestore{
             
             // Convert DocsData to Object
             let docs = response.documents.first!
-            guard let log = AccessLog(acclogData: docs.data()) else {
+            guard let log = AccessLog(logData: docs.data()) else {
                 
                 // Exception Handling : Failed to fetch AccessLog from Docs
                 return result(.failure(AccessLogErrorFS.UnexpectedConvertError))
@@ -102,7 +102,7 @@ final class AccessLogServicesFirestore{
     // MARK: - Update AccessLog
     //================================
     //##### Result #####
-    func updateAccessLog(identifier: String, updateAcclog: AccessLog,
+    func updateAccessLog(identifier: String, updatedLog: AccessLog,
                          result: @escaping(Result<String, Error>) -> Void) {
         // Target Table
         let collectionRef = fs.collection("AccessLog")
@@ -134,7 +134,7 @@ final class AccessLogServicesFirestore{
             
             // Update LogData
             let updatedData: [String : Any] = [
-                "log_access" : updateAcclog.log_access
+                "log_access" : updatedLog.log_access
             ]
             
             docs.reference.updateData(updatedData) { error in
@@ -142,14 +142,14 @@ final class AccessLogServicesFirestore{
                     print("(Firestore) Error Update AccessLog : \(error)")
                     return result(.failure(error))
                 } else {
-                    return result(.success("Successfully Set AccessLog"))
+                    return result(.success("Successfully Update AccessLog"))
                 }
             }
         }
     }
     
     //================================
-    // MARK: - Update AccessLog
+    // MARK: - Delete AccessLog
     //================================
     //##### Async/Await #####
     func deleteAccessLog(identifier: String) async throws {

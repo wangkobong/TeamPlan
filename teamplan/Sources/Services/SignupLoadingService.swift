@@ -100,7 +100,7 @@ final class SignupLoadingService{
     //===============================
     // : Firestore
     func setChallengeLogFS(result: @escaping(Result<Bool, Error>) -> Void) {
-        chlglogFS.setChallengeLogFS(reqLog: self.newChallengeLog) { fsResult in
+        chlglogFS.setChallengeLog(reqLog: self.newChallengeLog) { fsResult in
             self.handleServiceResult(fsResult, with: result)
         }
     }

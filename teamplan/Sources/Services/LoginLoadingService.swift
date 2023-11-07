@@ -438,7 +438,7 @@ extension LoginLoadingService{
     
     private func updateAcclogToFirestore(identifier: String, updatedAcclog: AccessLog,
                                          result: @escaping(Result<String, Error>) -> Void) {
-        acclogFS.updateAccessLog(identifier: identifier, updateAcclog: updatedAcclog, result: result)
+        acclogFS.updateAccessLog(identifier: identifier, updatedLog: updatedAcclog, result: result)
      }
 }
 
