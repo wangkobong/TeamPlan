@@ -169,7 +169,7 @@ extension LoginLoadingService{
                 return result(.success(UserDTO(userObject: userInfo)))
                 
                 // No userInfo at CoreData => Jump to Firestore
-            case .failure(let error as UserCDError) where error == .UserRetrievalByIdentifierFailed:
+            case .failure(let error as UserErrorCD) where error == .UserRetrievalByIdentifierFailed:
                 self?.fetchUserFromFirestore(identifier: identifier, result: result)
                 
                 // ExceptionHandling : Internal Error (Coredata)
@@ -238,7 +238,7 @@ extension LoginLoadingService{
                 return result(.success(StatisticsDTO(statObject: statInfo)))
                 
             // No StatInfo at CoreData => Jump to Firestore
-            case .failure(let error as StatCDError) where error == .StatRetrievalByIdentifierFailed:
+            case .failure(let error as StaticErrorCD) where error == .StatRetrievalByIdentifierFailed:
                 self.fetchStatFromFirestore(identifier: identifier, result: result)
                 
             // ExceptionHandling : Internal Error (Coredata)
@@ -308,7 +308,7 @@ extension LoginLoadingService{
                 return result(.success(acclog))
                
             // No AccessLog at CoreData => Jump to Firestore
-            case .failure(let error as AccessLogError) where error == .AccLogRetrievalByIdentifierFailed:
+            case .failure(let error as AccessLogErrorCD) where error == .AccLogRetrievalByIdentifierFailed:
                 self.fetchAcclogFromFirestore(identifier: identifier, result: result)
                 
             // ExceptionHandling : Internal Error (Coredata)

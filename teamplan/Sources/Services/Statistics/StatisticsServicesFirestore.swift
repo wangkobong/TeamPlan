@@ -33,7 +33,7 @@ final class StatisticsServicesFirestore{
             
         } catch {
             print("(Firestore) Error Set Statistics : \(error)")
-            throw UserFSError.UnexpectedSetError
+            throw StaticErrorFS.UnexpectedSetError
         }
     }
     
@@ -72,20 +72,21 @@ final class StatisticsServicesFirestore{
             
             // Exception Handling : Internal Error (FirestoreServer)
             if let error = error {
+                print("(Firestore) Error Get Statistics : \(error)")
                 return result(.failure(error))
             }
             
             // Exception Handling : Identifier
             guard let response = snapShot else {
-                return result(.failure(StatFSError.StatRetrievalByIdentifierFailed))
+                return result(.failure(StaticErrorFS.StatRetrievalByIdentifierFailed))
             }
             
             // Exception Handling : Search Error
             guard response.documents.count == 1 else {
                 if response.documents.count > 1 {
-                    return result(.failure(StatFSError.MultipleStatFound))
+                    return result(.failure(StaticErrorFS.MultipleStatFound))
                 } else {
-                    return result(.failure(StatFSError.InternalError))
+                    return result(.failure(StaticErrorFS.InternalError))
                 }
             }
             
@@ -94,7 +95,7 @@ final class StatisticsServicesFirestore{
             guard let stat = StatisticsObject(statData: docs.data()) else {
                 
                 // Exception Handling : Convert Error
-                return result(.failure(StatFSError.UnexpectedConvertError))
+                return result(.failure(StaticErrorFS.UnexpectedConvertError))
             }
             return result(.success(stat))
         }
@@ -115,27 +116,28 @@ final class StatisticsServicesFirestore{
             
             // Exception Handling : Internal Error (FirestoreServer)
             if let error = error {
+                print("(Firestore) Error Update Statistics : \(error)")
                 return result(.failure(error))
             }
             
             // Exception Handling : Docs Search Falied by Input Identifier
             guard let response = snapShot else {
-                return result(.failure(StatFSError.StatRetrievalByIdentifierFailed))
+                return result(.failure(StaticErrorFS.StatRetrievalByIdentifierFailed))
             }
             
             // Exception Handling: Search Error
             guard response.documents.count == 1 else {
                 if response.documents.count > 1 {
-                    return result(.failure(StatFSError.MultipleStatFound))
+                    return result(.failure(StaticErrorFS.MultipleStatFound))
                 } else {
-                    return result(.failure(StatFSError.InternalError))
+                    return result(.failure(StaticErrorFS.InternalError))
                 }
             }
             
             // Get Entity
             guard let docs = response.documents.first,
                   var statEntity = StatisticsObject(statData: docs.data()) else {
-                return result(.failure(StatFSError.UnexpectedConvertError))
+                return result(.failure(StaticErrorFS.UnexpectedConvertError))
             }
             
             // Updated field Check
@@ -152,7 +154,7 @@ final class StatisticsServicesFirestore{
             isUpdated = self.util.updateFieldIfNeeded(&statEntity.stat_upload_at, newValue: updatedStat.stat_upload_at) || isUpdated
             
             // Update Statistics
-            docs.reference.setData(statEntity.toDictionary()) { error in
+            docs.reference.updateData(statEntity.toDictionary()) { error in
                 if let error = error {
                     print("(Firestore) Error Update Statistics : \(error)")
                     return result(.failure(error))
@@ -178,22 +180,23 @@ final class StatisticsServicesFirestore{
             // Exception Handling : Search Error
             guard response.documents.count == 1 else {
                 if response.documents.count > 1 {
-                    throw StatFSError.MultipleStatFound
+                    throw StaticErrorFS.MultipleStatFound
                 } else {
-                    throw StatFSError.StatRetrievalByIdentifierFailed
+                    throw StaticErrorFS.StatRetrievalByIdentifierFailed
                 }
             }
             // Fetch Document
             guard let docs = response.documents.first else {
-                throw StatFSError.UnexpectedFetchError
+                throw StaticErrorFS.UnexpectedFetchError
             }
             
             // Delete Statistics
             try await docs.reference.delete()
             
         } catch {
+            // Exception Handling : Internal Error (FirestoreServer)
             print("(Firestore) Error Delete Statistics : \(error)")
-            throw StatFSError.InternalError
+            throw StaticErrorFS.InternalError
         }
     }
 }
@@ -201,7 +204,7 @@ final class StatisticsServicesFirestore{
 //================================
 // MARK: - Exception
 //================================
-enum StatFSError: LocalizedError {
+enum StaticErrorFS: LocalizedError {
     case UnexpectedSetError
     case UnexpectedGetError
     case UnexpectedUpdateError

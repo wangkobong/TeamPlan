@@ -37,7 +37,7 @@ final class UserServicesFirestore{
         } catch {
             // Exception Handling: Internal Error (Firestore)
             print("(Firestore) Error Set User : \(error)")
-            throw UserFSError.UnexpectedSetError
+            throw UserErrorFS.UnexpectedSetError
         }
     }
     
@@ -79,21 +79,21 @@ final class UserServicesFirestore{
             
             // Exception Handling: Internal Error (FirestoreServer)
             if let error = error {
-                print(error)
+                print("(Firestore) Error Get User : \(error)")
                 return result(.failure(error))
             }
             
             // Exception Handling: Identifier
             guard let response = snapShot else {
-                return result(.failure(UserFSError.UserRetrievalByIdentifierFailed))
+                return result(.failure(UserErrorFS.UserRetrievalByIdentifierFailed))
             }
             
             // Exception Handling: Search Error
             guard response.documents.count == 1 else {
                 if response.documents.count > 1 {
-                    return result(.failure(UserFSError.MultipleUserFound))
+                    return result(.failure(UserErrorFS.MultipleUserFound))
                 } else {
-                    return result(.failure(UserFSError.InternalError))
+                    return result(.failure(UserErrorFS.InternalError))
                 }
             }
             
@@ -102,7 +102,7 @@ final class UserServicesFirestore{
             guard let user = UserObject(userData: docs.data(), docsId: docs.documentID) else {
                 
                 // Exception Handling: Convert Error
-                return result(.failure(UserFSError.UnexpectedConvertError))
+                return result(.failure(UserErrorFS.UnexpectedConvertError))
             }
             return result(.success(user))
         }
@@ -124,9 +124,9 @@ final class UserServicesFirestore{
             // Exception Handling : Search Error
             guard response.documents.count == 1 else {
                 if response.documents.count > 1 {
-                    throw UserFSError.MultipleUserFound
+                    throw UserErrorFS.MultipleUserFound
                 } else {
-                    throw UserFSError.UserRetrievalByIdentifierFailed
+                    throw UserErrorFS.UserRetrievalByIdentifierFailed
                 }
             }
             
@@ -134,7 +134,7 @@ final class UserServicesFirestore{
             guard let docs = response.documents.first,
                   var userEntity = UserObject(userData: docs.data(), docsId: docs.documentID) else {
                 // Exception Handling : Convert Error
-                throw UserFSError.UnexpectedConvertError
+                throw UserErrorFS.UnexpectedConvertError
             }
             
             // Updated field Check
@@ -146,11 +146,11 @@ final class UserServicesFirestore{
             isUpdated = util.updateFieldIfNeeded(&userEntity.user_updated_at, newValue: updatedUser.user_updated_at) || isUpdated
             
             // Update User
-            try await docs.reference.setData(userEntity.toDictionary())
+            try await docs.reference.updateData(userEntity.toDictionary())
             
         } catch {
             print("(Firestore) Error Update User : \(error)")
-            throw UserFSError.UnexpectedUpdateError
+            throw UserErrorFS.UnexpectedUpdateError
         }
     }
     
@@ -170,20 +170,20 @@ final class UserServicesFirestore{
             // Exception Handling : Search Error
             guard response.documents.count == 1 else {
                 if response.documents.count > 1 {
-                    throw UserFSError.MultipleUserFound
+                    throw UserErrorFS.MultipleUserFound
                 } else {
-                    throw UserFSError.UserRetrievalByIdentifierFailed
+                    throw UserErrorFS.UserRetrievalByIdentifierFailed
                 }
             }
             guard let docs = response.documents.first else {
                 // Exception Handling: Fetch Error
-                throw UserFSError.UnexpectedFetchError
+                throw UserErrorFS.UnexpectedFetchError
             }
             // Delete User
             try await docs.reference.delete()
         } catch {
             print("(Firestore) Error Delete User : \(error)")
-            throw UserFSError.UnexpectedDeleteError
+            throw UserErrorFS.UnexpectedDeleteError
         }
     }
 }
@@ -191,7 +191,7 @@ final class UserServicesFirestore{
 //================================
 // MARK: - Exception
 //================================
-enum UserFSError: LocalizedError {
+enum UserErrorFS: LocalizedError {
     case UnexpectedSetError
     case UnexpectedGetError
     case UnexpectedUpdateError

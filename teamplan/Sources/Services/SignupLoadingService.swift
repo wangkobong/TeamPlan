@@ -83,7 +83,7 @@ final class SignupLoadingService{
     //===============================
     // : Firestore
     func setAccessLogFS(result: @escaping(Result<Bool, Error>) -> Void) {
-        aclogFS.setAccessLogFS(reqLog: self.newAccessLog) { fsResult in
+        aclogFS.setAccessLog(reqLog: self.newAccessLog) { fsResult in
             self.handleServiceResult(fsResult, with: result)
         }
     }

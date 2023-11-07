@@ -34,7 +34,7 @@ final class StatisticsServicesCoredata{
             try context.save()
         } catch {
             print("(CoreData) Error Set Statistics : \(error)")
-            throw StatCDError.UnexpectedSetError
+            throw StaticErrorCD.UnexpectedSetError
         }
     }
     
@@ -51,7 +51,7 @@ final class StatisticsServicesCoredata{
             return result(.success("Successfully set Statistics at CoreData"))
         } catch {
             print("(CoreData) Error Set Statistics : \(error)")
-            return result(.failure(StatCDError.UnexpectedSetError))
+            return result(.failure(StaticErrorCD.UnexpectedSetError))
         }
     }
     
@@ -79,7 +79,7 @@ final class StatisticsServicesCoredata{
             
         } catch {
             print("(CoreData) Error Convert(JSON) Statistics : \(error)")
-            throw StatCDError.UnexpectedConvertError
+            throw StaticErrorCD.UnexpectedConvertError
         }
     }
     
@@ -102,7 +102,7 @@ final class StatisticsServicesCoredata{
             // Search Statistics
             guard let statEntity = try context.fetch(fetchReq).first else {
                 // Exception Handling: Identifier
-                return result(.failure(StatCDError.StatRetrievalByIdentifierFailed))
+                return result(.failure(StaticErrorCD.StatRetrievalByIdentifierFailed))
             }
             let reqStat = try convertToObject(reqStat: statEntity)
             return result(.success(reqStat))
@@ -110,7 +110,7 @@ final class StatisticsServicesCoredata{
             // Exception Handling: Internal Error (Coredata)
         } catch  {
             print("(CoreData) Error Get Statistics : \(error)")
-            return result(.failure(StatCDError.UnexpectedGetError))
+            return result(.failure(StaticErrorCD.UnexpectedGetError))
         }
     }
     
@@ -124,13 +124,13 @@ final class StatisticsServicesCoredata{
             // Struct Oject
             guard let stat = StatisticsObject(statEntity: reqStat, chlgStep: chlgStep, mychlg: myChlg) else {
                 // Exception Handling: Fetch Error
-                throw StatCDError.UnexpectedFetchError
+                throw StaticErrorCD.UnexpectedFetchError
             }
             return stat
             
         } catch {
             print("(CoreData) Error Convert(Object) Statistics : \(error)")
-            throw StatCDError.UnexpectedConvertError
+            throw StaticErrorCD.UnexpectedConvertError
         }
     }
     
@@ -153,7 +153,7 @@ final class StatisticsServicesCoredata{
             guard let statEntity = try self.context.fetch(fetchReq).first else {
                 
                 // Exception Handling: Identifier
-                throw StatCDError.StatRetrievalByIdentifierFailed
+                throw StaticErrorCD.StatRetrievalByIdentifierFailed
             }
             // Convert Array to JSON
             let json_stat_chlg_step = try util.convertToJSON(data: updatedStat.stat_chlg_step)
@@ -181,7 +181,7 @@ final class StatisticsServicesCoredata{
         } catch {
             // Eception Handling: Internal Error
             print("(CoreData) Error Update Statistics : \(error)")
-            return result(.failure(StatCDError.UnexpectedUpdateError))
+            return result(.failure(StaticErrorCD.UnexpectedUpdateError))
         }
     }
 
@@ -201,7 +201,7 @@ final class StatisticsServicesCoredata{
         do {
             guard let statEntity = try context.fetch(fetchReq).first else {
                 // Exception Handling: Identifier
-                throw StatCDError.StatRetrievalByIdentifierFailed
+                throw StaticErrorCD.StatRetrievalByIdentifierFailed
             }
             // Delete StatEntity
             self.context.delete(statEntity)
@@ -209,7 +209,7 @@ final class StatisticsServicesCoredata{
             
         } catch {
             print("(CoreData) Error Delete Statistics : \(error)")
-            throw StatCDError.UnexpectedDeleteError
+            throw StaticErrorCD.UnexpectedDeleteError
         }
     }
 }
@@ -217,7 +217,7 @@ final class StatisticsServicesCoredata{
 //===============================
 // MARK: - Exception
 //===============================
-enum StatCDError: LocalizedError {
+enum StaticErrorCD: LocalizedError {
     case UnexpectedSetError
     case UnexpectedGetError
     case UnexpectedUpdateError
