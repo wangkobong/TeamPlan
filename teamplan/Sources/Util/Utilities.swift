@@ -24,34 +24,26 @@ final class Utilities {
     //============================
     // MARK: Get Identifier
     //============================
-    func getIdentifier(authRes: AuthSocialLoginResDTO,
-                       result: @escaping(Result<String, Error>) -> Void) {
+    func getIdentifier(authRes: AuthSocialLoginResDTO) -> String {
         
-        self.getAccountName(userEmail: authRes.email) { res in
-            switch res {
-                
-            // create identifier
-            case .success(let nickName):
-                let identifier = "\(nickName)_\(authRes.provider.rawValue)"
-                return result(.success(identifier))
-                
-            // Exception Handling: Invalid Email Format
-            case .failure(let error):
-                print("Error extract Identifier : \(error)")
-                return result(.failure(error))
-            }
+        let accountName = self.getAccountName(userEmail: authRes.email)
+        
+        if accountName != "" {
+            let identifier = "\(accountName)_\(authRes.provider.rawValue)"
+            return identifier
+        } else {
+            return ""
         }
     }
     
     //============================
     // MARK: Extract AccountName
     //============================
-    private func getAccountName(userEmail: String,
-                        result: @escaping(Result<String, Error>) -> Void) {
+    private func getAccountName(userEmail: String) -> String {
         guard let atIndex = userEmail.firstIndex(of: "@"), atIndex != userEmail.startIndex else {
-            return result(.failure(utilError.InvalidEmailFormat))
+            return ""
         }
-        return result(.success(String(userEmail.prefix(upTo: atIndex))))
+        return (String(userEmail.prefix(upTo: atIndex)))
     }
 
     //============================

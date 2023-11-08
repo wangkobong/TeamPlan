@@ -449,7 +449,9 @@ extension SignupView {
             .disabled(self.checkValidUserName())
             .font(.appleSDGothicNeo(.regular, size: 20))
             .onTapGesture {
-                trySignup()
+                Task {
+                    await trySignup()
+                }
             }
     }
     
@@ -497,8 +499,12 @@ extension SignupView {
         }
     }
     
-    private func trySignup() {
-        authViewModel.trySignup(userName: self.userName)
+    private func trySignup() async {
+        do {
+            try await authViewModel.trySignup(userName: self.userName)
+        } catch let error {
+            print("trySignup error: \(error)")
+        }
     }
 
 }

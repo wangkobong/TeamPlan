@@ -96,35 +96,32 @@ final class AuthenticationViewModel: ObservableObject{
         }
     }
     
-    func trySignup(userName: String) {
+    func trySignup(userName: String) async throws {
+        
+        /*
+        // 혼란을 드려 죄송합니다ㅠ
+        // 과정을 요약드리자면
+        // 1. getAccountInfo() 여기서는 social 로그인결과로 UserProfile 뼈대(UserSignupDTO)를 제작합니다
+        // 2. 단, getAccountInfo() 에는 사용자입력을 받아 구성되는 'nickname' 정보가 누락되어 있습니다.
+        // 3. View에서 nickname 값을 받아, UserProfile 뼈대(UserSignupDTO) 추가하는 작업이 필요합니다
+        // 3-1. SignupService에 'setNickName' 함수가 구현되어 있습니다.
+        // 4. NickName 까지 받아졌다면, 'SignupLoadingService' 로 UserProfile 뼈대(UserSignupDTO)를 넘겨주시면 됩니다
+         
+        // 아래 identifier은 이제 getAccountInfo 함수에 추가되어 아래과정은 불필요합니다!
+         
+        let identifier = "\(userInfo.accountName)_\(userInfo.provider.rawValue)"
+        let singUpUser = UserSignupDTO(identifier: identifier,
+                                          email: signupUser.email,
+                                          provider: signupUser.provider)
+        */
+        
         guard let signupUser = self.signupUser else { return }
-        self.signupService.getAccountInfo(newUser: signupUser) { getAccountInfoResult in
-            switch getAccountInfoResult {
-            case .success(let singUpUser):
-                
-                /*
-                // 혼란을 드려 죄송합니다ㅠ
-                // 과정을 요약드리자면
-                // 1. getAccountInfo() 여기서는 social 로그인결과로 UserProfile 뼈대(UserSignupDTO)를 제작합니다
-                // 2. 단, getAccountInfo() 에는 사용자입력을 받아 구성되는 'nickname' 정보가 누락되어 있습니다.
-                // 3. View에서 nickname 값을 받아, UserProfile 뼈대(UserSignupDTO) 추가하는 작업이 필요합니다
-                // 3-1. SignupService에 'setNickName' 함수가 구현되어 있습니다.
-                // 4. NickName 까지 받아졌다면, 'SignupLoadingService' 로 UserProfile 뼈대(UserSignupDTO)를 넘겨주시면 됩니다
-                 
-                // 아래 identifier은 이제 getAccountInfo 함수에 추가되어 아래과정은 불필요합니다!
-                 
-                let identifier = "\(userInfo.accountName)_\(userInfo.provider.rawValue)"
-                let singUpUser = UserSignupDTO(identifier: identifier,
-                                                  email: signupUser.email,
-                                                  provider: signupUser.provider)
-                */
-                
-                
-                let signupService = SignupLoadingService(newUser: singUpUser)
-            case .failure(let error):
-                print(error.localizedDescription)
-            }
-        }
+
+        let accountInfo = self.signupService.getAccountInfo(newUser: signupUser)
+        
+        guard let accountInfo = accountInfo else { return }
+        let signupService = SignupLoadingService(newUser: accountInfo)
+        try await signupService.executor()
     }
     
     

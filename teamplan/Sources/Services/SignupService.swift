@@ -15,22 +15,16 @@ final class SignupService{
     //===============================
     // MARK: - Get AccountInfo
     //===============================
-    func getAccountInfo(newUser: AuthSocialLoginResDTO,
-                        result: @escaping(Result<UserSignupDTO, Error>) -> Void) {
+    func getAccountInfo(newUser: AuthSocialLoginResDTO) -> UserSignupDTO? {
         
         // create identifier
-        util.getIdentifier(authRes: newUser) { response in
-            switch response {
-                
-            // set basic profile info for signup
-            case .success(let id):
-                return result(.success(UserSignupDTO(identifier: id, email: newUser.email, provider: newUser.provider)))
-                
-            // Exception Handling: Invalid Email Format
-            case .failure(let error):
-                print("(Signup) Invalid Email Format : \(error)")
-                return result(.failure(error))
-            }
+        let identifier = util.getIdentifier(authRes: newUser)
+        
+        if identifier != "" {
+            
+            return UserSignupDTO(identifier: identifier, email: newUser.email, provider: newUser.provider)
+        } else {
+            return nil
         }
     }
     

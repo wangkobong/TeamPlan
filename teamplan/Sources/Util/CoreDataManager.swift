@@ -22,7 +22,8 @@ final class CoreDataManager{
         container = NSPersistentContainer(name: "Coredata")
         container.loadPersistentStores{ storeDescription, error in
             if let error = error as NSError? {
-                fatalError("### Failed to load PersistentContainer\n \(error), \(error.userInfo)")
+//                fatalError("### Failed to load PersistentContainer\n \(error), \(error.userInfo)")
+                print("### Failed to load PersistentContainer\n \(error), \(error.userInfo)")
             }
         }
     }
