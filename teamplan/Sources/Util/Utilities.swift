@@ -8,6 +8,17 @@
 
 import Foundation
 
+enum EmailError: LocalizedError {
+    case invalidEmailFormat
+    
+    var errorDescription: String? {
+        switch self {
+        case .invalidEmailFormat:
+            return "Invalid email format"
+        }
+    }
+}
+
 final class Utilities {
     
     //============================
@@ -42,7 +53,7 @@ final class Utilities {
         }
         return result(.success(String(userEmail.prefix(upTo: atIndex))))
     }
-    
+
     //============================
     // MARK: Time Calculation
     //============================

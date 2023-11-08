@@ -15,6 +15,7 @@ final class HomeViewModel: ObservableObject {
     @Published var myChallenges: [ChallengeCardResDTO] = []
     
     private let homeService = HomeService(identifier: "")
+    private let loginService = LoginLoadingService()
     private let challengeService = ChallengeService(identifier: "")
     private var cancellables = Set<AnyCancellable>()
     
@@ -33,14 +34,8 @@ final class HomeViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
+    @MainActor
     private func getUser() async {
-        homeService.getUser { result in
-            switch result {
-            case .success(let user):
-                self.userName = user
-            case .failure(let error):
-                print(error.localizedDescription)
-            }
-        }
+
     }
 }

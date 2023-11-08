@@ -15,6 +15,12 @@ final class AuthenticationViewModel: ObservableObject{
     // Parameter
     //====================
     let loginService = LoginService()
+    let util = Utilities()
+    lazy var loginLoadingService = LoginLoadingService()
+    
+    @Published var nickName: String = ""
+    @Published var signupUser: AuthSocialLoginResDTO?
+    let signupService = SignupService()
     init(){}
     
     //====================
@@ -24,24 +30,58 @@ final class AuthenticationViewModel: ObservableObject{
     func signInGoogle(completion: @escaping (Result<AuthSocialLoginResDTO, Error>) -> Void) async {
         do {
             
-            await loginService.loginGoogle { result in
+            await loginService.loginGoogle { [self] result in
                 switch result {
+                    
                 case .success(let user):
                     switch user.status {
                     case .exist:
                         print("########### Exist User ###########")
+                        DispatchQueue.main.async {
+                            self.signupUser = user
+                        }
+//                        DispatchQueue.main.async {
+//                            self.loginLoadingService.getUser(authResult: user) { result in
+//                                switch result {
+//                                case .success(let loginUser):
+//                                    print("loginUser: \(loginUser)")
+//                                    let accountName = self.util.getAccountName(userEmail: loginUser.user_email)
+//                                    let identifier = "\(accountName)_\(loginUser.user_social_type.rawValue)"
+//                                    self.loginLoadingService.getStatistics(identifier: identifier) { result in
+//                                        switch result {
+//                                        case .success(let statistics):
+//                                            print("statistics: \(statistics)")
+////                                            self.loginLoadingService.getAccessLog(identifier: identifier) { result in
+////                                                switch result {
+////                                                case .success(let accessLog):
+////                                                    print("accessLog: \(accessLog)")
+////                                                case .failure(let error):
+////                                                    print(error.localizedDescription)
+////                                                }
+////                                            }
+//                                        case .failure(let error):
+//                                            print(error.localizedDescription)
+//                                        }
+//                                    }
+//                                case .failure(let error):
+//                                    print(error.localizedDescription)
+//                                }
+//                            }
+//
+//                            
+//                            
+//                        }
+
+
                     case .new:
                         print("########### New User ###########")
+                        DispatchQueue.main.async {
+                            self.signupUser = user
+                        }
                     case .unknown:
                         print("########### UNKNOWN ###########")
                     }
-                    
-                    print(user.provider)
-                    print(user.email)
-                    print(user.status)
                     completion(.success(user))
-                    print("idToken: \(user.idToken)")
-                    print("accessToken: \(user.accessToken)")
                     let keychain = KeychainSwift()
                     keychain.set(user.idToken, forKey: "idToken")
                     keychain.set(user.accessToken, forKey: "accessToken")
@@ -52,6 +92,23 @@ final class AuthenticationViewModel: ObservableObject{
                     print(error)
                     completion(.failure(error))
                 }
+            }
+        }
+    }
+    
+    func trySignup(userName: String) {
+        guard let signupUser = self.signupUser else { return }
+        self.signupService.getAccountInfo(newUser: signupUser) { getAccountInfoResult in
+            switch getAccountInfoResult {
+            case .success(let userInfo):
+                let identifier = "\(userInfo.accountName)_\(userInfo.provider.rawValue)"
+                let singUpUser = UserSignupReqDTO(identifier: identifier,
+                                                  email: signupUser.email,
+                                                  provider: signupUser.provider)
+
+                let signupService = SignupLoadingService(newUser: singUpUser)
+            case .failure(let error):
+                print(error.localizedDescription)
             }
         }
     }

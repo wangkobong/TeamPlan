@@ -34,8 +34,7 @@ final class SignupLoadingService{
         self.newProfile = UserObject(newUser: newUser, signupDate: signupDate)
         self.newStat = StatisticsObject(identifier: newUser.identifier, signupDate: signupDate)
         self.newAccessLog = AccessLog(identifier: newUser.identifier, signupDate: signupDate)
-        self.newChallengeLog = ChallengeLog(identifier: newUser.identifier, signupDate: signupDate)
-    }
+        self.newChallengeLog = ChallengeLog(identifier: newUser.identifier, signupDate: signupDate)\        
     
     //===============================
     // MARK: - Executor

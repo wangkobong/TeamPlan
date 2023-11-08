@@ -14,8 +14,7 @@ struct TeamPlanApp: App {
     @State private var showIntroView: Bool = true
     @StateObject var authViewModel = AuthenticationViewModel()
     @StateObject var termsViewModel = TermsViewModel()
-    @StateObject var signupViewModel = SignupViewModel()
-    
+  
     //====================
     // MARK: Main
     //====================
@@ -24,7 +23,6 @@ struct TeamPlanApp: App {
             mainView
                 .environmentObject(authViewModel)
                 .environmentObject(termsViewModel)
-                .environmentObject(signupViewModel)
                 .onAppear(perform: initializeApp)
                 .onOpenURL(perform: handelOpenURL)
         }

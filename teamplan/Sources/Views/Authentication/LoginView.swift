@@ -9,43 +9,43 @@ import SwiftUI
 import GoogleSignInSwift
 import AuthenticationServices
 
+enum LoginViewState {
+    case login
+    case toHome
+    case toSignup
+}
+
 struct LoginView: View {
     
     @State private var showTermsView: Bool = false
     @State private var showHomeView: Bool = false
-    @State private var showUserProfile: Bool = false
+    @State private var showSignUpView: Bool = false
+    @State private var isLoading: Bool = false
+    @State private var isLogin: Bool = false
+    @State private var viewState: LoginViewState = .login
 
     @ObservedObject var vm = GoogleSignInButtonViewModel()
     @EnvironmentObject var authViewModel: AuthenticationViewModel
     
+    let transition: AnyTransition = .asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading))
+
     var body: some View {
         NavigationView {
-            VStack {
-                NavigationLink(
-                    destination: TermsView().defaultNavigationMFormatting(),
-                     isActive: $showTermsView) {
-                          Text("")
-                               .hidden()
-                     }
-                     .navigationBarBackButtonHidden(true)
-                
-                NavigationLink(
-                    destination: MainTapView().defaultNavigationMFormatting(),
-                     isActive: $showHomeView) {
-                          Text("")
-                               .hidden()
-                     }
-                     .navigationBarBackButtonHidden(true)
-                
-                HStack {
-                    Image("loginView")
-                        .padding(.trailing, 51)
-                        .padding(.leading, 16)
+            LoadingView(isShowing: $isLoading) {
+                ZStack {
+                    switch viewState {
+                    case .login:
+                        loginView
+                            .transition(transition)
+                    case .toHome:
+                        HomeView()
+                            .transition(transition)
+                    case .toSignup:
+                        SignupView()
+                            .transition(transition)
+                    }
                 }
-                Spacer()
-                    .frame(height: 100)
                 
-                buttons
             }
         }
     }
@@ -58,6 +58,20 @@ struct LoginView_Previews: PreviewProvider {
 }
 
 extension LoginView {
+    
+    private var loginView: some View {
+        VStack {
+            HStack {
+                Image("loginView")
+                    .padding(.trailing, 51)
+                    .padding(.leading, 16)
+            }
+            Spacer()
+                .frame(height: 100)
+            
+            buttons
+        }
+    }
     
     private var buttons: some View {
         VStack(spacing: 18) {
@@ -115,24 +129,30 @@ extension LoginView {
             
             GoogleSignInButton(viewModel: GoogleSignInButtonViewModel(scheme: .dark, style: .standard, state: .normal)) {
                 Task {
-                    do {  
+                    do {
+                        isLoading = true
                         await authViewModel.signInGoogle { result in
                             switch result {
                             case .success(let user):
+                                isLoading = false
                                 switch user.status {
                                 case .exist:
-                                    showHomeView = true
+                                    withAnimation(.spring()) {
+                                        viewState = .toSignup
+                                    }
                                 case .new:
-                                    showTermsView = true
+                                    withAnimation(.spring()) {
+                                        viewState = .toSignup
+                                    }
                                 case .unknown:
                                     break
                                 }
                             case .failure(let error):
                                 print(error.localizedDescription)
+                                isLoading = false
                                 break
                             }
                         }
-     
                     }
                 }
             }
