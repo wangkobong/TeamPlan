@@ -76,3 +76,22 @@ struct ChallengeDetailResDTO{
         self.isUnlock = chlgObject.chlg_lock
     }
 }
+
+struct ChallengeStatusReqDTO{
+    // id
+    let chlg_id: Int
+    
+    // status
+    let chlg_step: Int
+    let chlg_selected: Bool
+    let chlg_status: Bool
+    let chlg_lock: Bool
+    
+    init(chlgObject: ChallengeObject, myChlg: Bool){
+        self.chlg_id = chlgObject.chlg_id
+        self.chlg_step = chlgObject.chlg_step
+        self.chlg_selected = myChlg
+        self.chlg_status = chlgObject.chlg_status
+        self.chlg_lock = chlgObject.chlg_lock
+    }
+}

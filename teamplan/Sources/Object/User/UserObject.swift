@@ -30,9 +30,11 @@ struct UserObject{
     var user_updated_at: Date
     
     
-    // Constructor
+    //============================
+    // MARK: Constructor
+    //============================
     // : SignupService
-    init(newUser: UserSignupReqDTO, signupDate: Date) {
+    init(newUser: UserSignupDTO, signupDate: Date) {
         self.user_id = newUser.identifier
         self.user_fb_id = ""
         self.user_email = newUser.email
@@ -44,20 +46,33 @@ struct UserObject{
         self.user_updated_at = signupDate
     }
     
-    // : Get Coredata
-    init(userEntity: UserEntity) {
-        self.user_id = userEntity.user_id ?? "Unknown"
-        self.user_fb_id = userEntity.user_fb_id ?? "Unknown"
-        self.user_email = userEntity.user_email ?? "Unknown"
-        self.user_name = userEntity.user_name ?? "Unknown"
-        self.user_social_type = userEntity.user_social_type ?? "Unknown"
-        self.user_status = userEntity.user_status ?? "Unknown"
-        self.user_created_at = userEntity.user_created_at ?? Date()
-        self.user_login_at = userEntity.user_login_at ?? Date()
-        self.user_updated_at = userEntity.user_updated_at ?? Date()
+    // : (Coredata) Get
+    init?(userEntity: UserEntity) {
+        guard let user_id = userEntity.user_id,
+                let user_email = userEntity.user_email,
+                let user_name = userEntity.user_name,
+                let user_social_type = userEntity.user_social_type,
+                let user_status = userEntity.user_status,
+                let user_created_at = userEntity.user_created_at,
+                let user_login_at = userEntity.user_login_at,
+                let user_updated_at = userEntity.user_updated_at
+        else {
+            return nil
+        }
+        
+        // Assigning values
+        self.user_id = user_id
+        self.user_fb_id = userEntity.user_fb_id ?? ""
+        self.user_email = user_name
+        self.user_name = user_email
+        self.user_social_type = user_social_type
+        self.user_status = user_status
+        self.user_created_at = user_created_at
+        self.user_login_at = user_login_at
+        self.user_updated_at = user_updated_at
     }
     
-    // : Get Firestore
+    // : (Firestore) Get
     init?(userData: [String : Any], docsId: String) {
         guard let user_id = userData["user_id"] as? String,
               let user_email = userData["user_email"] as? String,
@@ -86,7 +101,7 @@ struct UserObject{
         self.user_updated_at = formatter.date(from: user_updated_at)!
     }
     
-    // : Get Dummy
+    // : (Dummy) Get
     init(user_id: String, user_fb_id: String, user_email: String, user_name: String, user_social_type: String, user_status: UserStatus, user_created_at: Date, user_login_at: Date, user_updated_at: Date) {
         self.user_id = user_id
         self.user_fb_id = user_fb_id
@@ -105,6 +120,10 @@ struct UserObject{
     //============================
     mutating func addDocsId(docsId: String){
         self.user_fb_id = docsId
+    }
+    
+    mutating func setUserStatus(userSatus: UserStatus){
+        self.user_status = userSatus.rawValue
     }
     
     func toDictionary() -> [String: Any] {
@@ -128,9 +147,11 @@ struct UserObject{
 // MARK: Enum
 //============================
 enum UserStatus: String{
-    case active = "Normal: Active User"
-    case dormant = "Noraml: Dormant User"
-    case unknown = "Caution: Unknown User"
+    case active = "Active"
+    case dormant = "Dormant"
+    case unknown = "Unknown"
+    case unStableCD = "FailedToSetCoredata"
+    case unStableFS = "FailedToSetFirestore"
 }
 
 enum Providers: String{

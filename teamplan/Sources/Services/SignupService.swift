@@ -11,39 +11,34 @@ import Foundation
 final class SignupService{
     
     let util = Utilities()
-    // Becuase of Struct 'UserSignupReqDTO' contain success/failure case, can't deploy init()
-    var userInfo: UserSignupReqDTO? = nil
-    init(){}
     
     //===============================
     // MARK: - Get AccountInfo
     //===============================
     func getAccountInfo(newUser: AuthSocialLoginResDTO,
-                        result: @escaping(Result<UserSignupResDTO, Error>) -> Void) {
+                        result: @escaping(Result<UserSignupDTO, Error>) -> Void) {
         
-        // extract AccountName from SocialLogin Result
-        let accName = util.getAccountName(userEmail: newUser.email)
-        
-        if accName == "" {
-            return result(.failure(EmailError.invalidEmailFormat))
-        } else {
-            // create identifier
-            let identifier = "\(accName)_\(newUser.provider.rawValue)"
-            
+        // create identifier
+        util.getIdentifier(authRes: newUser) { response in
+            switch response {
+                
             // set basic profile info for signup
-            self.userInfo = UserSignupReqDTO(identifier: identifier, email: newUser.email, provider: newUser.provider)
-            
-            // return UserInfo that require SignupView
-            return result(.success(UserSignupResDTO(accountName: accName, provider: newUser.provider)))
+            case .success(let id):
+                return result(.success(UserSignupDTO(identifier: id, email: newUser.email, provider: newUser.provider)))
+                
+            // Exception Handling: Invalid Email Format
+            case .failure(let error):
+                print("(Signup) Invalid Email Format : \(error)")
+                return result(.failure(error))
+            }
         }
     }
     
     //===============================
     // MARK: - Set NickName
     //===============================
-    func setNickName(nickName: String) -> UserSignupReqDTO {
-        
-        self.userInfo?.addNickName(nickName: nickName)
-        return self.userInfo!
+    func setNickName(newUser: UserSignupDTO, nickName: String) -> UserSignupDTO {
+        let updatedUserSignup = UserSignupDTO(identifier: newUser.email, email: newUser.email, provider: newUser.provider, nickname: nickName)
+        return updatedUserSignup
     }
 }

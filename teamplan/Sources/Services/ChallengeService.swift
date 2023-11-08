@@ -43,7 +43,7 @@ final class ChallengeService{
     
     // Pre Load Challenge Data
     func initChallenge(result: @escaping(Result<Bool, Error>) -> Void) {
-        chlgCD.getChallengeCoredata(identifier: self.identifier) { cdResult in
+        chlgCD.getChallenges { cdResult in
             switch cdResult {
             case .success(let reqChlg):
                 self.challengeArray = reqChlg
@@ -103,12 +103,19 @@ final class ChallengeService{
     func selecteMyChallenge(challengeID: Int, status: Bool,
                             result: @escaping(Result<Bool, Error>) -> Void) {
         
-        // update challenge status
-        chlgCD.selectMyChallenge(identifier: self.identifier, chlg_id: challengeID, status: status) { cdResult in
+        // get ChallengeData
+        guard let reqChallenge = findChallengeByID(in: self.challengeArray, challengeId: challengeID) else {
+            return result(.failure(ChallengeError.InvalidChallengeId))
+        }
+        
+        // Update ChallengeData
+        let updatedChallenge = ChallengeStatusReqDTO(chlgObject: reqChallenge, myChlg: status)
+        chlgCD.updateChallengeStatus(updatedChallenge: updatedChallenge) { cdResult in
+            
             switch cdResult {
             case .success:
                 
-                // update 'challengeArray'
+                // Adjust updated 'challengeArray'
                 self.initChallenge() { updateRes in
                     
                     switch updateRes {
@@ -126,6 +133,7 @@ final class ChallengeService{
             }
         }
     }
+
     
     //===============================
     // MARK: Get - Challenges
@@ -175,36 +183,47 @@ final class ChallengeService{
             result(.failure(ChallengeError.PreviousChallengeSearchFailed))
         }
     }
+}
+
+//===============================
+// MARK: - Support Function
+//===============================
+extension ChallengeService {
+    func findChallengeByID(in challenges: [ChallengeObject], challengeId: Int) -> ChallengeObject? {
+        return challenges.first { $0.chlg_user_id == identifier }
+    }
+}
+
+//===============================
+// MARK: - Exception
+//===============================
+enum ChallengeError: LocalizedError {
+    case NoMyChallenge
+    case ChallengeIdGetFailed
+    case IdentifierGetFailed
+    case InvalidChallengeId
+    case InvalidType
+    case InternalError
+    case PreviousChallengeSearchFailed
     
-    //===============================
-    // MARK: - Exception
-    //===============================
-    enum ChallengeError: LocalizedError {
-        case NoMyChallenge
-        case ChallengeIdGetFailed
-        case IdentifierGetFailed
-        case InvalidChallengeId
-        case InvalidType
-        case InternalError
-        case PreviousChallengeSearchFailed
-        
-        var errorDescription: String?{
-            switch self {
-            case .NoMyChallenge:
-                return "No Selected Challenge for MyChallenge"
-            case .ChallengeIdGetFailed:
-                return "Failed to Get Challenge by ChallengeID"
-            case .IdentifierGetFailed:
-                return "Failed to Get Challenge by identifier"
-            case .InvalidChallengeId:
-                return "Invalid ChallengeID"
-            case .InvalidType:
-                return "Invalid ChallengeType"
-            case .InternalError:
-                return "Failed to get Challenge by InternalError"
-            case .PreviousChallengeSearchFailed:
-                return "Failed to Search Previous Challenge"
-            }
+    var errorDescription: String?{
+        switch self {
+        case .NoMyChallenge:
+            return "No Selected Challenge for MyChallenge"
+        case .ChallengeIdGetFailed:
+            return "Failed to Get Challenge by ChallengeID"
+        case .IdentifierGetFailed:
+            return "Failed to Get Challenge by identifier"
+        case .InvalidChallengeId:
+            return "Invalid ChallengeID"
+        case .InvalidType:
+            return "Invalid ChallengeType"
+        case .InternalError:
+            return "Failed to get Challenge by InternalError"
+        case .PreviousChallengeSearchFailed:
+            return "Failed to Search Previous Challenge"
         }
     }
 }
+
+

@@ -42,9 +42,9 @@
     </entity>
     <entity name="StatisticsEntity" representedClassName="StatisticsEntity" syncable="YES" codeGenerationType="class">
         <attribute name="stat_chlg_fin" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
-        <attribute name="stat_chlg_step" optional="YES" attributeType="Transformable"/>
+        <attribute name="stat_chlg_step" optional="YES" attributeType="String"/>
         <attribute name="stat_drop" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
-        <attribute name="stat_mychlg" optional="YES" attributeType="Transformable"/>
+        <attribute name="stat_mychlg" optional="YES" attributeType="String"/>
         <attribute name="stat_proj_alert" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="stat_proj_ext" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="stat_proj_fin" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>

@@ -30,8 +30,10 @@ struct StatisticsObject{
     // maintenance
     var stat_upload_at: Date
     
-    // Service Constructor
-    // : Signup
+    //============================
+    // MARK: Constructor
+    //============================
+    // : SignupService
     init(identifier: String, signupDate: Date){
         self.stat_user_id = identifier
         self.stat_term = 0
@@ -52,10 +54,16 @@ struct StatisticsObject{
         self.stat_upload_at = signupDate
     }
     
-    // Store Constructor
-    // : Get (CoreData)
-    init(statEntity: StatisticsEntity) {
-        self.stat_user_id = statEntity.stat_user_id ?? "Unknown"
+    // : (CoreData) Get
+    init?(statEntity: StatisticsEntity, chlgStep: [[Int : Int]], mychlg: [Int : Int]){
+        guard let stat_user_id = statEntity.stat_user_id,
+              let stat_upload_at = statEntity.stat_upload_at
+        else {
+            return nil
+        }
+        
+        // Assigning values
+        self.stat_user_id = stat_user_id
         self.stat_term = Int(statEntity.stat_term)
         self.stat_drop = Int(statEntity.stat_drop)
         self.stat_proj_reg = Int(statEntity.stat_proj_reg)
@@ -63,12 +71,13 @@ struct StatisticsObject{
         self.stat_proj_alert = Int(statEntity.stat_proj_alert)
         self.stat_proj_ext = Int(statEntity.stat_proj_ext)
         self.stat_todo_reg = Int(statEntity.stat_todo_reg)
-        self.stat_chlg_step = statEntity.stat_chlg_step as! [[Int : Int]]
-        self.stat_mychlg = statEntity.stat_mychlg as! [Int : Int]
-        self.stat_upload_at = statEntity.stat_upload_at ?? Date()
+        self.stat_chlg_step = chlgStep
+        self.stat_mychlg = mychlg
+        self.stat_upload_at = stat_upload_at
     }
+
     
-    // : Update (Coredata)
+    // : (Coredata) Update
     init(updatedStat: StatisticsDTO){
         self.stat_user_id = updatedStat.stat_user_id
         self.stat_term = updatedStat.stat_term
@@ -83,7 +92,7 @@ struct StatisticsObject{
         self.stat_upload_at = updatedStat.stat_upload_at
     }
     
-    // : Get (Firestore)
+    // : (Firestore) Get
     init?(statData: [String : Any]){
         guard let stat_user_id = statData["stat_user_id"] as? String,
               let stat_term = statData["stat_term"] as? Int,
