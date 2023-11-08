@@ -38,36 +38,39 @@ final class AuthenticationViewModel: ObservableObject{
                     case .exist:
                         print("########### Exist User ###########")
                         DispatchQueue.main.async {
-                            self.loginLoadingService.getUser(authResult: user) { result in
-                                switch result {
-                                case .success(let loginUser):
-                                    print("loginUser: \(loginUser)")
-                                    let accountName = self.util.getAccountName(userEmail: loginUser.user_email)
-                                    let identifier = "\(accountName)_\(loginUser.user_social_type.rawValue)"
-                                    self.loginLoadingService.getStatistics(identifier: identifier) { result in
-                                        switch result {
-                                        case .success(let statistics):
-                                            print("statistics: \(statistics)")
-//                                            self.loginLoadingService.getAccessLog(identifier: identifier) { result in
-//                                                switch result {
-//                                                case .success(let accessLog):
-//                                                    print("accessLog: \(accessLog)")
-//                                                case .failure(let error):
-//                                                    print(error.localizedDescription)
-//                                                }
-//                                            }
-                                        case .failure(let error):
-                                            print(error.localizedDescription)
-                                        }
-                                    }
-                                case .failure(let error):
-                                    print(error.localizedDescription)
-                                }
-                            }
-
-                            
-                            
+                            self.signupUser = user
                         }
+//                        DispatchQueue.main.async {
+//                            self.loginLoadingService.getUser(authResult: user) { result in
+//                                switch result {
+//                                case .success(let loginUser):
+//                                    print("loginUser: \(loginUser)")
+//                                    let accountName = self.util.getAccountName(userEmail: loginUser.user_email)
+//                                    let identifier = "\(accountName)_\(loginUser.user_social_type.rawValue)"
+//                                    self.loginLoadingService.getStatistics(identifier: identifier) { result in
+//                                        switch result {
+//                                        case .success(let statistics):
+//                                            print("statistics: \(statistics)")
+////                                            self.loginLoadingService.getAccessLog(identifier: identifier) { result in
+////                                                switch result {
+////                                                case .success(let accessLog):
+////                                                    print("accessLog: \(accessLog)")
+////                                                case .failure(let error):
+////                                                    print(error.localizedDescription)
+////                                                }
+////                                            }
+//                                        case .failure(let error):
+//                                            print(error.localizedDescription)
+//                                        }
+//                                    }
+//                                case .failure(let error):
+//                                    print(error.localizedDescription)
+//                                }
+//                            }
+//
+//                            
+//                            
+//                        }
 
 
                     case .new:

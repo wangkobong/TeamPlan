@@ -446,7 +446,7 @@ extension SignupView {
             .frame(maxWidth: .infinity)
             .background(self.checkValidUserName() ? Color.theme.mainPurpleColor : .theme.whiteGreyColor)
             .foregroundColor(.theme.whiteColor)
-            .disabled(!self.checkValidUserName())
+            .disabled(self.checkValidUserName())
             .font(.appleSDGothicNeo(.regular, size: 20))
             .onTapGesture {
                 trySignup()

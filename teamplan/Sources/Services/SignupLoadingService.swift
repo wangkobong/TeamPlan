@@ -50,6 +50,38 @@ final class SignupLoadingService{
                                     switch result {
                                     case .success(let statisticsCDResult):
                                         print("statisticsCDResult: \(statisticsCDResult)")
+                                        self.setAccessLogFS { result in
+                                            switch result {
+                                            case .success(let accessLogFS):
+                                                print("AccessLogFS: \(accessLogFS)")
+                                                self.setAccessLogCD { result in
+                                                    switch result {
+                                                    case .success(let setAccessLogCDResult):
+                                                        print("setAccessLogCDResult: \(setAccessLogCDResult)")
+                                                        self.setChallengeLogFS { result in
+                                                            switch result {
+                                                            case .success(let setChallengeLogFS):
+                                                                print("setChallengeLogFS: \(setChallengeLogFS)")
+                                                                self.setChallengeLogCD { result in
+                                                                    switch result {
+                                                                    case .success(let setChallengeLogCD):
+                                                                        print("setChallengeLogCD: \(setChallengeLogCD)")
+                                                                    case .failure(let error):
+                                                                        print(error.localizedDescription)
+                                                                    }
+                                                                }
+                                                            case .failure(let error):
+                                                                print(error.localizedDescription)
+                                                            }
+                                                        }
+                                                    case .failure(let error):
+                                                        print(error.localizedDescription)
+                                                    }
+                                                }
+                                            case .failure(let error):
+                                                print(error.localizedDescription)
+                                            }
+                                        }
                                     case .failure(let error):
                                         print(error.localizedDescription)
                                     }

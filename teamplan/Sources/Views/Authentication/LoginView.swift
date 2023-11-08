@@ -138,7 +138,7 @@ extension LoginView {
                                 switch user.status {
                                 case .exist:
                                     withAnimation(.spring()) {
-                                        viewState = .toHome
+                                        viewState = .toSignup
                                     }
                                 case .new:
                                     withAnimation(.spring()) {
