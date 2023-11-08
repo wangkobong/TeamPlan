@@ -35,7 +35,7 @@ final class Utilities {
     //============================
     // MARK: Extract AccountName
     //============================
-    func getAccountName(userEmail: String,
+    private func getAccountName(userEmail: String,
                         result: @escaping(Result<String, Error>) -> Void) {
         guard let atIndex = userEmail.firstIndex(of: "@"), atIndex != userEmail.startIndex else {
             return result(.failure(utilError.InvalidEmailFormat))

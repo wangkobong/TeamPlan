@@ -34,7 +34,7 @@ struct UserObject{
     // MARK: Constructor
     //============================
     // : SignupService
-    init(newUser: UserSignupReqDTO, signupDate: Date) {
+    init(newUser: UserSignupDTO, signupDate: Date) {
         self.user_id = newUser.identifier
         self.user_fb_id = ""
         self.user_email = newUser.email

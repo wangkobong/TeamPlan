@@ -41,7 +41,7 @@ struct UserDTO{
 // MARK: Signup/SignupLoading
 //============================
 /// Request DTO : View -> Service
-struct UserSignupReqDTO{
+struct UserSignupDTO{
     // info
     let identifier: String
     let email: String
@@ -60,21 +60,16 @@ struct UserSignupReqDTO{
         self.nickName = ""
     }
     
-    // func
-    mutating func addNickName(nickName: String){
-        self.nickName = nickName
-    }
-}
-
-struct UserSignupResDTO{
-    // info
-    let accountName: String
-    let provider: Providers
-    
-    // Constructor
-    init(accountName: String, provider: Providers){
-        self.accountName = accountName
+    init(
+        identifier: String,
+        email: String,
+        provider: Providers,
+        nickname: String
+    ) {
+        self.identifier = identifier
+        self.email = email
         self.provider = provider
+        self.nickName = nickname
     }
 }
 

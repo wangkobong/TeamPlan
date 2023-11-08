@@ -29,7 +29,7 @@ final class SignupLoadingService{
     //===============================
     // MARK: - Constructor
     //===============================
-    init(newUser: UserSignupReqDTO){
+    init(newUser: UserSignupDTO){
         let signupDate = Date()
         self.newProfile = UserObject(newUser: newUser, signupDate: signupDate)
         self.newStat = StatisticsObject(identifier: newUser.identifier, signupDate: signupDate)
