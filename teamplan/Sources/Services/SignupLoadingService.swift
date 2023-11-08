@@ -33,6 +33,73 @@ final class SignupLoadingService{
         self.newStat = StatisticsObject(identifier: newUser.identifier, signupDate: signupDate)
         self.newAccessLog = AccessLog(identifier: newUser.identifier, signupDate: signupDate)
         self.newChallengeLog = ChallengeLog(identifier: newUser.identifier, signupDate: signupDate)
+        
+        self.setUserFS { fsResult in
+            switch fsResult {
+            case .success(let fsResult):
+                print("fsResult: \(fsResult)")
+                self.setUserCD { cdResult in
+                    switch cdResult {
+                    case .success(let cdResultResult):
+                        print("cdResultResult: \(cdResultResult)")
+                        self.setStatisticsFS { result in
+                            switch result {
+                            case .success(let statisticsFSResult):
+                                print("statisticsFSResult: \(statisticsFSResult)")
+                                self.setStatisticsCD { result in
+                                    switch result {
+                                    case .success(let statisticsCDResult):
+                                        print("statisticsCDResult: \(statisticsCDResult)")
+                                        self.setAccessLogFS { result in
+                                            switch result {
+                                            case .success(let accessLogFS):
+                                                print("AccessLogFS: \(accessLogFS)")
+                                                self.setAccessLogCD { result in
+                                                    switch result {
+                                                    case .success(let setAccessLogCDResult):
+                                                        print("setAccessLogCDResult: \(setAccessLogCDResult)")
+                                                        self.setChallengeLogFS { result in
+                                                            switch result {
+                                                            case .success(let setChallengeLogFS):
+                                                                print("setChallengeLogFS: \(setChallengeLogFS)")
+                                                                self.setChallengeLogCD { result in
+                                                                    switch result {
+                                                                    case .success(let setChallengeLogCD):
+                                                                        print("setChallengeLogCD: \(setChallengeLogCD)")
+                                                                    case .failure(let error):
+                                                                        print(error.localizedDescription)
+                                                                    }
+                                                                }
+                                                            case .failure(let error):
+                                                                print(error.localizedDescription)
+                                                            }
+                                                        }
+                                                    case .failure(let error):
+                                                        print(error.localizedDescription)
+                                                    }
+                                                }
+                                            case .failure(let error):
+                                                print(error.localizedDescription)
+                                            }
+                                        }
+                                    case .failure(let error):
+                                        print(error.localizedDescription)
+                                    }
+                                }
+                            case .failure(let error):
+                                print(error.localizedDescription)
+                            }
+                        }
+                    case .failure(let error):
+                        print(error.localizedDescription)
+                    }
+                }
+
+            case .failure(let error):
+                print(error.localizedDescription)
+
+            }
+        }
     }
     
     //===============================
@@ -42,8 +109,9 @@ final class SignupLoadingService{
     func setUserFS(result: @escaping(Result<Bool, Error>) -> Void) {
         userFS.setUser(reqUser: self.newProfile) { fsResult in
             switch fsResult {
-    
+            
             case .success(let docsId):
+                print("newProfile: \(self.newProfile)")
                 self.newProfile.addDocsId(docsId: docsId)
                 return result(.success(true))
                 

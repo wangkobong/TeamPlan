@@ -8,6 +8,17 @@
 
 import Foundation
 
+enum EmailError: LocalizedError {
+    case invalidEmailFormat
+    
+    var errorDescription: String? {
+        switch self {
+        case .invalidEmailFormat:
+            return "Invalid email format"
+        }
+    }
+}
+
 final class Utilities {
     
     //============================
@@ -16,43 +27,35 @@ final class Utilities {
     func getIdentifier(authRes: AuthSocialLoginResDTO,
                        result: @escaping(Result<String, Error>) -> Void) {
         
-        self.getAccountName(userEmail: authRes.email) { res in
-            switch res {
-                
-            // create identifier
-            case .success(let nickName):
-                let identifier = "\(nickName)_\(authRes.provider.rawValue)"
-                return result(.success(identifier))
-                
-            // Exception Handling: Invalid Email Format
-            case .failure(let error):
-                return result(.failure(error))
-            }
+        let accountName = self.getAccountName(userEmail: authRes.email)
+        
+        if accountName == "" {
+            return result(.failure(EmailError.invalidEmailFormat))
+        } else {
+            let identifier = "\(accountName)_\(authRes.provider.rawValue)"
+            return result(.success(identifier))
         }
+
     }
     
     //============================
     // MARK: Extract AccountName
     //============================
-    func getAccountName(userEmail: String,
-                        result: @escaping(Result<String, Error>) -> Void) {
+//    func getAccountName(userEmail: String,
+//                        result: @escaping(Result<String, Error>) -> Void) {
+//        guard let atIndex = userEmail.firstIndex(of: "@"), atIndex != userEmail.startIndex else {
+//            return result(.failure(EmailError.invalidEmailFormat))
+//        }
+//        return result(.success(String(userEmail.prefix(upTo: atIndex))))
+//    }
+//
+    func getAccountName(userEmail: String) -> String {
         guard let atIndex = userEmail.firstIndex(of: "@"), atIndex != userEmail.startIndex else {
-            return result(.failure(EmailError.invalidEmailFormat))
+            return ""
         }
-        return result(.success(String(userEmail.prefix(upTo: atIndex))))
+        return (String(userEmail.prefix(upTo: atIndex)))
     }
 
-    enum EmailError: LocalizedError {
-        case invalidEmailFormat
-        
-        var errorDescription: String? {
-            switch self {
-            case .invalidEmailFormat:
-                return "Invalid email format"
-            }
-        }
-    }
-    
     //============================
     // MARK: Time Calculation
     //============================
