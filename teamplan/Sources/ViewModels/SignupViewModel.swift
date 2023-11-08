@@ -65,7 +65,7 @@ final class SignupViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    func trySignup(newUser: UserSignupReqDTO) {
+    func trySignup(newUser: UserSignupDTO) {
         
     }
     
