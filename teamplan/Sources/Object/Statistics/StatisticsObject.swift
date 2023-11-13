@@ -25,13 +25,13 @@ struct StatisticsObject{
     
     //content: Challenge
     var stat_chlg_step: [[Int : Int]]
-    var stat_mychlg: [Int : Int]
+    var stat_mychlg: [Int]
     
     // maintenance
     var stat_upload_at: Date
     
     //============================
-    // MARK: Constructor
+    // MARK: Constructor : Service
     //============================
     // : SignupService
     init(identifier: String, signupDate: Date){
@@ -50,12 +50,15 @@ struct StatisticsObject{
             [ChallengeType.projectFinish.rawValue : 1],
             [ChallengeType.waterDrop.rawValue : 1]
         ]
-        self.stat_mychlg = [:]
+        self.stat_mychlg = []
         self.stat_upload_at = signupDate
     }
     
-    // : (CoreData) Get
-    init?(statEntity: StatisticsEntity, chlgStep: [[Int : Int]], mychlg: [Int : Int]){
+    //============================
+    // MARK: Constructor : Coredata
+    //============================
+    // Get
+    init?(statEntity: StatisticsEntity, chlgStep: [[Int : Int]], mychlg: [Int]){
         guard let stat_user_id = statEntity.stat_user_id,
               let stat_upload_at = statEntity.stat_upload_at
         else {
@@ -75,9 +78,8 @@ struct StatisticsObject{
         self.stat_mychlg = mychlg
         self.stat_upload_at = stat_upload_at
     }
-
     
-    // : (Coredata) Update
+    // Update
     init(updatedStat: StatisticsDTO){
         self.stat_user_id = updatedStat.stat_user_id
         self.stat_term = updatedStat.stat_term
@@ -92,8 +94,12 @@ struct StatisticsObject{
         self.stat_upload_at = updatedStat.stat_upload_at
     }
     
-    // : (Firestore) Get
+    //============================
+    // MARK: Constructor : Firestore
+    //============================
+    // Get
     init?(statData: [String : Any]){
+        // 1. Pharsing Normal Data
         guard let stat_user_id = statData["stat_user_id"] as? String,
               let stat_term = statData["stat_term"] as? Int,
               let stat_drop = statData["stat_drop"] as? Int,
@@ -102,17 +108,31 @@ struct StatisticsObject{
               let stat_proj_alert = statData["stat_proj_alert"] as? Int,
               let stat_proj_ext = statData["stat_proj_ext"] as? Int,
               let stat_todo_reg = statData["stat_todo_reg"] as? Int,
-              let stat_chlg_step = statData["stat_chlg_step"] as? [[Int : Int]],
-              let stat_mychlg = statData["stat_mychlg"] as? [Int : Int],
-              let stat_upload_at = statData["stat_upload_at"] as? String
+              let stat_upload_at_string = statData["stat_upload_at"] as? String
         else {
             return nil
         }
-        // Date Converter
+        // 2. Date Converter & Pharsing
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
         
-        // Assigning values
+        guard let stat_upload_at = formatter.date(from: stat_upload_at_string) else {
+            return nil
+        }
+        
+        // 3. Pharsing JSONString & Convert to Dictionary Array
+        if let stat_chlg_step_string = statData["stat_chlg_step"] as? String,
+           let jsonData = stat_chlg_step_string.data(using: .utf8),
+           let stat_chlg_step = try? JSONSerialization.jsonObject(with: jsonData) as? [[Int: Int]] {
+            self.stat_chlg_step = stat_chlg_step
+        } else {
+            return nil
+        }
+        
+        // 4. Pharsing Int Array Data
+        self.stat_mychlg = statData["stat_mychlg"] as? [Int] ?? []
+        
+        // 5. Assigning values
         self.stat_user_id = stat_user_id
         self.stat_term = stat_term
         self.stat_drop = stat_drop
@@ -121,9 +141,7 @@ struct StatisticsObject{
         self.stat_proj_alert = stat_proj_alert
         self.stat_proj_ext = stat_proj_ext
         self.stat_todo_reg = stat_todo_reg
-        self.stat_chlg_step = stat_chlg_step
-        self.stat_mychlg = stat_mychlg
-        self.stat_upload_at = formatter.date(from: stat_upload_at)!
+        self.stat_upload_at = stat_upload_at
     }
     
     //============================
@@ -132,6 +150,10 @@ struct StatisticsObject{
     func toDictionary() -> [String : Any] {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
+        
+        let statChlgStepConverted = self.stat_chlg_step.map { innerDict in
+            innerDict.mapKeys { String($0) }
+        }
         
         return [
             "stat_user_id": self.stat_user_id,
@@ -142,8 +164,8 @@ struct StatisticsObject{
             "stat_proj_alert": self.stat_proj_alert,
             "stat_proj_ext": self.stat_proj_ext,
             "stat_todo_reg": self.stat_todo_reg,
-            "stat_chlg_step": self.stat_chlg_step,
             "stat_mychlg": self.stat_mychlg,
+            "stat_chlg_step": statChlgStepConverted,
             "stat_upload_at": formatter.string(from: self.stat_upload_at)
         ]
     }

@@ -120,6 +120,19 @@ final class Utilities {
     }
 }
 
+//============================
+// MARK: Dictionary Extension
+//============================
+extension Dictionary {
+    func mapKeys<T: Hashable>(_ transform: (Key) -> T) -> [T: Value] {
+        var newDict = [T: Value]()
+        for (key, value) in self {
+            newDict[transform(key)] = value
+        }
+        return newDict
+    }
+}
+
 //================================
 // MARK: - Exception
 //================================
