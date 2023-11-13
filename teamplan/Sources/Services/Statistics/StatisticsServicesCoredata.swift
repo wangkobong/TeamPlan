@@ -119,7 +119,7 @@ final class StatisticsServicesCoredata{
         do {
             // Convert JSON String Data
             let chlgStep = try util.convertFromJSON(jsonString: reqStat.stat_chlg_step, type: [[Int : Int]].self)
-            let myChlg = try util.convertFromJSON(jsonString: reqStat.stat_mychlg, type: [Int : Int].self)
+            let myChlg = try util.convertFromJSON(jsonString: reqStat.stat_mychlg, type: [Int].self)
             
             // Struct Oject
             guard let stat = StatisticsObject(statEntity: reqStat, chlgStep: chlgStep, mychlg: myChlg) else {

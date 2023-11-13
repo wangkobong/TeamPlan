@@ -25,7 +25,7 @@ struct StatisticsDTO{
     
     //content: Challenge
     var stat_chlg_step: [[Int : Int]]
-    var stat_mychlg: [Int : Int]
+    var stat_mychlg: [Int]
     
     // maintenance
     var stat_upload_at: Date
