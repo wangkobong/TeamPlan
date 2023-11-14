@@ -39,7 +39,7 @@ final class AccessLogServicesFirestore{
         
         // Target Table
         let collectionRef = fs.collection("AccessLog")
-        
+
         // Add AccessLog
         collectionRef.addDocument(data: reqLog.toDictionary()){ error in
             

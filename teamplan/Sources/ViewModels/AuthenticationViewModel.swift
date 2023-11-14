@@ -96,7 +96,7 @@ final class AuthenticationViewModel: ObservableObject{
         }
     }
     
-    func trySignup(userName: String) async throws {
+    func trySignup(userName: String) async throws -> UserDTO {
         
         /*
         // 혼란을 드려 죄송합니다ㅠ
@@ -108,20 +108,16 @@ final class AuthenticationViewModel: ObservableObject{
         // 4. NickName 까지 받아졌다면, 'SignupLoadingService' 로 UserProfile 뼈대(UserSignupDTO)를 넘겨주시면 됩니다
          
         // 아래 identifier은 이제 getAccountInfo 함수에 추가되어 아래과정은 불필요합니다!
-         
-        let identifier = "\(userInfo.accountName)_\(userInfo.provider.rawValue)"
-        let singUpUser = UserSignupDTO(identifier: identifier,
-                                          email: signupUser.email,
-                                          provider: signupUser.provider)
         */
         
-        guard let signupUser = self.signupUser else { return }
+        guard let signupUser = self.signupUser else { throw SignupError.invalidUser }
 
-        let accountInfo = self.signupService.getAccountInfo(newUser: signupUser)
         
-        guard let accountInfo = accountInfo else { return }
-        let signupService = SignupLoadingService(newUser: accountInfo)
-        try await signupService.executor()
+        guard let accountInfo = self.signupService.getAccountInfo(newUser: signupUser) else { throw SignupError.invalidAccountInfo }
+        let finalUserInfo = self.signupService.setNickName(newUser: accountInfo, nickName: userName)
+        let signupService = SignupLoadingService(newUser: finalUserInfo)
+        let signedUser = try await signupService.executor()
+        return signedUser
     }
     
     
@@ -143,5 +139,11 @@ extension AuthenticationViewModel{
     enum State{
         case signedIn
         case signedOut
+    }
+    
+    enum SignupError: Error {
+        case invalidUser
+        case invalidAccountInfo
+        case signupFailed
     }
 }

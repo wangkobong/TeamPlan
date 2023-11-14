@@ -15,6 +15,7 @@ struct SignupView: View {
     @Environment(\.dismiss) var dismiss
     @State var signupState: Int = 0
     @State var userName: String = ""
+    @State private var signupSuccess = false
     
     let transition: AnyTransition = .asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading))
 
@@ -33,8 +34,6 @@ struct SignupView: View {
     
     var body: some View {
         NavigationView {
-
-            
             VStack {
                 Spacer()
                     .frame(height: 34)
@@ -446,11 +445,13 @@ extension SignupView {
             .frame(maxWidth: .infinity)
             .background(self.checkValidUserName() ? Color.theme.mainPurpleColor : .theme.whiteGreyColor)
             .foregroundColor(.theme.whiteColor)
-            .disabled(self.checkValidUserName())
+            .disabled(!self.checkValidUserName())
             .font(.appleSDGothicNeo(.regular, size: 20))
             .onTapGesture {
                 Task {
-                    await trySignup()
+                    let userDTO = try await trySignup()
+                    print("userDTO: \(userDTO)")
+                    self.signupSuccess = true
                 }
             }
     }
@@ -499,11 +500,13 @@ extension SignupView {
         }
     }
     
-    private func trySignup() async {
+    private func trySignup() async throws -> UserDTO {
+        
         do {
-            try await authViewModel.trySignup(userName: self.userName)
+            let user = try await authViewModel.trySignup(userName: self.userName)
+            return user
         } catch let error {
-            print("trySignup error: \(error)")
+            throw error
         }
     }
 
