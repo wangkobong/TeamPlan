@@ -18,7 +18,7 @@ final class ChallengeLogServicesFirestore{
     // MARK: - Set ChallengeLog
     //================================
     //##### Async/Await #####
-    func setChallengeLog(reqLog: ChallengeLog) async throws {
+    func setLog(reqLog: ChallengeLog) async throws {
         
         // Target Table
         let collectionRef = fs.collection("ChallengeLog")
@@ -33,110 +33,52 @@ final class ChallengeLogServicesFirestore{
         }
     }
     
-    //##### Result #####
-    func setChallengeLog(reqLog: ChallengeLog,
-                           result: @escaping(Result<String, Error>) -> Void) {
-        
-        // Target Table
-        let collectionRef = fs.collection("ChallengeLog")
-        
-        // Add ChallengeLog
-        collectionRef.addDocument(data: reqLog.toDictionary()){ error in
-            
-            // Exception Handling: Firestore
-            if let error = error {
-                print("(Firestore) Error Set ChallengeLog : \(error)")
-                result(.failure(ChallengeLogErrorFS.UnexpectedSetError))
-            } else {
-                result(.success("Successfully set ChallengeLog at Firestore"))
-            }
-        }
-    }
-    
     //================================
     // MARK: - Get ChallengeLog
     //================================
-    //##### Result #####
-    func getChallengeLog(identifier: String,
-                         result: @escaping(Result<ChallengeLog, Error>) -> Void) {
+    func getLog(from userId: String) async throws -> ChallengeLog {
         
-        // Target Table
+        // Search Table
         let collectionRef = fs.collection("ChallengeLog")
+        let docsRef = try await collectionRef.whereField("log_user_id", isEqualTo: userId).getDocuments()
         
-        collectionRef.whereField("log_user_id", isEqualTo: identifier).getDocuments() { (snapShot, error) in
-            
-            // Exception Handling : Internal Error (FirestoreServer)
-            if let error = error {
-                print("(Firestore) Error Get ChallengeLog : \(error)")
-                return result(.failure(ChallengeLogErrorFS.InternalError))
+        // Exception Handling : Search Error
+        guard docsRef.documents.count == 1 else {
+            if docsRef.documents.count > 1 {
+                throw ChallengeLogErrorFS.MultipleChallengeLogFound
+            } else {
+                throw ChallengeLogErrorFS.InternalError
             }
-            
-            // Exception Handling : Identifier
-            guard let response = snapShot else {
-                return result(.failure(ChallengeLogErrorFS.ChallengeLogRetrievalByIdentifierFailed))
-            }
-            
-            // Exception Handling : Search Error
-            guard response.documents.count == 1 else {
-                if response.documents.count > 1 {
-                    return result(.failure(ChallengeLogErrorFS.MultipleChallengeLogFound))
-                } else {
-                    return result(.failure(ChallengeLogErrorFS.InternalError))
-                }
-            }
-            
-            // Convert DocsData to Object
-            let docs = response.documents.first!
-            guard let log = ChallengeLog(challengeData: docs.data()) else {
-                // Exception Handling : Failed to fetch ChallengeLog from Docs
-                return result(.failure(ChallengeLogErrorFS.UnexpectedConvertError))
-            }
-            return result(.success(log))
         }
+        
+        // Convert Docs to Object
+        let docs = docsRef.documents.first!
+        guard let log = ChallengeLog(challengeData: docs.data()) else {
+            throw ChallengeLogErrorFS.UnexpectedConvertError
+        }
+        return log
     }
     
     //================================
     // MARK: - Update ChallengeLog
     //================================
-    //##### Result #####
-    func updateChallengeLog(identifier: String, updatedLog: ChallengeLog,
-                            result: @escaping(Result<String, Error>) -> Void) {
+    func updateLog(from userId: String, to updatedLog: ChallengeLog) async throws {
         
-        // Target Table
+        // Search Table
         let collectionRef = fs.collection("ChallengeLog")
+        let docsRef = try await collectionRef.whereField("log_user_id", isEqualTo: userId).getDocuments()
         
-        collectionRef.whereField("log_user_id", isEqualTo: identifier).getDocuments() { (snapShot, error) in
-            
-            // Exception Handling : Internal Error (FirestoreServer)
-            if let error = error {
-                print("(Firestore) Error Update ChallengeLog : \(error)")
-                return result(.failure(ChallengeLogErrorFS.InternalError))
-            }
-            
-            // Exception Handling : Identifier
-            guard let response = snapShot else {
-                return result(.failure(ChallengeLogErrorFS.ChallengeLogRetrievalByIdentifierFailed))
-            }
-            
-            // Exception Handling : Search Error
-            guard response.documents.count == 1 else {
-                if response.documents.count > 1 {
-                    return result(.failure(ChallengeLogErrorFS.MultipleChallengeLogFound))
-                } else {
-                    return result(.failure(ChallengeLogErrorFS.InternalError))
-                }
-            }
-            
-            let docs = response.documents.first!
-            docs.reference.updateData(updatedLog.toDictionary()) { error in
-                if let error = error {
-                    print("(Firestore) Error Update ChallengeLog : \(error)")
-                    return result(.failure(error))
-                } else {
-                    return result(.success("Successfully Update ChallengeLog"))
-                }
+        // Exception Handling : Search Error
+        guard docsRef.documents.count == 1 else {
+            if docsRef.documents.count > 1 {
+                throw ChallengeLogErrorFS.MultipleChallengeLogFound
+            } else {
+                throw ChallengeLogErrorFS.InternalError
             }
         }
+        
+        let docs = docsRef.documents.first!
+        try await docs.reference.updateData(updatedLog.toDictionary())
     }
     
     //================================
@@ -147,31 +89,19 @@ final class ChallengeLogServicesFirestore{
         
         // Target Table
         let collectionRef = fs.collection("ChallengeLog")
+        let docsRef = try await collectionRef.whereField("log_user_id", isEqualTo: identifier).getDocuments()
         
-        do {
-            let response = try await collectionRef.whereField("log_user_id", isEqualTo: identifier).getDocuments()
-            
-            // Exception Handling : Search Error
-            guard response.documents.count == 1 else {
-                if response.documents.count > 1 {
-                    throw ChallengeLogErrorFS.MultipleChallengeLogFound
-                } else {
-                    throw ChallengeLogErrorFS.InternalError
-                }
+        // Exception Handling : Search Error
+        guard docsRef.documents.count == 1 else {
+            if docsRef.documents.count > 1 {
+                throw ChallengeLogErrorFS.MultipleChallengeLogFound
+            } else {
+                throw ChallengeLogErrorFS.InternalError
             }
-            
-            // Fetch Document
-            guard let docs = response.documents.first else {
-                throw ChallengeLogErrorFS.UnexpectedFetchError
-            }
-            
-            // Delete ChallengeLog
-            try await docs.reference.delete()
-            
-        } catch {
-            print("(Firestore) Error Delete ChallengeLog : \(error)")
-            throw ChallengeLogErrorFS.UnexpectedDeleteError
         }
+        
+        let docs = docsRef.documents.first!
+        try await docs.reference.delete()
     }
 }
 
