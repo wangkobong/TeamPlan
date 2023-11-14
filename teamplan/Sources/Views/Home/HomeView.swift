@@ -31,7 +31,7 @@ struct HomeView: View {
     
     var body: some View {
         NavigationStack {
-            LoadingView(isShowing: $isLoading) {
+            ZStack {
                 VStack {
                     Spacer()
                         .frame(height: 21)
@@ -67,6 +67,10 @@ struct HomeView: View {
                 }
                 .fullScreenCover(isPresented: $showingTutorial) {
                     TutorialView()
+                }
+                
+                if isLoading {
+                    LoadingView()
                 }
             }
         }

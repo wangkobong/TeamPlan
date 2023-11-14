@@ -31,21 +31,22 @@ struct LoginView: View {
 
     var body: some View {
         NavigationView {
-            LoadingView(isShowing: $isLoading) {
-                ZStack {
-                    switch viewState {
-                    case .login:
-                        loginView
-                            .transition(transition)
-                    case .toHome:
-                        HomeView()
-                            .transition(transition)
-                    case .toSignup:
-                        SignupView()
-                            .transition(transition)
-                    }
+            ZStack {
+                switch viewState {
+                case .login:
+                    loginView
+                        .transition(transition)
+                case .toHome:
+                    HomeView()
+                        .transition(transition)
+                case .toSignup:
+                    SignupView()
+                        .transition(transition)
                 }
                 
+                if isLoading {
+                    LoadingView()
+                }
             }
         }
     }

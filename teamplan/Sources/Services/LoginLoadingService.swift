@@ -154,7 +154,7 @@ extension LoginLoadingService{
     // Step1. Identifier
     func getIdentifier(authResult: AuthSocialLoginResDTO,
                        result: @escaping(Result<String, Error>) -> Void) {
-        util.getIdentifier(authRes: authResult, result: result)
+        util.getIdentifier(authRes: authResult)
     }
     
     // Step2. Get User From Coredata or Firestore
