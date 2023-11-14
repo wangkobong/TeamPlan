@@ -10,109 +10,107 @@ import Foundation
 
 final class HomeService {
     
+    //===============================
+    // MARK: - Parameter Setting
+    //===============================
     let userCD = UserServicesCoredata()
     let projectCD = ProjectServicesCoredata()
-    let challengeCD = ChallengeServicesCoredata()
-    let genDummy = GenerateDummy()
+    let challenge: ChallengeService
+    let phrase = UserPhrase()
     
-    var identifier: String
+    let identifier: String
+    var statistics: StatisticsDTO?
+    
+    //===============================
+    // MARK: - Initializer
+    //===============================
     init(identifier: String){
         self.identifier = identifier
+        self.challenge = ChallengeService(identifier)
     }
     
-    //===============================
-    // MARK: - get User
-    //===============================
-    /// * Return Type : UserDTO / UserHomeResDTO
-    ///    * success : 'user_id' & 'user_name' return
-    ///    * exception : filled error message in 'user_id' & 'user_name'
-    func getUser(result: @escaping(Result<String, Error>) -> Void) {
-        userCD.getUser(identifier: self.identifier) { cdResult in
-            switch cdResult {
-            case .success(let userInfo):
-                return result(.success(userInfo.user_name))
-            case .failure(let error):
-                return result(.failure(error))
-            }
+    func readyService() throws {
+        do {
+            try self.challenge.loadStatistics()
+            try self.challenge.loadChallenges()
+            try self.challenge.loadMyChallenges()
+        } catch {
+            print("(Service) Error while Init in HomeService : \(error)")
+            throw HomeServiceError.UnexpectedInitError
         }
     }
     
-    func getDummyUser() ->UserHomeResDTO{
-        
-        let dummyUser = genDummy.createDummyUser()
-        
-        return UserHomeResDTO(userObject: dummyUser)
-    }
-    
     //===============================
-    // MARK: - get Project
+    // MARK: - Generate Sentence
     //===============================
-    func getProject(result: @escaping(Result<[ProjectCardResDTO], Error>) -> Void) {
-        
-        // extract all project info
-        projectCD.getProjectCoredata(identifier: self.identifier) { cdResult in
-            switch cdResult {
-            case .success(let reqProjects):
-                
-                // sorted by 'deadline'
-                let sortedProjects = reqProjects.sorted { $0.proj_deadline > $1.proj_deadline }
-                
-                // convert to DTO
-                let convertedProjects = sortedProjects.map{ ProjectCardResDTO(from: $0) }
-                
-                // return top3 project Info
-                return result(.success(Array(convertedProjects.prefix(3))))
-              
-            // Exception Error: Projects fetch Failed
-            case .failure(let error):
-                return result(.failure(error))
-            }
+    func getSentences() throws -> String {
+        if let phrase = self.phrase.stringAry.randomElement() {
+            return phrase
+        } else {
+            print("(Service) Error while Generate Sentence in HomeService")
+            throw HomeServiceError.InternalError
         }
     }
     
-    
-    func getTDummyProject() -> [ProjectCardResDTO]{
-        
-        // get DummyProject
-        let dummyProjects = genDummy.createDummyProject()
-        
-        // sorted by 'deadline'
-        let sortedProjects = dummyProjects.sorted{ $0.proj_deadline < $1.proj_deadline }
-        
-        let convertedProjects = sortedProjects.map{ ProjectCardResDTO(from: $0) }
-        
-        // return top3 project info
-        return Array(convertedProjects.prefix(3))
-    }
-    
     //===============================
-    // MARK: - get MyChallenge
+    // MARK: - get ProjectCard
     //===============================
-    /*
-    func getMyChallenge(result: @escaping(Result<[ChallengeCardResDTO], Error>) -> Void) {
-        
-        challengeCD.getMyChallenge(selected: [1,2,3]) { cdResult in
-            switch cdResult {
+    func getProjectCard() throws -> [ProjectCardDTO] {
+        do {
+            // Get All Projects
+            let requestProjects = try self.projectCD.getProjects(from: self.identifier)
             
-            case .success(let cardObjects):
-                let cardList = cardObjects.map { ChallengeCardResDTO(chlgObject: $0) }
-                return result(.success(cardList))
-                
-            // Exception Handling: Failed to Get MyChallenge
-            case .failure(let error):
-                return result(.failure(error))
-            }
+            return requestProjects
+            // Sorted by DeadLine
+                .sorted { $0.proj_deadline > $1.proj_deadline }
+            // Set Top3
+                .prefix(3)
+            // Convert to ProjectCard
+                .map { ProjectCardDTO(from: $0) }
+        } catch {
+            print("(Service) Error get ProjectCard in HomeService : \(error)")
+            throw HomeServiceError.UnexpectedProjectCardGetError
         }
     }
-     */
-    
-    func getDummyMyChallenge() -> [ChallengeCardResDTO]{
-        let dummyMyChallenge = genDummy.createDummyMyChallenge()
-        let dummyMyChallengeDTO = dummyMyChallenge.map{ ChallengeCardResDTO(chlgObject: $0) }
-        
-        return Array(dummyMyChallengeDTO)
-    }
-    
 }
 
+//===============================
+// MARK: - MyChallenge
+//===============================
+extension HomeService{
+    // Get MyChallenge
+    func getMyChallenge() throws -> [MyChallengeDTO] {
+        try challenge.getMyChallenges()
+    }
+    // Disable MyChallenge
+    func disableMyChallenge(from challengeId: Int) async throws {
+        try await challenge.disableMyChallenge(from: challengeId)
+    }
+    // Reward MyChallenge
+    func rewardMyChallenge(from challengeId: Int) async throws -> ChallengeRewardDTO {
+        try await challenge.rewardMyChallenge(from: challengeId)
+    }
+}
 
+//===============================
+// MARK: - Exception
+//===============================
+enum HomeServiceError: LocalizedError {
+    case UnexpectedInitError
+    case UnexpectedSentenceGenerateError
+    case UnexpectedProjectCardGetError
+    case InternalError
+    
+    var errorDescription: String?{
+        switch self {
+        case .UnexpectedInitError:
+            return "Service: There was an unexpected error while Initialize 'HomeService'"
+        case .UnexpectedSentenceGenerateError:
+            return "Service: There was an unexpected error while Generate Sentence in 'HomeService'"
+        case .UnexpectedProjectCardGetError:
+            return "Service: There was an unexpected error while Get 'ProjectCard' in 'HomeService'"
+        case .InternalError:
+            return "Service: Internal Error Occurred while processing 'HomeService'"
+        }
+    }
+}
