@@ -88,7 +88,7 @@ final class HomeService {
     //===============================
     // MARK: - get MyChallenge
     //===============================
-    
+    /*
     func getMyChallenge(result: @escaping(Result<[ChallengeCardResDTO], Error>) -> Void) {
         
         challengeCD.getMyChallenge(selected: [1,2,3]) { cdResult in
@@ -104,6 +104,7 @@ final class HomeService {
             }
         }
     }
+     */
     
     func getDummyMyChallenge() -> [ChallengeCardResDTO]{
         let dummyMyChallenge = genDummy.createDummyMyChallenge()

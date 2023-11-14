@@ -42,6 +42,7 @@ final class ChallengeService{
     }
     
     // Pre Load Challenge Data
+    /*
     func initChallenge(result: @escaping(Result<Bool, Error>) -> Void) {
         chlgCD.getChallenges { cdResult in
             switch cdResult {
@@ -53,6 +54,7 @@ final class ChallengeService{
             }
         }
     }
+     */
 
     //===============================
     // MARK: Get - MyChallenges
@@ -98,7 +100,7 @@ final class ChallengeService{
     //===============================
     // MARK: Select - MyChallenges
     //===============================
-    //TODO: Exception Handling
+    /*TODO: Exception Handling
     // * need return type?
     func selecteMyChallenge(challengeID: Int, status: Bool,
                             result: @escaping(Result<Bool, Error>) -> Void) {
@@ -133,6 +135,7 @@ final class ChallengeService{
             }
         }
     }
+     */
 
     
     //===============================
