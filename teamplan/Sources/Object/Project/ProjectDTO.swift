@@ -12,7 +12,7 @@ import Foundation
 // MARK: Card - Home/Project
 //============================
 /// Service -> View/ViewModel
-struct ProjectCardResDTO{
+struct ProjectCardDTO{
     // content
     let title: String
     

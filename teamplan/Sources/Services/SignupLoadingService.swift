@@ -220,7 +220,7 @@ final class SignupLoadingService{
     //===============================
     // : Firestore
     func setChallengeLogFS() async throws {
-        try await chlglogFS.setChallengeLog(reqLog: self.newChallengeLog)
+        try await chlglogFS.setLog(reqLog: self.newChallengeLog)
     }
     private func rollbackSetChallengeLogFS() async throws {
         try await chlglogFS.deleteChallengeLog(identifier: self.newProfile.user_id)
@@ -228,10 +228,10 @@ final class SignupLoadingService{
     
     // : Coredata
     func setChallengeLogCD() async throws {
-        try await chlglogCD.setChallengeLog(reqLog: self.newChallengeLog)
+        try await chlglogCD.setLog(from: self.newChallengeLog)
     }
     private func rollbackSetChallengeLogCD() async throws {
-        try await chlglogCD.deleteChallengeLog(identifier: self.newProfile.user_id)
+        try await chlglogCD.deleteLog(from: self.newProfile.user_id)
     }
     
     //===============================

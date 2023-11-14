@@ -16,7 +16,7 @@ final class HomeViewModel: ObservableObject {
     
     private let homeService = HomeService(identifier: "")
     private let loginService = LoginLoadingService()
-    private let challengeService = ChallengeService(identifier: "")
+    private let challengeService = ChallengeService("")
     private var cancellables = Set<AnyCancellable>()
     
     init() {
@@ -27,11 +27,13 @@ final class HomeViewModel: ObservableObject {
     }
     
     private func addSubscribers() {
+        /*
         challengeService.$myChallenges
             .sink { [weak self] challenges in
                 self?.myChallenges = challenges
             }
             .store(in: &cancellables)
+         */
     }
     
     @MainActor

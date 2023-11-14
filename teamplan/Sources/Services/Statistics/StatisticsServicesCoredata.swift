@@ -23,7 +23,7 @@ final class StatisticsServicesCoredata{
     //================================
     // MARK: - Set Statistics
     //================================
-    //##### Async/Await #####
+    //##### Async/Throws #####
     func setStatistics(reqStat: StatisticsObject) async throws {
         
         do{
@@ -86,32 +86,40 @@ final class StatisticsServicesCoredata{
     //================================
     // MARK: - Get Statistics
     //================================
+    //##### Throws #####
+    func getStatistics(from userId: String) throws -> StatisticsObject {
+        return try getStatProcess(userId)
+    }
+    
     //##### Result #####
     func getStatistics(identifier: String,
-                         result: @escaping(Result<StatisticsObject, Error>) -> Void) {
-        
+                       result: @escaping(Result<StatisticsObject, Error>) -> Void) {
+        do {
+            let reqStat = try getStatProcess(identifier)
+            return result(.success(reqStat))
+        } catch {
+            print("(CoreData) Error Get Statistics : \(error)")
+            return result(.failure(StaticErrorCD.UnexpectedGetError))
+        }
+    }
+    
+    //##### Core Function #####
+    private func getStatProcess(_ userId: String) throws -> StatisticsObject {
         // parameter setting
         let fetchReq: NSFetchRequest<StatisticsEntity> = StatisticsEntity.fetchRequest()
         
         // Request Query
-        fetchReq.predicate = NSPredicate(format: "stat_user_id == %@", identifier)
+        fetchReq.predicate = NSPredicate(format: "stat_user_id == %@", userId)
         fetchReq.fetchLimit = 1
         
         // Search Statistics
-        do{
-            // Search Statistics
-            guard let statEntity = try context.fetch(fetchReq).first else {
-                // Exception Handling: Identifier
-                return result(.failure(StaticErrorCD.StatRetrievalByIdentifierFailed))
-            }
-            let reqStat = try convertToObject(reqStat: statEntity)
-            return result(.success(reqStat))
-        
-            // Exception Handling: Internal Error (Coredata)
-        } catch  {
-            print("(CoreData) Error Get Statistics : \(error)")
-            return result(.failure(StaticErrorCD.UnexpectedGetError))
+        guard let statEntity = try context.fetch(fetchReq).first else {
+            // Exception Handling: Identifier
+            throw StaticErrorCD.StatRetrievalByIdentifierFailed
         }
+        // Convert Entity to Object
+        let reqStat = try convertToObject(reqStat: statEntity)
+        return reqStat
     }
     
     //##### Support function
@@ -137,10 +145,36 @@ final class StatisticsServicesCoredata{
     //================================
     // MARK: - Update Statistics
     //================================
-    //##### Result #####
-    func updateStatistics(identifier: String, updatedStat: StatisticsDTO,
-                          result: @escaping(Result<String, Error>) -> Void) {
+    //##### Async/Throws #####
+    func updateStatistics(from identifier: String, to updatedStat: StatisticsDTO) async throws {        // parameter setting
+        let fetchReq: NSFetchRequest<StatisticsEntity> = StatisticsEntity.fetchRequest()
         
+        // Request Query
+        fetchReq.predicate = NSPredicate(format: "stat_user_id == %@", identifier)
+        fetchReq.fetchLimit = 1
+        
+        do {
+            // Search StatisticsEntity
+            guard let statEntity = try self.context.fetch(fetchReq).first else {
+                // Exception Handling: Identifier
+                throw StaticErrorCD.StatRetrievalByIdentifierFailed
+            }
+            if try checkUpdate(from: statEntity, to: updatedStat) {
+                try context.save()
+            } else {
+                throw StaticErrorCD.NoUpdateNecessary
+            }
+        } catch {
+            // Eception Handling: Internal Error
+            print("(CoreData) Error Update Statistics : \(error)")
+            throw StaticErrorCD.UnexpectedUpdateError
+        }
+    }
+    
+    //##### Result #####
+    //TODO: Adjust Async
+    func updateStatistics(from identifier: String, to updatedStat: StatisticsDTO,
+                          result: @escaping(Result<String, Error>) -> Void) {
         // parameter setting
         let fetchReq: NSFetchRequest<StatisticsEntity> = StatisticsEntity.fetchRequest()
         
@@ -151,31 +185,15 @@ final class StatisticsServicesCoredata{
         do {
             // Search StatisticsEntity
             guard let statEntity = try self.context.fetch(fetchReq).first else {
-                
                 // Exception Handling: Identifier
                 throw StaticErrorCD.StatRetrievalByIdentifierFailed
             }
-            // Convert Array to JSON
-            let json_stat_chlg_step = try util.convertToJSON(data: updatedStat.stat_chlg_step)
-            let json_stat_mychlg = try util.convertToJSON(data: updatedStat.stat_mychlg)
-            
             // Update StatisticsEntity
-            var isUpdated = false
-            isUpdated = util.updateFieldIfNeeded(&statEntity.stat_term, newValue: Int32(updatedStat.stat_term)) || isUpdated
-            isUpdated = util.updateFieldIfNeeded(&statEntity.stat_drop, newValue: Int32(updatedStat.stat_drop)) || isUpdated
-            isUpdated = util.updateFieldIfNeeded(&statEntity.stat_proj_reg, newValue: Int32(updatedStat.stat_proj_reg)) || isUpdated
-            isUpdated = util.updateFieldIfNeeded(&statEntity.stat_proj_fin, newValue: Int32(updatedStat.stat_proj_fin)) || isUpdated
-            isUpdated = util.updateFieldIfNeeded(&statEntity.stat_proj_alert, newValue: Int32(updatedStat.stat_proj_alert)) || isUpdated
-            isUpdated = util.updateFieldIfNeeded(&statEntity.stat_proj_ext, newValue: Int32(updatedStat.stat_proj_ext)) || isUpdated
-            isUpdated = util.updateFieldIfNeeded(&statEntity.stat_todo_reg, newValue: Int32(updatedStat.stat_todo_reg)) || isUpdated
-            isUpdated = util.updateFieldIfNeeded(&statEntity.stat_chlg_step, newValue: json_stat_chlg_step) || isUpdated
-            isUpdated = util.updateFieldIfNeeded(&statEntity.stat_mychlg, newValue: json_stat_mychlg) || isUpdated
-            isUpdated = util.updateFieldIfNeeded(&statEntity.stat_upload_at, newValue: updatedStat.stat_upload_at) || isUpdated
-            
-            // Update StatisticsEntity
-            if isUpdated {
+            if try checkUpdate(from: statEntity, to: updatedStat) {
                 try context.save()
                 return result(.success("Successfully Update Statistics at CoreData"))
+            } else {
+                return result(.failure(StaticErrorCD.NoUpdateNecessary))
             }
         
         } catch {
@@ -183,6 +201,33 @@ final class StatisticsServicesCoredata{
             print("(CoreData) Error Update Statistics : \(error)")
             return result(.failure(StaticErrorCD.UnexpectedUpdateError))
         }
+    }
+    
+    //##### Core function
+    private func updateStatProcess(from userId: String, to updatedStat: StatisticsDTO) async throws {
+
+    }
+    
+    //##### Support function
+    private func checkUpdate(from statEntity: StatisticsEntity, to updatedStat: StatisticsDTO) throws -> Bool {
+        // Convert Array to JSON
+        let json_stat_chlg_step = try util.convertToJSON(data: updatedStat.stat_chlg_step)
+        let json_stat_mychlg = try util.convertToJSON(data: updatedStat.stat_mychlg)
+        
+        // Update StatisticsEntity
+        var isUpdated = false
+        isUpdated = util.updateFieldIfNeeded(&statEntity.stat_term, newValue: Int32(updatedStat.stat_term)) || isUpdated
+        isUpdated = util.updateFieldIfNeeded(&statEntity.stat_drop, newValue: Int32(updatedStat.stat_drop)) || isUpdated
+        isUpdated = util.updateFieldIfNeeded(&statEntity.stat_proj_reg, newValue: Int32(updatedStat.stat_proj_reg)) || isUpdated
+        isUpdated = util.updateFieldIfNeeded(&statEntity.stat_proj_fin, newValue: Int32(updatedStat.stat_proj_fin)) || isUpdated
+        isUpdated = util.updateFieldIfNeeded(&statEntity.stat_proj_alert, newValue: Int32(updatedStat.stat_proj_alert)) || isUpdated
+        isUpdated = util.updateFieldIfNeeded(&statEntity.stat_proj_ext, newValue: Int32(updatedStat.stat_proj_ext)) || isUpdated
+        isUpdated = util.updateFieldIfNeeded(&statEntity.stat_todo_reg, newValue: Int32(updatedStat.stat_todo_reg)) || isUpdated
+        isUpdated = util.updateFieldIfNeeded(&statEntity.stat_chlg_step, newValue: json_stat_chlg_step) || isUpdated
+        isUpdated = util.updateFieldIfNeeded(&statEntity.stat_mychlg, newValue: json_stat_mychlg) || isUpdated
+        isUpdated = util.updateFieldIfNeeded(&statEntity.stat_upload_at, newValue: updatedStat.stat_upload_at) || isUpdated
+        
+        return isUpdated
     }
 
     //================================
@@ -221,6 +266,7 @@ enum StaticErrorCD: LocalizedError {
     case UnexpectedSetError
     case UnexpectedGetError
     case UnexpectedUpdateError
+    case NoUpdateNecessary
     case UnexpectedDeleteError
     case StatRetrievalByIdentifierFailed
     case UnexpectedFetchError
@@ -234,6 +280,8 @@ enum StaticErrorCD: LocalizedError {
             return "Coredata: There was an unexpected error while Get 'Statistics' details"
         case .UnexpectedUpdateError:
             return "Coredata: There was an unexpected error while Update 'Statistics' details"
+        case .NoUpdateNecessary:
+            return "Coredata: 'Statistics' Update is No Necessary"
         case .UnexpectedDeleteError:
             return "Coredata: There was an unexpected error while Delete 'Statistics' details"
         case .StatRetrievalByIdentifierFailed:

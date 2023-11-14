@@ -64,125 +64,77 @@ final class ChallengeServicesCoredata{
     //================================
     // MARK: - Get Challenges
     //================================
-    //##### Result #####
-    func getChallenges(result: @escaping(Result<[ChallengeObject], Error>) -> Void) {
+    func getChallenges() throws -> [ChallengeObject] {
         
-        // parameter setting
+        // get ChallengeEntities
         let fetchReq: NSFetchRequest<ChallengeEntity> = ChallengeEntity.fetchRequest()
+        let reqChallenge = try self.context.fetch(fetchReq)
         
-        context.perform {
-            do{
-                let reqChlg = try self.context.fetch(fetchReq)
-                
-                // extract challenges
-                let chlgData = reqChlg.compactMap { ChallengeObject(chlgEntity: $0) }
-                
-                // Exception Handling: Convert
-                if chlgData.count != reqChlg.count {
-                    return result(.failure(ChallengeErrorCD.UnexpectedConvertError))
-                }
-                return result(.success(chlgData))
-                
-                // Exception Handling: Internal Error
-            } catch {
-                print("(CoreData) Error Get Challenges : \(error)")
-                return result(.failure(ChallengeErrorCD.InternalError))
-            }
+        // Convert Entity to Object
+        let challengeData = reqChallenge.compactMap { ChallengeObject(chlgEntity: $0) }
+        
+        // Exception Handling: Convert
+        if challengeData.count != reqChallenge.count {
+            throw ChallengeErrorCD.UnexpectedConvertError
         }
+        return challengeData
     }
     
-    //##### Result #####
-    func getChallenge(chlgID: Int,
-                      result: @escaping(Result<ChallengeObject, Error>) -> Void) {
-        
+    //================================
+    // MARK: - Get Challenge
+    //================================
+    func getChallenge(from chlgId: Int) throws -> ChallengeObject{
         // parameter setting
         let fetchReq: NSFetchRequest<ChallengeEntity> = ChallengeEntity.fetchRequest()
         
         // Request Query
-        fetchReq.predicate = NSPredicate(format: "chlg_id == %@", chlgID)
+        fetchReq.predicate = NSPredicate(format: "chlg_id == %@", chlgId)
         fetchReq.fetchLimit = 1
         
-        // Search Challenge
-        context.perform {
-            do{
-                guard let reqChlg = try self.context.fetch(fetchReq).first else {
-                    return result(.failure(ChallengeErrorCD.ChallengeRetrievalByIdentifierFailed))
-                }
-                
-                guard let chlgData = ChallengeObject(chlgEntity: reqChlg) else {
-                    return result(.failure(ChallengeErrorCD.UnexpectedConvertError))
-                }
-                return result(.success(chlgData))
-                
-            } catch {
-                print("(CoreData) Error Get Challenge : \(error)")
-                return result(.failure(ChallengeErrorCD.InternalError))
-            }
+        guard let reqChallenge = try self.context.fetch(fetchReq).first,
+              let chlgData = ChallengeObject(chlgEntity: reqChallenge) else {
+            throw ChallengeErrorCD.InternalError
         }
-    }
-    
-    //##### Result #####
-    func getMyChallenge(selected: [Int],
-                                result: @escaping(Result<[ChallengeObject], Error>) -> Void) {
-        
-        var myChlg: [ChallengeObject] = []
-        
-        // Search MyChallenge
-        for chlgID in selected {
-            getChallenge(chlgID: chlgID) { response in
-                switch response {
-                    
-                // Successfully Found MyChallenge
-                case .success(let chlg):
-                    myChlg.append(chlg)
-                    
-                // Failed to Found MyChallenge
-                case .failure(let error):
-                    print("(CoreData) Error Get MyChallenge : \(error)")
-                    return result(.failure(error))
-                }
-            }
-        }
-        return result(.success(myChlg))
+        return chlgData
     }
     
     //================================
     // MARK: - update Challenge
     //================================
-    //TODO: Exception Handling
-    func updateChallengeStatus(updatedChallenge: ChallengeStatusReqDTO,
-                           result: @escaping(Result<Bool, Error>) -> Void) {
+    func updateChallenge(from dto: ChallengeStatusDTO) async throws {
         
         // parameter setting
         let fetchReq: NSFetchRequest<ChallengeEntity> = ChallengeEntity.fetchRequest()
         
         // Request Query
-        fetchReq.predicate = NSPredicate(format: "chlg_id == %d", updatedChallenge.chlg_id)
+        fetchReq.predicate = NSPredicate(format: "chlg_id == %d", dto.chlg_id)
         fetchReq.fetchLimit = 1
         
-        do{
-            // Get Challenge Entities
-            guard let reqChlg = try context.fetch(fetchReq).first else {
+        do {
+            guard let reqChallenge = try context.fetch(fetchReq).first else {
                 throw ChallengeErrorCD.ChallengeRetrievalByIdentifierFailed
             }
             
             // update Challenge
-            var isUpdated = false
+            checkUpdateField(target: reqChallenge, with: dto)
+ 
+            try context.save()
             
-            isUpdated = util.updateFieldIfNeeded(&reqChlg.chlg_step, newValue: Int32(updatedChallenge.chlg_step)) || isUpdated
-            isUpdated = util.updateFieldIfNeeded(&reqChlg.chlg_selected, newValue: updatedChallenge.chlg_selected) || isUpdated
-            isUpdated = util.updateFieldIfNeeded(&reqChlg.chlg_status, newValue: updatedChallenge.chlg_status) || isUpdated
-            isUpdated = util.updateFieldIfNeeded(&reqChlg.chlg_lock, newValue: updatedChallenge.chlg_lock) || isUpdated
-            
-            if isUpdated {
-                try context.save()
-            }
-
         } catch {
             // Eception Handling: Internal Error (Coredata)
             print("(CoreData) Error Update Challenge Status : \(error)")
-            return result(.failure(ChallengeErrorCD.UnexpectedUpdateError))
+            throw ChallengeErrorCD.UnexpectedUpdateError
         }
+    }
+    
+    //##### Support #####
+    private func checkUpdateField(target entity: ChallengeEntity, with dto: ChallengeStatusDTO){
+        entity.chlg_selected = dto.chlg_selected ?? entity.chlg_selected
+        entity.chlg_status = dto.chlg_status ?? entity.chlg_status
+        entity.chlg_lock = dto.chlg_lock ?? entity.chlg_lock
+        entity.chlg_selected_at = dto.chlg_selected_at ?? entity.chlg_selected_at
+        entity.chlg_unselected_at = dto.chlg_unselected_at ?? entity.chlg_unselected_at
+        entity.chlg_finished_at = dto.chlg_finished_at ?? entity.chlg_finished_at
     }
     
     //================================
