@@ -96,7 +96,7 @@ final class LoginLoadingService{
         
         // Update Statistics
         var updatedStat = stat
-        updatedStat.updateServiceTerm(updatedTerm: stat.stat_term + 1)
+        updatedStat.updateServiceTerm(to: stat.stat_term + 1)
         
         // Update Coredata & Firestore
         self.updateStatisticsStore(identifier: identifier, updatedStat: updatedStat) { response in
@@ -393,7 +393,7 @@ extension LoginLoadingService{
     private func updateStatToCoredata(identifier: String, updatedStat: StatisticsDTO,
                                       result: @escaping(Result<String, Error>) -> Void) {
         
-        statCD.updateStatistics(identifier: identifier, updatedStat: updatedStat, result: result)
+        statCD.updateStatistics(from: identifier, to: updatedStat, result: result)
     }
     
     private func updateStatToFirestore(identifier: String, updatedStat: StatisticsDTO,

@@ -44,9 +44,33 @@ struct StatisticsDTO{
         self.stat_mychlg = statObject.stat_mychlg
         self.stat_upload_at = statObject.stat_upload_at
     }
+
+    // ===== Update
+    mutating func updateServiceTerm(to term: Int){
+        self.stat_term = term
+    }
     
-    // Func
-    mutating func updateServiceTerm(updatedTerm: Int){
-        self.stat_term = updatedTerm
+    mutating func updateWaterDrop(to drop: Int){
+        self.stat_drop = drop
+    }
+    
+    mutating func updateProjectRegist(to projectRegist: Int){
+        self.stat_proj_reg = projectRegist
+    }
+    
+    mutating func updateProjectFinish(to projectFinish: Int){
+        self.stat_proj_fin = projectFinish
+    }
+    
+    mutating func updateProjectAlert(to projectAlert: Int){
+        self.stat_proj_alert = projectAlert
+    }
+    
+    mutating func updateProjectExtend(to projectExtend: Int){
+        self.stat_proj_ext = projectExtend
+    }
+    
+    mutating func updateTodoRegist(to todoRegist: Int){
+        self.stat_todo_reg = todoRegist
     }
 }

@@ -16,7 +16,7 @@ final class ChallengeService{
     // CoreData
     let chlgCD = ChallengeServicesCoredata()
     // StatisticsCenter
-    let statCenter: StatisticsCenter
+    //let statCenter: StatisticsCenter
     // Total Challenge Data
     var challengeArray: [ChallengeObject] = []
     // Identifier
@@ -29,7 +29,7 @@ final class ChallengeService{
     //===============================
     init(identifier: String){
         self.identifier = identifier
-        self.statCenter = StatisticsCenter(identifier: identifier)
+        //self.statCenter = StatisticsCenter(identifier: identifier)
         
         self.getMyChallenge { result in
             switch result {
@@ -72,7 +72,7 @@ final class ChallengeService{
     //===============================
     // MARK: Get - MyChallenge Detail
     //===============================
-    //TODO: Exception Handling
+    /*TODO: Exception Handling
     func getMyChallengeDetail(challengeId: Int,
                               result: @escaping(Result<MyChallengeDetailResDTO, Error>) -> Void) {
         
@@ -96,6 +96,7 @@ final class ChallengeService{
             
         }
     }
+     */
     
     //===============================
     // MARK: Select - MyChallenges
