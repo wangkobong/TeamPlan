@@ -12,7 +12,7 @@ import Combine
 final class HomeViewModel: ObservableObject {
     
     @Published var userName: String = ""
-    @Published var myChallenges: [ChallengeCardResDTO] = []
+    @Published var myChallenges: [MyChallengeDTO] = []
     
     private let homeService = HomeService(identifier: "")
     private let loginService = LoginLoadingService()
