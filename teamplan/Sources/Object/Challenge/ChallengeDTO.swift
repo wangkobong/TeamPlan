@@ -9,97 +9,8 @@
 import Foundation
 
 //============================
-// MARK: Legacy
+// MARK: MyChallenges
 //============================
-struct ChallengeCardResDTO{
-    // id
-    let id: Int
-    
-    // category
-    let type: ChallengeType
-    
-    // content
-    let title: String
-    let desc: String
-    let goal: Int
-    let reward: Int
-    
-    // Constructor
-    init(chlgObject: ChallengeObject){
-        self.id = chlgObject.chlg_id
-        self.type = ChallengeType(rawValue: chlgObject.chlg_type.rawValue) ?? .unknownType
-        self.title = chlgObject.chlg_title
-        self.desc = chlgObject.chlg_desc
-        self.goal = Int(chlgObject.chlg_goal)
-        self.reward = Int(chlgObject.chlg_reward)
-    }
-}
-
-struct MyChallengeDetailResDTO{
-    // categoory
-    let type: ChallengeType
-    
-    // content
-    let title: String
-    let desc: String
-    let goal: Int
-    let progress: Int
-    
-    // Constructor
-    // myChallenge
-    init(chlgObject: ChallengeObject, userProgress: Int){
-        self.type = ChallengeType(rawValue: chlgObject.chlg_type.rawValue) ?? .unknownType
-        self.title = chlgObject.chlg_title
-        self.desc = chlgObject.chlg_desc
-        self.goal = Int(chlgObject.chlg_goal)
-        self.progress = userProgress
-    }
-}
-
-struct ChallengeDetailResDTO{
-    // content
-    let title: String
-    let desc: String
-    let prevChlg: String
-    
-    // status
-    let isComplete: Bool
-    let isSelected: Bool
-    let isUnlock: Bool
-    
-    init(chlgObject: ChallengeObject, prevChallenge: String) {
-        self.title = chlgObject.chlg_title
-        self.desc = chlgObject.chlg_desc
-        self.prevChlg = prevChallenge
-        self.isComplete = chlgObject.chlg_status
-        self.isSelected = chlgObject.chlg_selected
-        self.isUnlock = chlgObject.chlg_lock
-    }
-}
-
-struct ChallengeStatusReqDTO{
-    // id
-    let chlg_id: Int
-    
-    // status
-    let chlg_step: Int
-    let chlg_selected: Bool
-    let chlg_status: Bool
-    let chlg_lock: Bool
-    
-    init(chlgObject: ChallengeObject, myChlg: Bool){
-        self.chlg_id = chlgObject.chlg_id
-        self.chlg_step = chlgObject.chlg_step
-        self.chlg_selected = myChlg
-        self.chlg_status = chlgObject.chlg_status
-        self.chlg_lock = chlgObject.chlg_lock
-    }
-}
-
-//============================
-// MARK: Updated
-//============================
-// MyChallenge
 struct MyChallengeDTO {
     // id
     let cahllengeID: Int
@@ -124,7 +35,9 @@ struct MyChallengeDTO {
     }
 }
 
-// Total Challenge
+//============================
+// MARK: Challenges
+//============================
 struct ChallengeDTO{
     // id
     let id: Int
@@ -145,11 +58,18 @@ struct ChallengeDTO{
     let prevGoal: Int?
     
     // status
-    let isComplete: Bool
-    let isSelected: Bool
-    let isUnlock: Bool
+    let step: Int?
+    let isComplete: Bool?
+    let isSelected: Bool?
+    let isUnlock: Bool?
+    
+    // Statistics
+    let setMyChallengeAt: Date?
+    let disableMyChallengeAt: Date?
+    let completeAt: Date?
     
     // Constructor
+    // Detail
     init(from object: ChallengeObject, prev prevObject: ChallengeObject){
         self.id = object.chlg_id
         self.type = object.chlg_type
@@ -161,11 +81,16 @@ struct ChallengeDTO{
         self.prevTitle = prevObject.chlg_title
         self.prevDesc = prevObject.chlg_desc
         self.prevGoal = prevObject.chlg_goal
+        self.step = object.chlg_step
         self.isComplete = object.chlg_status
         self.isSelected = object.chlg_selected
         self.isUnlock = object.chlg_lock
+        self.setMyChallengeAt = object.chlg_selected_at
+        self.disableMyChallengeAt = object.chlg_unselected_at
+        self.completeAt = object.chlg_finished_at
     }
     
+    // Total
     init(from object: ChallengeObject){
         self.id = object.chlg_id
         self.type = object.chlg_type
@@ -177,34 +102,42 @@ struct ChallengeDTO{
         self.prevTitle = nil
         self.prevDesc = nil
         self.prevGoal = nil
+        self.step = object.chlg_step
         self.isComplete = object.chlg_status
         self.isSelected = object.chlg_selected
         self.isUnlock = object.chlg_lock
+        self.setMyChallengeAt = object.chlg_selected_at
+        self.disableMyChallengeAt = object.chlg_unselected_at
+        self.completeAt = object.chlg_finished_at
     }
 }
 
 // Reward Challenge
 struct ChallengeRewardDTO {
-    // id
-    let id: Int
-    
     // content
     let title: String
     let desc: String
     let type: ChallengeType
-    let goal: Int
+    let reward: Int
+    
+    // Statistics
+    let setMyChallengeAt: Date
+    let completeAt: Date
     
     // Constructor
-    init(from object: ChallengeObject) {
-        self.id = object.chlg_id
-        self.title = object.chlg_title
-        self.desc = object.chlg_desc
-        self.type = object.chlg_type
-        self.goal = object.chlg_goal
+    init(from object: ChallengeObject, to nextObject: ChallengeObject) {
+        self.title = nextObject.chlg_title
+        self.desc = nextObject.chlg_desc
+        self.type = nextObject.chlg_type
+        self.reward = object.chlg_reward
+        self.setMyChallengeAt = object.chlg_selected_at
+        self.completeAt = object.chlg_finished_at
     }
 }
 
-// Update Challenge
+//============================
+// MARK: Challenges Status
+//============================
 struct ChallengeStatusDTO {
     // id
     let chlg_id: Int
