@@ -16,7 +16,7 @@ struct SignupView: View {
     @State var signupState: Int = 0
     @State var userName: String = ""
     @State private var signupSuccess = false
-    
+
     let transition: AnyTransition = .asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading))
 
     // onboarding inputs
@@ -24,53 +24,65 @@ struct SignupView: View {
     @State var gender: String = ""
     
     // for the alert
-    @State var alertTitle: String = ""
-    @State var showAlert: Bool = false
+    @State private var alertTitle: String = ""
+    @State private var showAlert = false
     
     // goal
     @State var goalCount: String = ""
     
     @State var showHome: Bool = false
+    @State private var isLoading = false
     
     var body: some View {
         NavigationView {
-            VStack {
-                Spacer()
-                    .frame(height: 34)
-
-                levelBar
-                
-                Spacer()
-                    .frame(height: 42)
-                
-                
-                ZStack {
-                    switch signupState {
-                    case 0:
-                        profileSection
-                            .transition(transition)
-//                    case 1:
-//                        jobSection
-//                            .transition(transition)
-//                    case 2:
-//                        interestSection
-//                            .transition(transition)
-//                    case 3:
-//                        abilitiesSection
-//                            .transition(transition)
-//                    case 4:
-//                        goalSection
-//                            .transition(transition)
-                    default:
-                        RoundedRectangle(cornerRadius: 25)
-                            .foregroundColor(.green)
+            ZStack {
+                VStack {
+                    Spacer()
+                        .frame(height: 34)
+                    NavigationLink(
+                        destination: MainTapView().defaultNavigationMFormatting(),
+                         isActive: $signupSuccess) {
+                              Text("")
+                                   .hidden()
+                         }
+                    levelBar
+                    
+                    Spacer()
+                        .frame(height: 42)
+                    
+                    
+                    ZStack {
+                        switch signupState {
+                        case 0:
+                            profileSection
+                                .transition(transition)
+    //                    case 1:
+    //                        jobSection
+    //                            .transition(transition)
+    //                    case 2:
+    //                        interestSection
+    //                            .transition(transition)
+    //                    case 3:
+    //                        abilitiesSection
+    //                            .transition(transition)
+    //                    case 4:
+    //                        goalSection
+    //                            .transition(transition)
+                        default:
+                            RoundedRectangle(cornerRadius: 25)
+                                .foregroundColor(.green)
+                        }
                     }
+                    
+                    Spacer()
+                    
+                    bottomButton
+
                 }
                 
-                Spacer()
-                
-                bottomButton
-
+                if isLoading {
+                    LoadingView()
+                }
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -87,6 +99,13 @@ struct SignupView: View {
                             .foregroundColor(.theme.darkGreyColor)
                     }
                 }
+            }
+            .alert(isPresented: $showAlert) {
+                Alert(
+                    title: Text("회원가입 실패"),
+                    message: Text("회원가입에 실패했습니다."),
+                    dismissButton: .default(Text("확인"))
+                )
             }
         }
     }
@@ -448,10 +467,17 @@ extension SignupView {
             .disabled(!self.checkValidUserName())
             .font(.appleSDGothicNeo(.regular, size: 20))
             .onTapGesture {
+                self.isLoading = true
                 Task {
-                    let userDTO = try await trySignup()
-                    print("userDTO: \(userDTO)")
-                    self.signupSuccess = true
+                    do {
+                        let userDTO = try await trySignup()
+                        print("userDTO: \(userDTO)")
+                        self.signupSuccess = true
+                        self.isLoading = false
+                    } catch {
+                        self.showAlert = true
+                        self.isLoading = false
+                    }
                 }
             }
     }
