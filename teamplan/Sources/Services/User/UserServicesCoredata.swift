@@ -24,7 +24,7 @@ final class UserServicesCoredata{
     // MARK: - Set User
     //================================
     //##### Async/Await #####
-    func setUser(reqUser: UserObject) async throws {
+    func setUser(reqUser: UserObject) throws {
         do{
             // Set User
             setUserEntity(from: reqUser)
@@ -66,6 +66,7 @@ final class UserServicesCoredata{
         user.user_created_at = userObject.user_created_at
         user.user_login_at = userObject.user_login_at
         user.user_updated_at = userObject.user_updated_at
+        
     }
     
     //================================

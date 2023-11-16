@@ -26,7 +26,7 @@ final class StatisticsServicesFirestore{
         
         // Target Table
         let collectionRef = fs.collection("Stat")
-        
+
         do {
             // Set User
             try await collectionRef.addDocument(data: reqStat.toDictionary())
