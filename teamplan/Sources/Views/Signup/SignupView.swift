@@ -16,6 +16,7 @@ struct SignupView: View {
     @State var signupState: Int = 0
     @State var userName: String = ""
     @State private var signupSuccess = false
+    @AppStorage("mainViewState") var mainViewState: MainViewState?
 
     let transition: AnyTransition = .asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading))
 
@@ -39,12 +40,7 @@ struct SignupView: View {
                 VStack {
                     Spacer()
                         .frame(height: 34)
-                    NavigationLink(
-                        destination: MainTapView().defaultNavigationMFormatting(),
-                         isActive: $signupSuccess) {
-                              Text("")
-                                   .hidden()
-                         }
+
                     levelBar
                     
                     Spacer()
@@ -474,6 +470,7 @@ extension SignupView {
                         print("userDTO: \(userDTO)")
                         self.signupSuccess = true
                         self.isLoading = false
+                        mainViewState = .main
                     } catch {
                         self.showAlert = true
                         self.isLoading = false

@@ -8,8 +8,15 @@
 import SwiftUI
 import KeychainSwift
 
+enum MainViewState: Int {
+    case login
+    case signup
+    case main
+}
+
 struct IntroView: View {
     @AppStorage("isOnboarding") var isOnboarding: Bool = true
+    @AppStorage("mainViewState") var mainViewState: MainViewState = .login
     @StateObject var notificationViewModel = NotificationViewModel()
     @State private var hasCheckedLoginStatus = false
     @State private var isLoggedIn = false
@@ -19,15 +26,21 @@ struct IntroView: View {
             if isOnboarding {
                 OnboardingView()
                     .transition(.asymmetric(insertion: .move(edge: .top), removal: .move(edge: .bottom)))
-
-            } else if isLoggedIn {
-                MainTapView()
-                    .environmentObject(notificationViewModel)
-                    .transition(.asymmetric(insertion: .move(edge: .bottom), removal: .move(edge: .top)))
             } else {
-                LoginView()
-                    .environmentObject(notificationViewModel)
-                    .transition(.asymmetric(insertion: .move(edge: .bottom), removal: .move(edge: .top)))
+                switch mainViewState {
+                case .login:
+                    LoginView()
+                        .environmentObject(notificationViewModel)
+                        .transition(.asymmetric(insertion: .move(edge: .bottom), removal: .move(edge: .top)))
+                case .signup:
+                    SignupView()
+                        .environmentObject(notificationViewModel)
+                        .transition(.asymmetric(insertion: .move(edge: .bottom), removal: .move(edge: .top)))
+                case .main:
+                    MainTapView()
+                        .environmentObject(notificationViewModel)
+                        .transition(.asymmetric(insertion: .move(edge: .bottom), removal: .move(edge: .top)))
+                }
             }
         }
         .onAppear {
@@ -43,35 +56,16 @@ struct IntroView_Previews: PreviewProvider {
 }
 
 extension IntroView {
-//    private func isLoggedIn() -> Bool {
-//        let keychain = KeychainSwift()
-//        let accessToken = keychain.get("accessToken")
-//
-//        if let idToken = keychain.get("idToken"), !idToken.isEmpty {
-//            return true
-//        } else {
-//            return false
-//        }
-//        /* Lock for Social Login Test
-//
-//         */
-//    }
     
     private func checkLoginStatus() {
         guard !hasCheckedLoginStatus else {
             return
         }
         
-        let keychain = KeychainSwift()
-        let accessToken = keychain.get("accessToken")
+        let userDefaultManager = UserDefaultManager.loadWith(key: "user")
+        let identifier = userDefaultManager?.identifier
         
-        if let idToken = keychain.get("idToken"), !idToken.isEmpty {
-            isLoggedIn = true
-        } else {
-            isLoggedIn = false
-        }
-        
+        self.isLoggedIn = identifier == "" ? false : true
         hasCheckedLoginStatus = true
     }
-    
 }

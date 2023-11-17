@@ -32,7 +32,7 @@ final class SignupService{
     // MARK: - Set NickName
     //===============================
     func setNickName(newUser: UserSignupDTO, nickName: String) -> UserSignupDTO {
-        let updatedUserSignup = UserSignupDTO(identifier: newUser.email, email: newUser.email, provider: newUser.provider, nickname: nickName)
+        let updatedUserSignup = UserSignupDTO(identifier: newUser.identifier, email: newUser.email, provider: newUser.provider, nickname: nickName)
         return updatedUserSignup
     }
 }
