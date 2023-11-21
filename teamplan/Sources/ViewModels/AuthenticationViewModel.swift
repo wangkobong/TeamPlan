@@ -92,7 +92,7 @@ final class AuthenticationViewModel: ObservableObject{
         guard let signupUser = self.signupUser else { throw SignupError.invalidUser }
 
         
-        guard let accountInfo = self.signupService.getAccountInfo(newUser: signupUser) else { throw SignupError.invalidAccountInfo }
+        let accountInfo = try self.signupService.getAccountInfo(newUser: signupUser)
         let finalUserInfo = self.signupService.setNickName(newUser: accountInfo, nickName: userName)
         let signupService = SignupLoadingService(newUser: finalUserInfo)
         let signedUser = try await signupService.executor()

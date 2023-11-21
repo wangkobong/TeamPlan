@@ -14,7 +14,6 @@ final class ChallengeServicesCoredata{
     //================================
     // MARK: - Parameter Setting
     //================================
-    let util = Utilities()
     let cd = CoreDataManager.shared
     var context: NSManagedObjectContext {
         return cd.context
@@ -23,26 +22,16 @@ final class ChallengeServicesCoredata{
     //================================
     // MARK: - Set Challenges
     //================================
-    //##### Async/Await #####
-    func setChallenges(reqChallenges: [ChallengeObject]) async throws {
-        // Thread safe for multiple insert
-        try context.performAndWait {
-            for challenges in reqChallenges {
-                setEntity(from: challenges)
-            }
-            
-            // Store challenges to Coredata
-            do {
-                try context.save()
-            } catch {
-                print("(CoreData) Error Set Challenges : \(error)")
-                throw ChallengeErrorCD.UnexpectedSetError
-            }
-        }
-    }
-    
-    private func setEntity(from challenge: ChallengeObject) {
+    func setChallenges(reqChallenges: [ChallengeObject]) throws {
         
+        // Create Entity & Set Data
+        for challenges in reqChallenges {
+            setEntity(from: challenges)
+        }
+        try context.save()
+    }
+    // Support Function
+    private func setEntity(from challenge: ChallengeObject) {
         let chlgEntity = ChallengeEntity(context: context)
         
         chlgEntity.chlg_id = Int32(challenge.chlg_id)
@@ -66,11 +55,11 @@ final class ChallengeServicesCoredata{
     //================================
     func getChallenges() throws -> [ChallengeObject] {
         
-        // get ChallengeEntities
+        // get Challenges
         let fetchReq: NSFetchRequest<ChallengeEntity> = ChallengeEntity.fetchRequest()
         let reqChallenge = try self.context.fetch(fetchReq)
         
-        // Convert Entity to Object
+        // Convert to Object Array
         let challengeData = reqChallenge.compactMap { ChallengeObject(chlgEntity: $0) }
         
         // Exception Handling: Convert
@@ -83,84 +72,72 @@ final class ChallengeServicesCoredata{
     //================================
     // MARK: - Get Challenge
     //================================
-    func getChallenge(from chlgId: Int) throws -> ChallengeObject{
+    func getChallenge(from challengeId: Int) throws -> ChallengeObject{
+        
         // parameter setting
         let fetchReq: NSFetchRequest<ChallengeEntity> = ChallengeEntity.fetchRequest()
         
         // Request Query
-        fetchReq.predicate = NSPredicate(format: "chlg_id == %@", chlgId)
+        fetchReq.predicate = NSPredicate(format: "chlg_id == %@", challengeId)
         fetchReq.fetchLimit = 1
         
-        guard let reqChallenge = try self.context.fetch(fetchReq).first,
-              let chlgData = ChallengeObject(chlgEntity: reqChallenge) else {
-            throw ChallengeErrorCD.InternalError
+        // Search Data
+        guard let reqChallenge = try context.fetch(fetchReq).first else {
+            throw ChallengeErrorCD.ChallengeRetrievalByIdentifierFailed
         }
-        return chlgData
+        // Convert to Object & Get
+        guard let challengeData = ChallengeObject(chlgEntity: reqChallenge) else {
+            throw ChallengeErrorCD.UnexpectedConvertError
+        }
+        return challengeData
     }
     
     //================================
     // MARK: - update Challenge
     //================================
-    func updateChallenge(from dto: ChallengeStatusDTO) async throws {
+    func updateChallenge(from updatedChallenge: ChallengeStatusDTO) throws {
         
         // parameter setting
         let fetchReq: NSFetchRequest<ChallengeEntity> = ChallengeEntity.fetchRequest()
         
         // Request Query
-        fetchReq.predicate = NSPredicate(format: "chlg_id == %d", dto.chlg_id)
+        fetchReq.predicate = NSPredicate(format: "chlg_id == %d", updatedChallenge.chlg_id)
         fetchReq.fetchLimit = 1
         
-        do {
-            guard let reqChallenge = try context.fetch(fetchReq).first else {
-                throw ChallengeErrorCD.ChallengeRetrievalByIdentifierFailed
-            }
-            
-            // update Challenge
-            checkUpdateField(target: reqChallenge, with: dto)
- 
-            try context.save()
-            
-        } catch {
-            // Eception Handling: Internal Error (Coredata)
-            print("(CoreData) Error Update Challenge Status : \(error)")
-            throw ChallengeErrorCD.UnexpectedUpdateError
+        // Search Data
+        guard let reqChallenge = try context.fetch(fetchReq).first else {
+            throw ChallengeErrorCD.ChallengeRetrievalByIdentifierFailed
         }
+        // Update Data
+        checkUpdate(from: reqChallenge, to: updatedChallenge)
+        try context.save()
     }
-    
-    //##### Support #####
-    private func checkUpdateField(target entity: ChallengeEntity, with dto: ChallengeStatusDTO){
-        entity.chlg_selected = dto.chlg_selected ?? entity.chlg_selected
-        entity.chlg_status = dto.chlg_status ?? entity.chlg_status
-        entity.chlg_lock = dto.chlg_lock ?? entity.chlg_lock
-        entity.chlg_selected_at = dto.chlg_selected_at ?? entity.chlg_selected_at
-        entity.chlg_unselected_at = dto.chlg_unselected_at ?? entity.chlg_unselected_at
-        entity.chlg_finished_at = dto.chlg_finished_at ?? entity.chlg_finished_at
+    // Support Function
+    private func checkUpdate(from origin: ChallengeEntity, to updated: ChallengeStatusDTO) {
+        origin.chlg_selected = updated.chlg_selected ?? origin.chlg_selected
+        origin.chlg_status = updated.chlg_status ?? origin.chlg_status
+        origin.chlg_lock = updated.chlg_lock ?? origin.chlg_lock
+        origin.chlg_selected_at = updated.chlg_selected_at ?? origin.chlg_selected_at
+        origin.chlg_unselected_at = updated.chlg_unselected_at ?? origin.chlg_unselected_at
+        origin.chlg_finished_at = updated.chlg_finished_at ?? origin.chlg_finished_at
     }
     
     //================================
-    // MARK: - Delete Challenge
+    // MARK: - Delete Challenges
     //================================
-    func deleteChallenges() async throws {
+    func deleteChallenges() throws {
         
+        // parameter setting
         let fetchReq: NSFetchRequest<ChallengeEntity> = ChallengeEntity.fetchRequest()
         
-        try context.performAndWait {
-            do {
-                let reqChlgs = try self.context.fetch(fetchReq)
-                
-                // delete challenges
-                for chlg in reqChlgs {
-                    self.context.delete(chlg)
-                }
-                
-                // save status
-                try self.context.save()
-                
-            } catch {
-                print("(CoreData) Error Delete Challenge : \(error)")
-                throw ChallengeErrorCD.UnexpectedDeleteError
-            }
+        // Search Data
+        let reqChallenges = try self.context.fetch(fetchReq)
+        
+        // Delete Data
+        for challenge in reqChallenges {
+            context.delete(challenge)
         }
+        try context.save()
     }
 }
 
@@ -168,35 +145,15 @@ final class ChallengeServicesCoredata{
 // MARK: - Exception
 //===============================
 enum ChallengeErrorCD: LocalizedError {
-    case UnexpectedSetError
-    case UnexpectedGetError
-    case UnexpectedUpdateError
-    case UnexpectedDeleteError
     case UnexpectedConvertError
     case ChallengeRetrievalByIdentifierFailed
-    case MyChallengeNotFound
-    case InternalError
     
     var errorDescription: String?{
         switch self {
-        case .UnexpectedSetError:
-            return "Coredata: There was an unexpected error while Set 'Challenge' details"
-        case .UnexpectedGetError:
-            return "Coredata: There was an unexpected error while Get 'Challenge' details"
-        case .UnexpectedUpdateError:
-            return "Coredata: There was an unexpected error while Update 'Challenge' details"
-        case .UnexpectedDeleteError:
-            return "Coredata: There was an unexpected error while Delete 'Challenge' details"
         case .UnexpectedConvertError:
             return "Coredata: There was an unexpected error while Convert 'Challenge' details"
         case .ChallengeRetrievalByIdentifierFailed:
             return "Coredata: Unable to retrieve 'Challenge' data using the provided identifier."
-        case .MyChallengeNotFound:
-            return "Coredata: MyChallenge Not Found"
-        case .InternalError:
-            return "Coredata: Internal Error Occurred while process 'Challenge' details"
         }
     }
 }
-
-

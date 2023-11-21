@@ -80,13 +80,13 @@ final class ChallengeService{
     // MARK: Disable MyChallenge (Update)
     //===============================
     // Disable
-    func disableMyChallenge(from challengeId: Int) async throws {
+    func disableMyChallenge(from challengeId: Int) throws {
         // Search & Update Challenge
         let updatedChallenge = ChallengeStatusDTO(target: challengeId, select: false, disableTime: Date())
-        try await challengeCD.updateChallenge(from: updatedChallenge)
+        try challengeCD.updateChallenge(from: updatedChallenge)
         
         // Update Statistics : Remove MyChallenge
-        try await updateStatistics(challengeId, nil, nil)
+        try updateStatistics(challengeId, nil, nil)
         
         // Refresh MyChallenge
         try getMychallengesProcess()
@@ -96,20 +96,20 @@ final class ChallengeService{
     // MARK: Reward MyChallenge (Update)
     //===============================
     // Reward
-    func rewardMyChallenge(from challengeId: Int) async throws -> ChallengeRewardDTO {
+    func rewardMyChallenge(from challengeId: Int) throws -> ChallengeRewardDTO {
         let updatedDate = Date()
         
         // Update Reward Challenge
-        let targetChallenge = try await rewardChallengeUpdate(challengeId, updatedDate)
+        let targetChallenge = try rewardChallengeUpdate(challengeId, updatedDate)
         
         // Update Next Challenge
-        let nextChallenge = try await nextChallengeUpdate(challengeId)
+        let nextChallenge = try nextChallengeUpdate(challengeId)
         
         // Update Statistics
-        try await updateStatistics(challengeId, nextChallenge.chlg_type, targetChallenge.chlg_reward)
+        try updateStatistics(challengeId, nextChallenge.chlg_type, targetChallenge.chlg_reward)
         
         // Update ChallengeLog
-        try await challengeLogCD.updateLog(to: self.userId, what: [challengeId : updatedDate], when: updatedDate)
+        try challengeLogCD.updateLog(from: self.userId, updatedLog: [challengeId : updatedDate], updatedAt: updatedDate)
         
         // Return Next Challenge
         return ChallengeRewardDTO(from: targetChallenge, to: nextChallenge)
@@ -122,21 +122,21 @@ final class ChallengeService{
 extension ChallengeService {
     
     // Update Statistics (Set MyChallenge)
-    private func updateStatistics(_ id: Int) async throws {
+    private func updateStatistics(_ id: Int) throws {
         // Check Parameter
         guard var stat = self.statistics else {
             throw ChallengeError.UnexpectedStatError
         }
         // Add Challenge to MyChallenge & Update Statistics
         stat.stat_mychlg.append(id)
-        try await statisticsCD.updateStatistics(from: self.userId, to: stat)
+        try statisticsCD.updateStatistics(to: stat)
         
         // Refresh Statistics
         self.statistics = stat
     }
     
     // Update Statistics (Disable or Reward MyChallenge)
-    private func updateStatistics(_ id: Int, _ type: ChallengeType?, _ reward: Int?) async throws {
+    private func updateStatistics(_ id: Int, _ type: ChallengeType?, _ reward: Int?) throws {
         // Check Parameter
         guard var stat = self.statistics else {
             throw ChallengeError.UnexpectedStatError
@@ -154,7 +154,7 @@ extension ChallengeService {
         }
         // Remove Challenge from MyChallenges & Update
         stat.stat_mychlg.remove(at: idx)
-        try await statisticsCD.updateStatistics(from: self.userId, to: stat)
+        try statisticsCD.updateStatistics(to: stat)
             
         // Refresh Statistics
         self.statistics = stat
@@ -179,14 +179,14 @@ extension ChallengeService {
 //===============================
 extension ChallengeService {
     // Update Challenge : Reward Target
-    private func rewardChallengeUpdate(_ id: Int, _ date: Date) async throws -> ChallengeObject {
+    private func rewardChallengeUpdate(_ id: Int, _ date: Date) throws -> ChallengeObject {
         let updatedChallenge = ChallengeStatusDTO(target: id, when: date)
-        try await challengeCD.updateChallenge(from: updatedChallenge)
+        try challengeCD.updateChallenge(from: updatedChallenge)
         return try challengeCD.getChallenge(from: id)
     }
 
     // Update Challenge : Next Target
-    private func nextChallengeUpdate(_ id: Int) async throws -> ChallengeObject {
+    private func nextChallengeUpdate(_ id: Int) throws -> ChallengeObject {
         // Search Next Challenge
         guard let currentChallenge = self.challengeArray?.first(where: { $0.chlg_id == id }),
               let nextChallenge = try getNextChallenge(challengeType: currentChallenge.chlg_type, currentStep: currentChallenge.chlg_step)
@@ -196,7 +196,7 @@ extension ChallengeService {
 
         // Struct DTO & Update
         let updatedChallenge = ChallengeStatusDTO(target: nextChallenge.chlg_id, status: true)
-        try await challengeCD.updateChallenge(from: updatedChallenge)
+        try challengeCD.updateChallenge(from: updatedChallenge)
         return nextChallenge
     }
     
@@ -244,13 +244,13 @@ extension ChallengeService {
     //===============================
     // MARK: Update Challenge
     //===============================
-    func setMyChallenge(from challengeId: Int) async throws {
+    func setMyChallenge(from challengeId: Int) throws {
         // Search & Update Challenge
         let updatedChallenge = ChallengeStatusDTO(target: challengeId, select: true, selectTime: Date())
-        try await challengeCD.updateChallenge(from: updatedChallenge)
+        try challengeCD.updateChallenge(from: updatedChallenge)
         
         // Update Statistics : Add MyChallenge
-        try await updateStatistics(challengeId)
+        try updateStatistics(challengeId)
         
         // Refresh MyChallenge
         try getMychallengesProcess()

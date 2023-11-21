@@ -44,6 +44,19 @@ struct StatisticsDTO{
         self.stat_mychlg = statObject.stat_mychlg
         self.stat_upload_at = statObject.stat_upload_at
     }
+    init() {
+        self.stat_user_id = "unknown"
+        self.stat_term = 0
+        self.stat_drop = 0
+        self.stat_proj_reg = 0
+        self.stat_proj_fin = 0
+        self.stat_proj_alert = 0
+        self.stat_proj_ext = 0
+        self.stat_todo_reg = 0
+        self.stat_chlg_step = [[:]]
+        self.stat_mychlg = []
+        self.stat_upload_at = Date()
+    }
 
     // ===== Update
     mutating func updateServiceTerm(to term: Int){

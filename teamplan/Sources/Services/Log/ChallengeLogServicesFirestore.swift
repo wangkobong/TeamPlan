@@ -8,29 +8,23 @@
 
 import Foundation
 import FirebaseFirestore
+import FirebaseFirestoreSwift
 
 final class ChallengeLogServicesFirestore{
     
-    // Firestore setting
+    //================================
+    // MARK: - Parameter Setting
+    //================================
     let fs = Firestore.firestore()
     
     //================================
     // MARK: - Set ChallengeLog
     //================================
-    //##### Async/Await #####
     func setLog(reqLog: ChallengeLog) async throws {
         
-        // Target Table
+        // Search & Set Data
         let collectionRef = fs.collection("ChallengeLog")
-        
-        do
-        {
-            // Set ChallengeLog
-            try await collectionRef.addDocument(data: reqLog.toDictionary())
-        } catch {
-            print("(Firestore) Error Set ChallengeLog : \(error)")
-            throw ChallengeLogErrorFS.UnexpectedSetError
-        }
+        try await collectionRef.addDocument(data: reqLog.toDictionary())
     }
     
     //================================
@@ -50,8 +44,7 @@ final class ChallengeLogServicesFirestore{
                 throw ChallengeLogErrorFS.InternalError
             }
         }
-        
-        // Convert Docs to Object
+        // Convert to Object & Get
         let docs = docsRef.documents.first!
         guard let log = ChallengeLog(challengeData: docs.data()) else {
             throw ChallengeLogErrorFS.UnexpectedConvertError
@@ -62,11 +55,11 @@ final class ChallengeLogServicesFirestore{
     //================================
     // MARK: - Update ChallengeLog
     //================================
-    func updateLog(from userId: String, to updatedLog: ChallengeLog) async throws {
+    func updateLog(to updatedData: ChallengeLog) async throws {
         
         // Search Table
         let collectionRef = fs.collection("ChallengeLog")
-        let docsRef = try await collectionRef.whereField("log_user_id", isEqualTo: userId).getDocuments()
+        let docsRef = try await collectionRef.whereField("log_user_id", isEqualTo: updatedData.log_user_id).getDocuments()
         
         // Exception Handling : Search Error
         guard docsRef.documents.count == 1 else {
@@ -76,16 +69,15 @@ final class ChallengeLogServicesFirestore{
                 throw ChallengeLogErrorFS.InternalError
             }
         }
-        
+        // Update Documents
         let docs = docsRef.documents.first!
-        try await docs.reference.updateData(updatedLog.toDictionary())
+        try await docs.reference.updateData(updatedData.toDictionary())
     }
     
     //================================
     // MARK: - Delete ChallengeLog
     //================================
-    //##### Async/Await #####
-    func deleteChallengeLog(identifier: String) async throws {
+    func deleteLog(identifier: String) async throws {
         
         // Target Table
         let collectionRef = fs.collection("ChallengeLog")
@@ -99,7 +91,7 @@ final class ChallengeLogServicesFirestore{
                 throw ChallengeLogErrorFS.InternalError
             }
         }
-        
+        // Delete Documents
         let docs = docsRef.documents.first!
         try await docs.reference.delete()
     }
@@ -109,32 +101,14 @@ final class ChallengeLogServicesFirestore{
 // MARK: - Exception
 //================================
 enum ChallengeLogErrorFS: LocalizedError {
-    case UnexpectedSetError
-    case UnexpectedGetError
-    case UnexpectedUpdateError
-    case UnexpectedDeleteError
-    case UnexpectedFetchError
     case UnexpectedConvertError
-    case ChallengeLogRetrievalByIdentifierFailed
     case MultipleChallengeLogFound
     case InternalError
     
     var errorDescription: String?{
         switch self {
-        case .UnexpectedSetError:
-            return "Firestore: There was an unexpected error while Set 'ChallengeLog' details"
-        case .UnexpectedGetError:
-            return "Firestore: There was an unexpected error while Get 'ChallengeLog' details"
-        case .UnexpectedUpdateError:
-            return "Firestore: There was an unexpected error while Update 'ChallengeLog' details"
-        case .UnexpectedDeleteError:
-            return "Firestore: There was an unexpected error while Delete 'ChallengeLog' details"
-        case .UnexpectedFetchError:
-            return "Firestore: There was an unexpected error while Fetch 'ChallengeLog' details from DocumentReference"
         case .UnexpectedConvertError:
             return "Firestore: There was an unexpected error while Convert 'ChallengeLog' details"
-        case .ChallengeLogRetrievalByIdentifierFailed:
-            return "Firestore: Unable to retrieve 'ChallengeLog' data using the provided identifier."
         case .MultipleChallengeLogFound:
             return "Firestore: Multiple 'ChallengeLog' found. Expected only one."
         case .InternalError:

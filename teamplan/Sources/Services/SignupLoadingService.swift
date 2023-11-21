@@ -71,14 +71,14 @@ final class SignupLoadingService{
         case (true, false):
             // Update UserStatus
             self.newProfile.setUserStatus(userSatus: .unStableFS)
-            try await userCD.updateUser(updatedUser: self.newProfile)
+            try userCD.updateUser(updatedUser: self.newProfile)
             return UserDTO(userObject: self.newProfile)
             
         // Set NewUserPackage only at Firestore
         case (false, true):
             // Update UserStatus
             self.newProfile.setUserStatus(userSatus: .unStableCD)
-            try await userCD.updateUser(updatedUser: self.newProfile)
+            try userCD.updateUser(updatedUser: self.newProfile)
             return UserDTO(userObject: self.newProfile)
             
         // Failed to Set NewUserPackage at Coredata & Firestore
@@ -166,15 +166,15 @@ final class SignupLoadingService{
         self.newProfile.user_fb_id = docsId
     }
     private func rollbackSetUserFS() async throws {
-        try await userFS.deleteUser(identifier: self.newProfile.user_id)
+        try await userFS.deleteUser(to: self.newProfile.user_id)
     }
     
     // : Coredata
     func setUserCD() async throws {
-        try await userCD.setUser(reqUser: self.newProfile)
+        try userCD.setUser(reqUser: self.newProfile)
     }
     private func rollbackSetUserCD() async throws {
-        try await userCD.deleteUser(identifier: self.newProfile.user_id)
+        try userCD.deleteUser(identifier: self.newProfile.user_id)
     }
     
     //===============================
@@ -185,15 +185,15 @@ final class SignupLoadingService{
         try await statFS.setStatistics(reqStat: self.newStat)
     }
     private func rollbackSetStatisticsFS() async throws {
-        try await statFS.deleteStatistics(identifier: self.newProfile.user_id)
+        try await statFS.deleteStatistics(to: self.newProfile.user_id)
     }
     
     // : Coredata
     func setStatisticsCD() async throws {
-        try await statCD.setStatistics(reqStat: self.newStat)
+        try statCD.setStatistics(reqStat: self.newStat)
     }
     private func rollbackSetStatisticsCD() async throws {
-        try await statCD.deleteStatistics(identifier: self.newProfile.user_id)
+        try statCD.deleteStatistics(identifier: self.newProfile.user_id)
     }
     
     //===============================
@@ -201,18 +201,18 @@ final class SignupLoadingService{
     //===============================
     // : Firestore
     func setAccessLogFS() async throws {
-        try await aclogFS.setAccessLog(reqLog: self.newAccessLog)
+        try await aclogFS.setLog(reqLog: self.newAccessLog)
     }
     private func rollbackSetAccessLogFS() async throws {
-        try await aclogFS.deleteAccessLog(identifier: self.newProfile.user_id)
+        try await aclogFS.deleteLog(to: self.newProfile.user_id)
     }
     
     // : CoreData
     func setAccessLogCD() async throws {
-        try await aclogCD.setAccessLog(reqLog: self.newAccessLog)
+        try aclogCD.setLog(reqLog: self.newAccessLog)
     }
     private func rollbackSetAccessLogCD() async throws {
-        try await aclogCD.deleteAccessLog(identifier: self.newProfile.user_id)
+        try aclogCD.deleteLog(identifier: self.newProfile.user_id)
     }
     
     //===============================
@@ -223,15 +223,15 @@ final class SignupLoadingService{
         try await chlglogFS.setLog(reqLog: self.newChallengeLog)
     }
     private func rollbackSetChallengeLogFS() async throws {
-        try await chlglogFS.deleteChallengeLog(identifier: self.newProfile.user_id)
+        try await chlglogFS.deleteLog(identifier: self.newProfile.user_id)
     }
     
     // : Coredata
     func setChallengeLogCD() async throws {
-        try await chlglogCD.setLog(from: self.newChallengeLog)
+        try chlglogCD.setLog(reqLog: self.newChallengeLog)
     }
     private func rollbackSetChallengeLogCD() async throws {
-        try await chlglogCD.deleteLog(from: self.newProfile.user_id)
+        try chlglogCD.deleteLog(from: self.newProfile.user_id)
     }
     
     //===============================
