@@ -71,14 +71,14 @@ final class SignupLoadingService{
         case (true, false):
             // Update UserStatus
             self.newProfile.setUserStatus(userSatus: .unStableFS)
-            try await userCD.updateUser(updatedUser: self.newProfile)
+            try userCD.updateUser(updatedUser: self.newProfile)
             return UserDTO(userObject: self.newProfile)
             
         // Set NewUserPackage only at Firestore
         case (false, true):
             // Update UserStatus
             self.newProfile.setUserStatus(userSatus: .unStableCD)
-            try await userCD.updateUser(updatedUser: self.newProfile)
+            try userCD.updateUser(updatedUser: self.newProfile)
             return UserDTO(userObject: self.newProfile)
             
         // Failed to Set NewUserPackage at Coredata & Firestore
@@ -166,15 +166,15 @@ final class SignupLoadingService{
         self.newProfile.user_fb_id = docsId
     }
     private func rollbackSetUserFS() async throws {
-        try await userFS.deleteUser(identifier: self.newProfile.user_id)
+        try await userFS.deleteUser(to: self.newProfile.user_id)
     }
     
     // : Coredata
     func setUserCD() async throws {
-        try await userCD.setUser(reqUser: self.newProfile)
+        try userCD.setUser(reqUser: self.newProfile)
     }
     private func rollbackSetUserCD() async throws {
-        try await userCD.deleteUser(identifier: self.newProfile.user_id)
+        try userCD.deleteUser(identifier: self.newProfile.user_id)
     }
     
     //===============================
