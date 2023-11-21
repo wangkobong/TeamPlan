@@ -25,7 +25,7 @@ final class StatisticsServicesFirestore{
         
         // Search & Set Data
         let collectionRef = fs.collection("Stat")
-        let docsRef = try await collectionRef.addDocument(data: reqStat.toDictionary())
+        try await collectionRef.addDocument(data: reqStat.toDictionary())
     }
     
     //================================
@@ -189,7 +189,7 @@ extension StatisticsServicesFirestore{
                 }
             }
             guard let docs = response.documents.first,
-                  var statEntity = StatisticsObject(statData: docs.data()) else {
+                  let statEntity = StatisticsObject(statData: docs.data()) else {
                 return result(.failure(StatErrorFS.UnexpectedConvertError))
             }
             docs.reference.updateData(statEntity.toDictionary()) { error in

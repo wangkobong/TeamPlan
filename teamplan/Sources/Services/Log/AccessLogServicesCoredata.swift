@@ -12,7 +12,7 @@ import CoreData
 final class AccessLogServicesCoredata{
     
     //================================
-    // MARK: - CoreData Setting
+    // MARK: - Parameter Setting
     //================================
     let cd = CoreDataManager.shared
     var context: NSManagedObjectContext {
@@ -22,42 +22,16 @@ final class AccessLogServicesCoredata{
     //================================
     // MARK: - Set AccessLog
     //================================
-    //##### Async/Await #####
-    func setAccessLog(reqLog: AccessLog) async throws {
-        do{
-            // Set Log
-            setLogEntity(from: reqLog)
-            
-            // Store Log
-            try context.save()
-        } catch {
-            print("(CoreData) Error Set AccessLog : \(error)")
-            throw AccessLogErrorCD.UnexpectedSetError
-        }
+    func setLog(reqLog: AccessLog) throws {
+        
+        // Create Entity & Set Data
+        setLogEntity(from: reqLog)
+        try context.save()
     }
-    
-    //##### Result #####
-    func setAccessLog(reqLog: AccessLog,
-                     result: @escaping(Result<String, Error>) -> Void) {
-        do {
-            // Set Log
-            setLogEntity(from: reqLog)
-            
-            // Store Log
-            try context.save()
-            return result(.success("Successfully Set AccessLog"))
-        } catch {
-            print("(CoreData) Error Set AccessLog : \(error)")
-            return result(.failure(AccessLogErrorCD.UnexpectedSetError))
-        }
-    }
-    
-    // Core Function
+    // Support Function
     private func setLogEntity(from reqLog: AccessLog) {
-        // Create new LogEntity
         let logEntity = AccessLogEntity(context: context)
         
-        // Set AccessLog Info
         logEntity.log_user_id = reqLog.log_user_id
         logEntity.log_access = reqLog.log_access as NSObject
     }
@@ -65,39 +39,56 @@ final class AccessLogServicesCoredata{
     //================================
     // MARK: - Get AccessLog
     //================================
-    //##### Result #####
-    func getAccessLog(identifier: String,
-                      result: @escaping(Result<AccessLog, Error>) -> Void) {
+    func getLog(from userId: String) throws -> AccessLog {
         
         // parameter setting
         let fetchReq: NSFetchRequest<AccessLogEntity> = AccessLogEntity.fetchRequest()
         
         // Request Query
-        fetchReq.predicate = NSPredicate(format: "log_user_id == %@", identifier)
+        fetchReq.predicate = NSPredicate(format: "log_user_id == %@", userId)
         fetchReq.fetchLimit = 1
         
-        do{
-            // Exception Handling: Idnetifier
-            guard let reqLog = try context.fetch(fetchReq).first else {
-                return result(.failure(AccessLogErrorCD.AccLogRetrievalByIdentifierFailed))
-            }
-            
-            // Successfully Get AccessLog from Coredata
-            return result(.success(AccessLog(logEntity: reqLog)))
-            
-        // Exception Handling: Internal Error (Coredata)
-        } catch {
-            print("(CoreData) Error Get AccessLog : \(error)")
-            return result(.failure(AccessLogErrorCD.InternalError))
+        // Search Data
+        guard let reqLog = try context.fetch(fetchReq).first else {
+            throw AccessLogErrorCD.AccLogRetrievalByIdentifierFailed
         }
+        // Convert to Log
+        guard let log = AccessLog(logEntity: reqLog) else {
+            throw AccessLogErrorCD.UnexpectedConvertError
+        }
+        return log
     }
     
     //================================
     // MARK: - Update AccessLog
     //================================
-    //##### Result #####
-    func updateAccessLog(identifier: String, updatedAcclog: AccessLog,
-                         result: @escaping(Result<String, Error>) -> Void) {
+    func updateLog(from userId: String, updatedAt: Date) throws {
+        
+        // parameter setting
+        let fetchReq: NSFetchRequest<AccessLogEntity> = AccessLogEntity.fetchRequest()
+        
+        // Request Query
+        fetchReq.predicate = NSPredicate(format: "log_user_id == %@", userId)
+        fetchReq.fetchLimit = 1
+        
+        // Search Data
+        guard let reqLog = try self.context.fetch(fetchReq).first else {
+            throw AccessLogErrorCD.AccLogRetrievalByIdentifierFailed
+        }
+        // Convert to Array
+        guard var log = reqLog.log_access as? [Date] else {
+            throw AccessLogErrorCD.UnexpectedConvertError
+        }
+        // Update Data
+        log.append(updatedAt)
+        reqLog.log_access = log as NSObject
+        try context.save()
+    }
+    
+    //================================
+    // MARK: - Delete AccessLog
+    //================================
+    func deleteLog(identifier: String) throws {
         
         // parameter setting
         let fetchReq: NSFetchRequest<AccessLogEntity> = AccessLogEntity.fetchRequest()
@@ -106,50 +97,13 @@ final class AccessLogServicesCoredata{
         fetchReq.predicate = NSPredicate(format: "log_user_id == %@", identifier)
         fetchReq.fetchLimit = 1
         
-        do {
-            // Exception Handling: Idnetifier
-            guard let reqLog = try self.context.fetch(fetchReq).first else {
-                return result(.failure(AccessLogErrorCD.AccLogRetrievalByIdentifierFailed))
-            }
-            
-            // Update AccessLog
-            reqLog.log_access = updatedAcclog.log_access as NSObject
-            try self.context.save()
-            
-            result(.success("Successfully Set AccessLog"))
-            
-        // Eception Handling: Internal Error
-        } catch {
-            print("(CoreData) Error Update AccessLog : \(error)")
-            return result(.failure(AccessLogErrorCD.UnexpectedUpdateError))
+        // Search Data
+        guard let reqLog = try context.fetch(fetchReq).first else {
+            throw AccessLogErrorCD.AccLogRetrievalByIdentifierFailed
         }
-    }
-    
-    //================================
-    // MARK: - Delete AccessLog
-    //================================
-    //##### Async/Await #####
-    func deleteAccessLog(identifier: String) async throws {
-        do {
-            // parameter setting
-            let fetchReq: NSFetchRequest<AccessLogEntity> = AccessLogEntity.fetchRequest()
-            
-            // Request Query
-            fetchReq.predicate = NSPredicate(format: "log_user_id == %@", identifier)
-            fetchReq.fetchLimit = 1
-            
-            guard let reqLog = try context.fetch(fetchReq).first else {
-                // Exception Handling: Identifier
-                throw AccessLogErrorCD.AccLogRetrievalByIdentifierFailed
-            }
-            // Delete Log
-            self.context.delete(reqLog)
-            try self.context.save()
-            
-        } catch {
-            print("(CoreData) Error Delete AccessLog : \(error)")
-            throw AccessLogErrorCD.UnexpectedDeleteError
-        }
+        // Delete Log
+        context.delete(reqLog)
+        try context.save()
     }
 }
 
@@ -157,15 +111,24 @@ final class AccessLogServicesCoredata{
 // MARK: - Exception
 //===============================
 enum AccessLogErrorCD: LocalizedError {
+    case AccLogRetrievalByIdentifierFailed
+    case UnexpectedConvertError
+    case InternalError
+    // Legacy Only
     case UnexpectedSetError
     case UnexpectedGetError
     case UnexpectedUpdateError
     case UnexpectedDeleteError
-    case AccLogRetrievalByIdentifierFailed
-    case InternalError
     
     var errorDescription: String?{
         switch self {
+        case .AccLogRetrievalByIdentifierFailed:
+            return "Coredata: Unable to retrieve 'AccessLog' data using the provided identifier."
+        case .UnexpectedConvertError:
+            return "Coredata: There was an unexpected error while Convert 'AccessLog' details"
+        case .InternalError:
+            return "Coredata: Internal Error Occurred while process 'AccessLog' details"
+        // Legacy Only
         case .UnexpectedSetError:
             return "Coredata: There was an unexpected error while Set 'AccessLog' details"
         case .UnexpectedGetError:
@@ -174,10 +137,68 @@ enum AccessLogErrorCD: LocalizedError {
             return "Coredata: There was an unexpected error while Update 'AccessLog' details"
         case .UnexpectedDeleteError:
             return "Coredata: There was an unexpected error while Delete 'AccessLog' details"
-        case .AccLogRetrievalByIdentifierFailed:
-            return "Coredata: Unable to retrieve 'AccessLog' data using the provided identifier."
-        case .InternalError:
-            return "Coredata: Internal Error Occurred while process 'AccessLog' details"
+        }
+    }
+}
+
+//===============================
+// MARK: - Legacy
+//===============================
+extension AccessLogServicesCoredata{
+    // Set Log
+    func setAccessLog(reqLog: AccessLog,
+                     result: @escaping(Result<String, Error>) -> Void) {
+        do {
+            setLogEntity(from: reqLog)
+            try context.save()
+            return result(.success("Successfully Set AccessLog"))
+        } catch {
+            print("(CoreData) Error Set AccessLog : \(error)")
+            return result(.failure(AccessLogErrorCD.UnexpectedSetError))
+        }
+    }
+    
+    // Get Log
+    func getAccessLog(identifier: String,
+                      result: @escaping(Result<AccessLog, Error>) -> Void) {
+        
+        let fetchReq: NSFetchRequest<AccessLogEntity> = AccessLogEntity.fetchRequest()
+        fetchReq.predicate = NSPredicate(format: "log_user_id == %@", identifier)
+        fetchReq.fetchLimit = 1
+        
+        do{
+            guard let reqLog = try context.fetch(fetchReq).first else {
+                return result(.failure(AccessLogErrorCD.AccLogRetrievalByIdentifierFailed))
+            }
+            guard let log = AccessLog(logEntity: reqLog) else {
+                return result(.failure(AccessLogErrorCD.UnexpectedConvertError))
+            }
+            return result(.success(log))
+        } catch {
+            print("(CoreData) Error Get AccessLog : \(error)")
+            return result(.failure(AccessLogErrorCD.InternalError))
+        }
+    }
+    
+    // Update Log
+    func updateAccessLog(identifier: String, updatedAcclog: AccessLog,
+                         result: @escaping(Result<String, Error>) -> Void) {
+        
+        let fetchReq: NSFetchRequest<AccessLogEntity> = AccessLogEntity.fetchRequest()
+        fetchReq.predicate = NSPredicate(format: "log_user_id == %@", identifier)
+        fetchReq.fetchLimit = 1
+        
+        do {
+            guard let reqLog = try self.context.fetch(fetchReq).first else {
+                return result(.failure(AccessLogErrorCD.AccLogRetrievalByIdentifierFailed))
+            }
+            reqLog.log_access = updatedAcclog.log_access as NSObject
+            try self.context.save()
+            
+            result(.success("Successfully Set AccessLog"))
+        } catch {
+            print("(CoreData) Error Update AccessLog : \(error)")
+            return result(.failure(AccessLogErrorCD.UnexpectedUpdateError))
         }
     }
 }

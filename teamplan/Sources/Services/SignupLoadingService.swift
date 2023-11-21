@@ -201,18 +201,18 @@ final class SignupLoadingService{
     //===============================
     // : Firestore
     func setAccessLogFS() async throws {
-        try await aclogFS.setAccessLog(reqLog: self.newAccessLog)
+        try await aclogFS.setLog(reqLog: self.newAccessLog)
     }
     private func rollbackSetAccessLogFS() async throws {
-        try await aclogFS.deleteAccessLog(identifier: self.newProfile.user_id)
+        try await aclogFS.deleteLog(to: self.newProfile.user_id)
     }
     
     // : CoreData
     func setAccessLogCD() async throws {
-        try await aclogCD.setAccessLog(reqLog: self.newAccessLog)
+        try aclogCD.setLog(reqLog: self.newAccessLog)
     }
     private func rollbackSetAccessLogCD() async throws {
-        try await aclogCD.deleteAccessLog(identifier: self.newProfile.user_id)
+        try aclogCD.deleteLog(identifier: self.newProfile.user_id)
     }
     
     //===============================

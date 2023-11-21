@@ -8,27 +8,36 @@
 
 import Foundation
 
-//============================
-// MARK: Entity
-//============================
 struct AccessLog{
+    
+    //============================
+    // MARK: Data
+    //============================
     // id
     let log_user_id: String
     
     // content
     var log_access: [Date]
     
-    // Constructor
-    // : Signup
+    //============================
+    // MARK: Constuctor
+    //============================
+    // : Signup (Service)
     init(identifier: String, signupDate: Date){
         self.log_user_id = identifier
         self.log_access = [signupDate]
     }
     
     // : Get (Coredata)
-    init(logEntity: AccessLogEntity) {
-        self.log_user_id = logEntity.log_user_id!
-        self.log_access = logEntity.log_access as! [Date]
+    init?(logEntity: AccessLogEntity) {
+        guard let log_user_id = logEntity.log_user_id,
+              let log_access = logEntity.log_access as? [Date]
+        else {
+            return nil
+        }
+        // Assigning values
+        self.log_user_id = log_user_id
+        self.log_access = log_access
     }
     
     // : Get (Firestore)
