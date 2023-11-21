@@ -185,15 +185,15 @@ final class SignupLoadingService{
         try await statFS.setStatistics(reqStat: self.newStat)
     }
     private func rollbackSetStatisticsFS() async throws {
-        try await statFS.deleteStatistics(identifier: self.newProfile.user_id)
+        try await statFS.deleteStatistics(to: self.newProfile.user_id)
     }
     
     // : Coredata
     func setStatisticsCD() async throws {
-        try await statCD.setStatistics(reqStat: self.newStat)
+        try statCD.setStatistics(reqStat: self.newStat)
     }
     private func rollbackSetStatisticsCD() async throws {
-        try await statCD.deleteStatistics(identifier: self.newProfile.user_id)
+        try statCD.deleteStatistics(identifier: self.newProfile.user_id)
     }
     
     //===============================

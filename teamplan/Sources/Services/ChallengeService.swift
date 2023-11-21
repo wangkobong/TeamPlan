@@ -129,7 +129,7 @@ extension ChallengeService {
         }
         // Add Challenge to MyChallenge & Update Statistics
         stat.stat_mychlg.append(id)
-        try await statisticsCD.updateStatistics(from: self.userId, to: stat)
+        try statisticsCD.updateStatistics(to: stat)
         
         // Refresh Statistics
         self.statistics = stat
@@ -154,7 +154,7 @@ extension ChallengeService {
         }
         // Remove Challenge from MyChallenges & Update
         stat.stat_mychlg.remove(at: idx)
-        try await statisticsCD.updateStatistics(from: self.userId, to: stat)
+        try statisticsCD.updateStatistics(to: stat)
             
         // Refresh Statistics
         self.statistics = stat
