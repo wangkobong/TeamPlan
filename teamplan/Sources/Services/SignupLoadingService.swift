@@ -223,15 +223,15 @@ final class SignupLoadingService{
         try await chlglogFS.setLog(reqLog: self.newChallengeLog)
     }
     private func rollbackSetChallengeLogFS() async throws {
-        try await chlglogFS.deleteChallengeLog(identifier: self.newProfile.user_id)
+        try await chlglogFS.deleteLog(identifier: self.newProfile.user_id)
     }
     
     // : Coredata
     func setChallengeLogCD() async throws {
-        try await chlglogCD.setLog(from: self.newChallengeLog)
+        try chlglogCD.setLog(reqLog: self.newChallengeLog)
     }
     private func rollbackSetChallengeLogCD() async throws {
-        try await chlglogCD.deleteLog(from: self.newProfile.user_id)
+        try chlglogCD.deleteLog(from: self.newProfile.user_id)
     }
     
     //===============================
