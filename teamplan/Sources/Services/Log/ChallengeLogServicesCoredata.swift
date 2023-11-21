@@ -83,7 +83,7 @@ final class ChallengeLogServicesCoredata{
         fetchReq.fetchLimit = 1
         
         // Search Data
-        guard var reqLog = try context.fetch(fetchReq).first else {
+        guard let reqLog = try context.fetch(fetchReq).first else {
             throw ChallengeLogErrorCD.ChallengeLogRetrievalByIdentifierFailed
         }
         // Deserialize Data

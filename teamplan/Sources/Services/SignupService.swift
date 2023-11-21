@@ -15,24 +15,19 @@ final class SignupService{
     //===============================
     // MARK: - Get AccountInfo
     //===============================
-    func getAccountInfo(newUser: AuthSocialLoginResDTO) -> UserSignupDTO? {
+    func getAccountInfo(newUser: AuthSocialLoginResDTO) throws -> UserSignupDTO {
         
-        // create identifier
-        let identifier = util.getIdentifier(authRes: newUser)
-        
-        if identifier != "" {
-            
-            return UserSignupDTO(identifier: identifier, email: newUser.email, provider: newUser.provider)
-        } else {
-            return nil
-        }
+        // create identifier & SignupDTO
+        let userId = try util.getIdentifier(from: newUser)
+        return UserSignupDTO(identifier: userId, email: newUser.email, provider: newUser.provider)
     }
     
     //===============================
     // MARK: - Set NickName
     //===============================
     func setNickName(newUser: UserSignupDTO, nickName: String) -> UserSignupDTO {
-        let updatedUserSignup = UserSignupDTO(identifier: newUser.email, email: newUser.email, provider: newUser.provider, nickname: nickName)
-        return updatedUserSignup
+        
+        // Complement SignupDTO
+        return UserSignupDTO(identifier: newUser.identifier, email: newUser.email, provider: newUser.provider, nickname: nickName)
     }
 }

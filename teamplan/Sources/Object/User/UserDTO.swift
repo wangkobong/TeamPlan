@@ -35,6 +35,15 @@ struct UserDTO{
         self.user_status = UserStatus(rawValue: userObject.user_status) ?? .unknown
         self.user_updated_at = userObject.user_updated_at
     }
+    // Default
+    init(){
+        self.user_id = "Unknown"
+        self.user_email = "Unknown"
+        self.user_name = "Unknown"
+        self.user_social_type = .unknown
+        self.user_status = .unknown
+        self.user_updated_at = Date()
+    }
 }
 
 //============================

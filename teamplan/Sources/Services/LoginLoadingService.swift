@@ -1,8 +1,8 @@
 //
-//  LoginLoadingService.swift
+//  LoginLoadService.swift
 //  teamplan
 //
-//  Created by 주찬혁 on 2023/10/25.
+//  Created by 주찬혁 on 11/21/23.
 //  Copyright © 2023 team1os. All rights reserved.
 //
 
@@ -10,6 +10,9 @@ import Foundation
 
 final class LoginLoadingService{
     
+    //================================
+    // MARK: - Parameter Setting
+    //================================
     let util = Utilities()
     let userCD = UserServicesCoredata()
     let userFS = UserServicesFirestore()
@@ -18,428 +21,186 @@ final class LoginLoadingService{
     let acclogCD = AccessLogServicesCoredata()
     let acclogFS = AccessLogServicesFirestore()
     
-    var accLog: AccessLog? = nil
+    var loginDate : Date
+    var userId: String
+    var userData: UserDTO
+    var userStat: StatisticsDTO
+    var userLog: AccessLog
     
-    //==============================
-    // MARK: Core Function
-    //==============================
-    // Step1. Get User
-    func getUser(authResult: AuthSocialLoginResDTO,
-                 result: @escaping(Result<UserDTO, Error>) -> Void) {
-        
-        // extract Identifer from LoginInfo
-        getIdentifier(authResult: authResult) { [weak self] response in
-            switch response {
-                
-                // Search Coredata
-            case .success(let identifier):
-                self?.fetchUser(identifier: identifier, result: result)
-                
-                // Exception Handling : Invalid Email Format
-            case .failure(let error):
-                return result(.failure(error))
-            }
-        }
+    init(){
+        self.loginDate = Date()
+        self.userId = ""
+        self.userData = UserDTO()
+        self.userStat = StatisticsDTO()
+        self.userLog = AccessLog()
     }
     
-    // Step2. Get Statistics
-    func getStatistics(identifier: String,
-                       result: @escaping(Result<StatisticsDTO, Error>) -> Void) {
+    //===============================
+    // MARK: - Executor
+    //===============================
+    func executor(with authResult: AuthSocialLoginResDTO) async throws -> UserDTO {
         
-        // Retrive Statistics by Identifier
-        self.fetchStatistics(identifier: identifier) { response in
-            switch response {
-                
-            // Successfully get Statistics
-            case .success(let statInfo):
-                return result(.success(statInfo))
-                
-            // Exception Handling : UnExpected error while fetching Statistics from Coredata or Firestore
-            case .failure(let error):
-                return result(.failure(error))
-            }
+        // Prepare User Data
+        self.userId = try await getIdentifier(from: authResult)
+        try await fetchExecutor(from: self.userId)
+        
+        // Re-Login Process
+        if try checkLoginTime(){
+            return self.userData
         }
+        // First Login Process
+        // Update & Adjust Coredata
+        self.userStat.updateServiceTerm(to: self.userStat.stat_term + 1)
+        try recordLoginTimeAtCoredata()
+        
+        // Update Firestore (7 Days Term)
+        if checkLoginTerm() {
+            try await recordLoginTimeAtFirestore()
+        }
+        return self.userData
+    }
+    // Support Function (Fetch Parallel)
+    private func fetchExecutor(from userId: String) async throws {
+        
+        async let userData = fetchUser(from: userId)
+        async let userStat = fetchStatistics(from: userId)
+        async let userLog = fetchLog(from: userId)
+
+        self.userData = try await userData
+        self.userStat = try await userStat
+        self.userLog = try await userLog
+    }
+    // Support Function (First Login Check)
+    private func checkLoginTime() throws -> Bool {
+        // Get LastLogin Info
+        guard let lastLogin = self.userLog.log_access.last else {
+            throw LoginLoadingServiceError.EmptyAccessLog
+        }
+        // Compare Time
+        return util.compareTime(currentTime: self.loginDate, lastTime: lastLogin)
+    }
+    // Support Function (ServiceTerm Check)
+    private func checkLoginTerm() -> Bool {
+        return userStat.stat_term % 7 == 0
+    }
+}
+
+//================================
+// MARK: - Get User
+//================================
+extension LoginLoadingService{
+    
+    func getIdentifier(from authResult: AuthSocialLoginResDTO) async throws -> String {
+        return try util.getIdentifier(from: authResult)
     }
     
-    // Step3. Get AccessLog
-    func getAccessLog(identifier: String,
-                      result: @escaping(Result<Bool, Error>) -> Void) {
+    func fetchUser(from userId: String) async throws -> UserDTO {
         
-        // Retrive AccessLog by Identifier
-        self.fetchAccessLog(identifier: identifier) { response in
-            switch response {
-                
-            // Successfully get AccessLog
-            case .success(let log):
-                self.accLog = log
-                return result(.success(true))
-                
-            // Exception Handling : UnExpected error while get AccessLog from Coredata or Firestore
-            case .failure(let error):
-                return result(.failure(error))
-            }
+        // Check Coredata
+        if let user = try fetchUserFromCoredata(from: userId) {
+            return UserDTO(userObject: user)
         }
+        // Check Firestore
+        let user = try await fetchUserFromFirestore(from: userId)
+        try setUserToCoredata(data: user)
+        return UserDTO(userObject: user)
     }
     
-    // Step4-1. Update Statistics (ServiceTerm)
-    func updateStatistics(identifier: String, stat: StatisticsDTO, loginDate: Date,
-                          result: @escaping(Result<Bool, Error>) -> Void) {
+    private func fetchUserFromCoredata(from userId: String) throws -> UserObject? {
+        return try? userCD.getUser(from: userId)
+    }
+    
+    private func fetchUserFromFirestore(from userId: String) async throws -> UserObject {
+        return try await userFS.getUser(from: userId)
+    }
+    
+    private func setUserToCoredata(data userData: UserObject) throws {
+        try userCD.setUser(reqUser: userData)
+    }
+}
+
+//================================
+// MARK: - Get Statistics
+//================================
+extension LoginLoadingService{
+    
+    func fetchStatistics(from userId: String) async throws -> StatisticsDTO {
         
-        // Check AccessLog
-        guard let lastLoginDate = self.accLog?.log_access.last else {
-            return result(.failure(LoginLoadingServiceError.EmptyAccessLog))
+        // Check Coredata
+        if let stat = try fetchStatFromCoredata(from: userId) {
+            return StatisticsDTO(statObject: stat)
         }
-        // User has login record of that day
-        if util.calcTime(currentTime: loginDate, lastTime: lastLoginDate) {
-            return result(.success(false))
+        // Check Firestore
+        let stat = try await fetchStatFromFirestore(from: userId)
+        try setStatToCoredata(data: stat)
+        return StatisticsDTO(statObject: stat)
+    }
+    
+    private func fetchStatFromCoredata(from userId: String) throws -> StatisticsObject? {
+        return try? statCD.getStatistics(from: userId)
+    }
+    
+    private func fetchStatFromFirestore(from userId: String) async throws -> StatisticsObject {
+        return try await statFS.getStatistics(from: userId)
+    }
+    
+    private func setStatToCoredata(data statData: StatisticsObject) throws {
+        try statCD.setStatistics(reqStat: statData)
+    }
+}
+
+//================================
+// MARK: - Get AccessLog
+//================================
+extension LoginLoadingService{
+    
+    func fetchLog(from userId: String) async throws -> AccessLog {
+        
+        // Check Coredata
+        if let log = try fetchLogFromCoredata(from: userId) {
+            return log
         }
+        // Check Firestore
+        let log = try await fetchLogFromFirestore(from: userId)
+        try setLogToCoredata(data: log)
+        return log
+    }
+    
+    private func fetchLogFromCoredata(from userId: String) throws -> AccessLog? {
+        return try? acclogCD.getLog(from: userId)
+    }
+    
+    private func fetchLogFromFirestore(from userId: String) async throws -> AccessLog {
+        return try await acclogFS.getLog(from: userId)
+    }
+    
+    private func setLogToCoredata(data logData: AccessLog) throws {
+        try acclogCD.setLog(reqLog: logData)
+    }
+}
+
+//================================
+// MARK: - Update Data
+//================================
+extension LoginLoadingService{
+    
+    func recordLoginTimeAtCoredata() throws {
         
         // Update Statistics
-        var updatedStat = stat
-        updatedStat.updateServiceTerm(to: stat.stat_term + 1)
-        
-        // Update Coredata & Firestore
-        self.updateStatisticsStore(identifier: identifier, updatedStat: updatedStat) { response in
-            switch response {
-                
-            // Successfully Update Statistics
-            case .success(_):
-                return result(.success(true))
-                
-            // Exception Handling : UnExpected error while Update Statistics from Coredata or Firestore
-            case .failure(let error):
-                return result(.failure(error))
-            }
-        }
-    }
-    
-    // Step4-2. Update AccessLog
-    func updateAccessLog(identifier: String, serviceTerm: Int, loginDate: Date,
-                         result: @escaping(Result<Bool, Error>) -> Void) {
-        
-        // Check AccessLog
-        guard var accessLog = self.accLog else {
-            return result(.failure(LoginLoadingServiceError.EmptyAccessLog))
-        }
-        
-        // Manage AccessLog size
-        if accessLog.log_access.count > 365 {
-            accessLog.log_access.removeAll()
-        }
+        try statCD.updateStatistics(to: self.userStat)
         
         // Update AccessLog
-        accessLog.log_access.append(loginDate)
+        try acclogCD.updateLog(from: self.userId, updatedAt: self.loginDate)
+    }
+    
+    func recordLoginTimeAtFirestore() async throws {
         
-        // Update Coredata & Firestore
-        self.updateAccessLogStore(identifier: identifier, serviceTerm: serviceTerm, updatedAcclog: accessLog) { response in
-            switch response {
-                
-            // Successfully Update Statistics
-            case .success(_):
-                return result(.success(true))
-                
-            // Exception Handling : UnExpected error while Update Statistics from Coredata or Firestore
-            case .failure(let error):
-                return result(.failure(error))
-            }
-        }
-    }
-}
-
-//==============================
-// MARK: Get User
-//==============================
-extension LoginLoadingService{
-    
-    // Step1. Identifier
-    func getIdentifier(authResult: AuthSocialLoginResDTO,
-                       result: @escaping(Result<String, Error>) -> Void) {
-        util.getIdentifier(authRes: authResult)
-    }
-    
-    // Step2. Get User From Coredata or Firestore
-    func fetchUser(identifier: String,
-                   result: @escaping(Result<UserDTO, Error>) -> Void) {
+        // Update Statistics
+        try await statFS.updateStatistics(to: StatisticsObject(updatedStat: self.userStat))
         
-        self.fetchUserFromCoredata(identifier: identifier) { [weak self] response in
-            switch response {
-                
-                // Successfully get UserInfo from CoreData
-            case .success(let userInfo):
-                return result(.success(UserDTO(userObject: userInfo)))
-                
-                // No userInfo at CoreData => Jump to Firestore
-            case .failure(let error as UserErrorCD) where error == .UserRetrievalByIdentifierFailed:
-                self?.fetchUserFromFirestore(identifier: identifier, result: result)
-                
-                // ExceptionHandling : Internal Error (Coredata)
-            case .failure(let error):
-                return result(.failure(error))
-            }
-        }
+        // Update AccessLog
+        try await acclogFS.updateLog(to: self.userLog)
     }
-    
-    // Step3-1. Get from Coredata
-    private func fetchUserFromCoredata(identifier: String,
-                                       result: @escaping(Result<UserObject, Error>) -> Void) {
-        userCD.getUser(identifier: identifier, result: result)
-    }
-    
-    // Step3-2. (Option) Get from Firestore
-    private func fetchUserFromFirestore(identifier: String,
-                                        result: @escaping(Result<UserDTO, Error>) -> Void) {
-        
-        userFS.getUser(identifier: identifier) { [weak self] fsResponse in
-            switch fsResponse {
-                
-                // Successgully get UserInfo from Firestore
-            case .success(let userInfo):
-                
-                // Set userInfo to Coredata
-                self?.storeUserToCoredata(user: userInfo) { cdResponse in
-                    switch cdResponse {
-                    case .success(let msg):
-                        print(msg)
-                        return result(.success(UserDTO(userObject: userInfo)))
-                        
-                        // ExceptionHandling : Internal Error (Coredata)
-                    case .failure(let error):
-                        result(.failure(error))
-                    }
-                }
-                // No userInfo at Firestore
-                // 'UserFSError.IdentiferDocsGetError' case = newUser
-            case .failure(let error):
-                return result(.failure(error))
-            }
-        }
-    }
-    
-    // Step1-3. (Option) Store to Coredata
-    private func storeUserToCoredata(user: UserObject,
-                                     result: @escaping(Result<String, Error>) -> Void) {
-        userCD.setUser(reqUser: user, result: result)
-    }
-}
-
-//==============================
-// MARK: Get Statistics
-//==============================
-extension LoginLoadingService{
-    
-    // Step1. Fetch Stattistics From Coredata or Firestore
-    private func fetchStatistics(identifier: String,
-                                 result: @escaping(Result<StatisticsDTO, Error>) -> Void) {
-        self.fetchStatFromCoredata(identifier: identifier) { response in
-            switch response {
-                
-            // Successfully get StatInfo from CoreData
-            case .success(let statInfo):
-                return result(.success(StatisticsDTO(statObject: statInfo)))
-                
-            // No StatInfo at CoreData => Jump to Firestore
-            case .failure(let error as StaticErrorCD) where error == .StatRetrievalByIdentifierFailed:
-                self.fetchStatFromFirestore(identifier: identifier, result: result)
-                
-            // ExceptionHandling : Internal Error (Coredata)
-            case .failure(let error):
-                return result(.failure(error))
-            }
-        }
-    }
-    
-    // Step1-1. Get from Coredata
-    private func fetchStatFromCoredata(identifier: String,
-                                       result: @escaping(Result<StatisticsObject, Error>) -> Void) {
-        statCD.getStatistics(identifier: identifier, result: result)
-    }
-    
-    // Step1-2. (Option) Get from Firestore
-    private func fetchStatFromFirestore(identifier: String,
-                                        result: @escaping(Result<StatisticsDTO, Error>) -> Void) {
-        
-        statFS.getStatistics(identifier: identifier) { [weak self] fsResponse in
-            switch fsResponse {
-                
-            // Successgully get UserInfo from Firestore
-            case .success(let statInfo):
-                
-                // Set StatInfo to Coredata
-                self?.storeStatToCoredata(statInfo: statInfo) { cdResponse in
-                    switch cdResponse {
-                    case .success(let msg):
-                        print(msg)
-                        return result(.success(StatisticsDTO(statObject: statInfo)))
-                        
-                    // ExceptionHandling : Internal Error (Coredata)
-                    case .failure(let error):
-                        return result(.failure(error))
-                    }
-                }
-                
-            // ExceptionHandling : Failed to Search (Firestore)
-            case .failure(let error):
-                return result(.failure(error))
-            }
-        }
-    }
-    
-    // Step1-3. (Option) Store to Coredata
-    private func storeStatToCoredata(statInfo: StatisticsObject,
-                                     result: @escaping(Result<String, Error>) -> Void) {
-        statCD.setStatistics(reqStat: statInfo, result: result)
-    }
-}
-
-//==============================
-// MARK: Get Access Log
-//==============================
-extension LoginLoadingService{
-    
-    // Step1. Fetch AccessLog from Coredata or Firestore
-    func fetchAccessLog(identifier: String,
-                      result: @escaping(Result<AccessLog, Error>) -> Void) {
-        
-        self.fetchAcclogFromCoredata(identifier: identifier) { response in
-            switch response {
-                
-            // Successfully get AccessLog from CoreData
-            case .success(let acclog):
-                return result(.success(acclog))
-               
-            // No AccessLog at CoreData => Jump to Firestore
-            case .failure(let error as AccessLogErrorCD) where error == .AccLogRetrievalByIdentifierFailed:
-                self.fetchAcclogFromFirestore(identifier: identifier, result: result)
-                
-            // ExceptionHandling : Internal Error (Coredata)
-            case .failure(let error):
-                return result(.failure(error))
-            }
-        }
-    }
-    
-    // Step1-1. Get from Coredata
-    private func fetchAcclogFromCoredata(identifier: String,
-                                         result: @escaping(Result<AccessLog, Error>) -> Void) {
-        acclogCD.getAccessLog(identifier: identifier, result: result)
-    }
-    
-    // Step1-2. (Option) Get from Firestore
-    private func fetchAcclogFromFirestore(identifier: String,
-                                          result: @escaping(Result<AccessLog, Error>) -> Void) {
-        
-        // Successgully get AccessLog from Firestore
-        acclogFS.getAccessLog(identifier: identifier) { fsResponse in
-            switch fsResponse {
-                
-            case .success(let log):
-                
-                // Set AccessLog to Coredata
-                self.storeLogToCoredata(log: log) { cdResponse in
-                    switch cdResponse {
-                    case .success(let msg):
-                        print(msg)
-                        return result(.success(log))
-                        
-                    // ExceptionHandling : Internal Error (Coredata)
-                    case .failure(let error):
-                        return result(.failure(error))
-                    }
-                }
-                
-            // ExceptionHandling : Failed to Search (Firestore)
-            case .failure(let error):
-                return result(.failure(error))
-            }
-        }
-    }
-    
-    // Step1-3. (Option) Store to Coredata
-    private func storeLogToCoredata(log: AccessLog,
-                                    result: @escaping(Result<String, Error>) -> Void) {
-        acclogCD.setAccessLog(reqLog: log, result: result)
-    }
-}
-
-//==============================
-// MARK: Update Statistics
-//==============================
-extension LoginLoadingService{
-    
-    func updateStatisticsStore(identifier: String, updatedStat: StatisticsDTO,
-                           result: @escaping(Result<String, Error>) -> Void) {
-            
-        // Step1. Update Coredata
-        self.updateStatToCoredata(identifier: identifier, updatedStat: updatedStat) { cdResponse in
-            switch cdResponse {
-            case .success(let msg):
-                print(msg)
-                
-                // Step2. (Option) Update Firestore
-                // If the Coredata update was successful and the stat_term is a multiple of 7, then update Firestore
-                if updatedStat.stat_term % 7 == 0 {
-                    self.updateStatToFirestore(identifier: identifier, updatedStat: updatedStat, result: result)
-                } else {
-                    result(.success("Successfully updated Coredata only."))
-                }
-                
-                // ExceptionHandling : Failed to Update (Coredata)
-            case .failure(let error):
-                result(.failure(error))
-            }
-        }
-    }
-    
-    private func updateStatToCoredata(identifier: String, updatedStat: StatisticsDTO,
-                                      result: @escaping(Result<String, Error>) -> Void) {
-        
-        statCD.updateStatistics(from: identifier, to: updatedStat, result: result)
-    }
-    
-    private func updateStatToFirestore(identifier: String, updatedStat: StatisticsDTO,
-                                       result: @escaping(Result<String, Error>) -> Void) {
-        statFS.updateStatistics(identifier: identifier, updatedStat: updatedStat, result: result)
-    }
-}
-
-//==============================
-// MARK: Update AccessLog
-//==============================
-extension LoginLoadingService{
-    
-    func updateAccessLogStore(identifier: String, serviceTerm: Int, updatedAcclog: AccessLog,
-                         result: @escaping(Result<String, Error>) -> Void) {
-        
-        // Step1. Update Coredata
-        self.updateAcclogToCoredata(identifier: identifier, updatedAcclog: updatedAcclog) { cdResponse in
-            switch cdResponse {
-            case .success(let msg):
-                print(msg)
-                
-                // Step2. Update Firestore
-                // If the Coredata update was successful and the stat_term is a multiple of 7, then update Firestore
-                if serviceTerm % 7 == 0 {
-                    self.updateAcclogToFirestore(identifier: identifier, updatedAcclog: updatedAcclog, result: result)
-                } else {
-                    result(.success("Successfully updated Coredata only."))
-                }
-                
-            // ExceptionHandling : Failed to Update (Coredata)
-            case .failure(let error):
-                return result(.failure(error))
-            }
-        }
-    }
-    
-    private func updateAcclogToCoredata(identifier: String, updatedAcclog: AccessLog,
-                                        result: @escaping(Result<String, Error>) -> Void) {
-        acclogCD.updateAccessLog(identifier: identifier, updatedAcclog: updatedAcclog, result: result)
-    }
-    
-    private func updateAcclogToFirestore(identifier: String, updatedAcclog: AccessLog,
-                                         result: @escaping(Result<String, Error>) -> Void) {
-        acclogFS.updateAccessLog(identifier: identifier, updatedLog: updatedAcclog, result: result)
-     }
 }
 
 //================================

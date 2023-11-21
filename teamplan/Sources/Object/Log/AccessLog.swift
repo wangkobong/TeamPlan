@@ -27,7 +27,6 @@ struct AccessLog{
         self.log_user_id = identifier
         self.log_access = [signupDate]
     }
-    
     // : Get (Coredata)
     init?(logEntity: AccessLogEntity) {
         guard let log_user_id = logEntity.log_user_id,
@@ -39,7 +38,6 @@ struct AccessLog{
         self.log_user_id = log_user_id
         self.log_access = log_access
     }
-    
     // : Get (Firestore)
     init?(logData: [String : Any]) {
         guard let log_user_id = logData["log_user_id"] as? String,
@@ -59,6 +57,11 @@ struct AccessLog{
         // Assigning values
         self.log_user_id = log_user_id
         self.log_access = logDates
+    }
+    // : Default
+    init(){
+        self.log_user_id = "unknown"
+        self.log_access = []
     }
     
     //============================
