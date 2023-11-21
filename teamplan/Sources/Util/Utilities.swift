@@ -8,40 +8,24 @@
 
 import Foundation
 
-enum EmailError: LocalizedError {
-    case invalidEmailFormat
-    
-    var errorDescription: String? {
-        switch self {
-        case .invalidEmailFormat:
-            return "Invalid email format"
-        }
-    }
-}
-
 final class Utilities {
     
     //============================
     // MARK: Get Identifier
     //============================
-    func getIdentifier(authRes: AuthSocialLoginResDTO) -> String {
+    func getIdentifier(from authRes: AuthSocialLoginResDTO) throws -> String {
         
-        let accountName = self.getAccountName(userEmail: authRes.email)
-        
-        if accountName != "" {
-            let identifier = "\(accountName)_\(authRes.provider.rawValue)"
-            return identifier
-        } else {
-            return ""
-        }
+        let accountName = try getAccountName(from: authRes.email)
+        return "\(accountName)_\(authRes.provider.rawValue)"
     }
     
     //============================
     // MARK: Extract AccountName
     //============================
-    private func getAccountName(userEmail: String) -> String {
+    private func getAccountName(from userEmail: String) throws -> String {
+        
         guard let atIndex = userEmail.firstIndex(of: "@"), atIndex != userEmail.startIndex else {
-            return ""
+            throw utilError.InvalidEmailFormat
         }
         return (String(userEmail.prefix(upTo: atIndex)))
     }
@@ -49,20 +33,15 @@ final class Utilities {
     //============================
     // MARK: Time Calculation
     //============================
-    func calcTime(currentTime: Date, lastTime: Date) -> Bool {
+    func compareTime(currentTime: Date, lastTime: Date) -> Bool {
         
         let calendar = Calendar.current
         let lastTimeComp = calendar.dateComponents([.year, .month, .day], from: lastTime)
         let currentTimeComp = calendar.dateComponents([.year, .month, .day], from: currentTime)
         
-        if let lastTimeDay = calendar.date(from: lastTimeComp),
-           let currentTimeDay = calendar.date(from: currentTimeComp),
-           
-            currentTimeDay <= lastTimeDay {
-            return true
-        } else {
-            return false
-        }
+        return lastTimeComp.year == currentTimeComp.year &&
+               lastTimeComp.month == currentTimeComp.month &&
+               lastTimeComp.day == currentTimeComp.day
     }
     
     //============================

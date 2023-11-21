@@ -83,12 +83,12 @@ extension HomeService{
         try challenge.getMyChallenges()
     }
     // Disable MyChallenge
-    func disableMyChallenge(from challengeId: Int) async throws {
-        try await challenge.disableMyChallenge(from: challengeId)
+    func disableMyChallenge(from challengeId: Int) throws {
+        try challenge.disableMyChallenge(from: challengeId)
     }
     // Reward MyChallenge
-    func rewardMyChallenge(from challengeId: Int) async throws -> ChallengeRewardDTO {
-        try await challenge.rewardMyChallenge(from: challengeId)
+    func rewardMyChallenge(from challengeId: Int) throws -> ChallengeRewardDTO {
+        try challenge.rewardMyChallenge(from: challengeId)
     }
 }
 

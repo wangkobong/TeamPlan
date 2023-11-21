@@ -8,32 +8,125 @@
 
 import Foundation
 import FirebaseFirestore
+import FirebaseFirestoreSwift
 
 final class AccessLogServicesFirestore{
-    
-    // Firestore setting
+
+    //================================
+    // MARK: - Parameter Setting
+    //================================
     let fs = Firestore.firestore()
     
     //================================
     // MARK: - Set AccessLog
     //================================
-    //##### Async/Await #####
-    func setAccessLog(reqLog: AccessLog) async throws {
+    func setLog(reqLog: AccessLog) async throws {
         
-        // Target Table
+        // Search & Set Data
         let collectionRef = fs.collection("AccessLog")
-        
-        do {
-            // Set AccessLog
-            try await collectionRef.addDocument(data: reqLog.toDictionary())
-            
-        } catch {
-            print("(Firestore) Error Set AccessLog : \(error)")
-            throw AccessLogErrorFS.UnexpectedSetError
-        }
+        try await collectionRef.addDocument(data: reqLog.toDictionary())
     }
     
-    //##### Result #####
+    //================================
+    // MARK: - Get AccessLog
+    //================================
+    func getLog(from userId: String) async throws -> AccessLog {
+        
+        // Search Data
+        let collectionRef = fs.collection("AccessLog")
+        let docsRef = try await collectionRef.whereField("log_user_id", isEqualTo: userId).getDocuments()
+        
+        // Exception Handling : Search Error
+        guard docsRef.documents.count == 1 else {
+            if docsRef.documents.count > 1 {
+                throw AccessLogErrorFS.MultipleAcclogFound
+            } else {
+                throw AccessLogErrorFS.InternalError
+            }
+        }
+        
+        // Convert to Log & Get
+        let docs = docsRef.documents.first!
+        guard let log = AccessLog(logData: docs.data()) else {
+            throw AccessLogErrorFS.UnexpectedConvertError
+        }
+        return log
+    }
+    
+    //================================
+    // MARK: - Update AccessLog
+    //================================
+    func updateLog(to updatedData: AccessLog) async throws {
+        
+        // Search Data
+        let collectionRef = fs.collection("AccessLog")
+        let docsRef = try await collectionRef.whereField("log_user_id", isEqualTo: updatedData.log_user_id).getDocuments()
+        
+        // Exception Handling : Search Error
+        guard docsRef.documents.count == 1 else {
+            if docsRef.documents.count > 1 {
+                throw AccessLogErrorFS.MultipleAcclogFound
+            } else {
+                throw AccessLogErrorFS.InternalError
+            }
+        }
+        // Update Log
+        let docs = docsRef.documents.first!
+        try await docs.reference.updateData(updatedData.toDictionary())
+    }
+    
+    
+    //================================
+    // MARK: - Delete AccessLog
+    //================================
+    func deleteLog(to userId: String) async throws {
+        
+        // Search Data
+        let collectionRef = fs.collection("AccessLog")
+        let docsRef = try await collectionRef.whereField("log_user_id", isEqualTo: userId).getDocuments()
+        
+        // Exception Handling : Search Error
+        guard docsRef.documents.count == 1 else {
+            if docsRef.documents.count > 1 {
+                throw AccessLogErrorFS.MultipleAcclogFound
+            } else {
+                throw AccessLogErrorFS.InternalError
+            }
+        }
+        // Delete Documents
+        let docs = docsRef.documents.first!
+        try await docs.reference.delete()
+    }
+}
+
+//================================
+// MARK: - Exception
+//================================
+enum AccessLogErrorFS: LocalizedError {
+    case UnexpectedConvertError
+    case AcclogRetrievalByIdentifierFailed
+    case MultipleAcclogFound
+    case InternalError
+    
+    var errorDescription: String? {
+        switch self {
+        case .UnexpectedConvertError:
+            return "Firestore: There was an unexpected error while Convert 'Accesslog' details"
+        case .AcclogRetrievalByIdentifierFailed:
+            return "Firestore: Unable to retrieve 'Accesslog' data using the provided identifier."
+        case .MultipleAcclogFound:
+            return "Firestore: Multiple 'Accesslog' found. Expected only one."
+        case .InternalError:
+            return "Firestore: Internal Error Occurred while process 'Accesslog' details"
+        }
+    }
+}
+
+//================================
+// MARK: - Legacy
+//================================
+extension AccessLogServicesFirestore{
+    // Set Log
     func setAccessLog(reqLog: AccessLog,
                        result: @escaping(Result<String, Error>) -> Void) {
         
@@ -54,9 +147,7 @@ final class AccessLogServicesFirestore{
         }
     }
     
-    //================================
-    // MARK: - Get AccessLog
-    //================================
+    // Get Log
     //##### Result #####
     func getAccessLog(identifier: String,
                       result: @escaping(Result<AccessLog, Error>) -> Void) {
@@ -98,10 +189,7 @@ final class AccessLogServicesFirestore{
         }
     }
     
-    //================================
-    // MARK: - Update AccessLog
-    //================================
-    //##### Result #####
+    // Update Log
     func updateAccessLog(identifier: String, updatedLog: AccessLog,
                          result: @escaping(Result<String, Error>) -> Void) {
         // Target Table
@@ -147,78 +235,5 @@ final class AccessLogServicesFirestore{
             }
         }
     }
-    
-    //================================
-    // MARK: - Delete AccessLog
-    //================================
-    //##### Async/Await #####
-    func deleteAccessLog(identifier: String) async throws {
-        
-        // Target Table
-        let collectionRef = fs.collection("AccessLog")
-        
-        do{
-            let response = try await collectionRef.whereField("log_user_id", isEqualTo: identifier).getDocuments()
-            
-            // Exception Handling : Search Error
-            guard response.documents.count == 1 else {
-                if response.documents.count > 1 {
-                    throw AccessLogErrorFS.MultipleAcclogFound
-                } else {
-                    throw AccessLogErrorFS.AcclogRetrievalByIdentifierFailed
-                }
-            }
-            
-            // Fetch Document
-            guard let docs = response.documents.first else {
-                throw AccessLogErrorFS.UnexpectedFetchError
-            }
-            
-            // Delete AccessLog
-            try await docs.reference.delete()
-            
-        } catch {
-            // Exception Handling : Internal Error (FirestoreServer)
-            print("(Firestore) Error Delete AccessLog : \(error)")
-            throw AccessLogErrorFS.InternalError
-        }
-    }
 }
 
-//================================
-// MARK: - Exception
-//================================
-enum AccessLogErrorFS: LocalizedError {
-    case UnexpectedSetError
-    case UnexpectedGetError
-    case UnexpectedUpdateError
-    case UnexpectedDeleteError
-    case UnexpectedFetchError
-    case UnexpectedConvertError
-    case AcclogRetrievalByIdentifierFailed
-    case MultipleAcclogFound
-    case InternalError
-    
-    var errorDescription: String? {
-        switch self {
-        case .UnexpectedSetError:
-            return "Firestore: There was an unexpected error while Set 'Accesslog' details"
-        case .UnexpectedGetError:
-            return "Firestore: There was an unexpected error while Get 'Accesslog' details"
-        case .UnexpectedUpdateError:
-            return "Firestore: There was an unexpected error while Update 'Accesslog' details"
-        case .UnexpectedDeleteError:
-            return "Firestore: There was an unexpected error while Delete 'Accesslog' details"
-        case .UnexpectedFetchError:
-            return "Firestore: There was an unexpected error while Fetch 'Accesslog' details from DocumentReference"
-        case .UnexpectedConvertError:
-            return "Firestore: There was an unexpected error while Convert 'Accesslog' details"
-        case .AcclogRetrievalByIdentifierFailed:
-            return "Firestore: Unable to retrieve 'Accesslog' data using the provided identifier."
-        case .MultipleAcclogFound:
-            return "Firestore: Multiple 'Accesslog' found. Expected only one."
-        case .InternalError:
-            return "Firestore: Internal Error Occurred while process 'Accesslog' details"
-        }
-    }
-}

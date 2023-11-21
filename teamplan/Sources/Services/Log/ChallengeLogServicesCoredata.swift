@@ -22,43 +22,28 @@ final class ChallengeLogServicesCoredata{
     //================================
     // MARK: - Set ChallengeLog
     //================================
-    func setLog(from reqLog: ChallengeLog) async throws {
-        do {
-            // Set Log
-            try setLogEntity(from: reqLog)
-            
-            // Store Log
-            try context.save()
-        } catch {
-            print("(CoreData) Error Set ChallengeLog : \(error)")
-            throw ChallengeLogErrorCD.UnexpectedSetError
-        }
+    func setLog(reqLog: ChallengeLog) throws {
+        
+        // Create Entity & Set Data
+        try setLogEntity(from: reqLog)
+        try context.save()
     }
-    
-    //##### Core Function #####
+    // Support Function
     private func setLogEntity(from reqLog: ChallengeLog) throws {
         
-        // Create new LogEntity
+        // Create LogEntity & Serialize
         let logEntity = ChallengeLogEntity(context: context)
+        let log = try NSKeyedArchiver.archivedData(withRootObject: reqLog.log_complete, requiringSecureCoding: false)
         
-        do {
-            // Serialize Log
-            let log = try NSKeyedArchiver.archivedData(withRootObject: reqLog.log_complete, requiringSecureCoding: false)
-            
-            // Set ChallengeLog Info
-            logEntity.log_user_id = reqLog.log_user_id
-            logEntity.log_complete = log as NSObject
-            logEntity.log_update_at = reqLog.log_update_at
-        } catch {
-            print("(CoreData) Error Serialize ChallengeLog : \(error)")
-            throw ChallengeLogErrorCD.UnexpectedSerializeError
-        }
+        logEntity.log_user_id = reqLog.log_user_id
+        logEntity.log_complete = log as NSObject
+        logEntity.log_update_at = reqLog.log_update_at
     }
     
     //================================
     // MARK: - Get ChallengeLog
     //================================
-    func getLog(from identifier: String) async throws -> ChallengeLog {
+    func getLog(from identifier: String) throws -> ChallengeLog {
         
         // parameter setting
         let fetchReq: NSFetchRequest<ChallengeLogEntity> = ChallengeLogEntity.fetchRequest()
@@ -67,42 +52,29 @@ final class ChallengeLogServicesCoredata{
         fetchReq.predicate = NSPredicate(format: "log_user_id == %@", identifier)
         fetchReq.fetchLimit = 1
         
-        do {
-            guard let reqLog = try context.fetch(fetchReq).first else {
-                // Exception Handling: Idnetifier
-                throw ChallengeLogErrorCD.ChallengeLogRetrievalByIdentifierFailed
-            }
-            
-            // Deserialize Log
-            guard let logData = reqLog.log_complete as? Data,
-                  let log = try NSKeyedUnarchiver.unarchivedObject(ofClasses: [NSArray.self, NSDictionary.self, NSDate.self], from: logData)
-                  as? [[Int: Date]]
-            else {
-                throw ChallengeLogErrorCD.UnexpectedDeserializeError
-            }
-            
-            // Struct LogData
-            guard let chlgLog = ChallengeLog(from: reqLog, log: log) else {
-                // Exception Handling: Convert
-                throw ChallengeLogErrorCD.UnexpectedConvertError
-            }
-            return chlgLog
-            
-        } catch {
-            print("(CoreData) Error Get ChallengeLog : \(error)")
-            throw ChallengeLogErrorCD.UnexpectedGetError
+        // Search Data
+        guard let reqLog = try context.fetch(fetchReq).first else {
+            throw ChallengeLogErrorCD.ChallengeLogRetrievalByIdentifierFailed
         }
+        // Deserialize Data
+        guard let logData = reqLog.log_complete as? Data,
+              let log = try NSKeyedUnarchiver.unarchivedObject(
+                ofClasses: [NSArray.self, NSDictionary.self, NSDate.self], from: logData) as? [[Int: Date]]
+        else {
+            throw ChallengeLogErrorCD.UnexpectedDeserializeError
+        }
+        // Convert to Log & Get
+        guard let challengeLog = ChallengeLog(from: reqLog, log: log) else {
+            throw ChallengeLogErrorCD.UnexpectedConvertError
+        }
+        return challengeLog
     }
     
     //================================
     // MARK: - Update ChallengeLog
     //================================
-    func updateLog(to id: String, what log: [Int:Date], when updatedAt: Date) async throws {
-        try await updateProcess(userId: id, newLog: log, newUpdateAt: updatedAt)
-    }
-
-    //##### Core Function #####
-    private func updateProcess(userId: String, newLog: [Int: Date], newUpdateAt: Date) async throws {
+    func updateLog(from userId: String, updatedLog: [Int:Date], updatedAt: Date) throws {
+        
         // parameter setting
         let fetchReq: NSFetchRequest<ChallengeLogEntity> = ChallengeLogEntity.fetchRequest()
         
@@ -110,56 +82,48 @@ final class ChallengeLogServicesCoredata{
         fetchReq.predicate = NSPredicate(format: "log_user_id == %@", userId)
         fetchReq.fetchLimit = 1
         
-        // Search Entity
+        // Search Data
         guard let reqLog = try context.fetch(fetchReq).first else {
-            // Exception Handling: Idnetifier
             throw ChallengeLogErrorCD.ChallengeLogRetrievalByIdentifierFailed
         }
-        
-        // Update Entity
-        if let logCompleteEntity = reqLog.log_complete as? Data,
-           
-            // 1. Deserialize log
-           var logComplete = try NSKeyedUnarchiver.unarchivedObject(ofClasses: [NSArray.self, NSDictionary.self, NSDate.self], from: logCompleteEntity)
-            as? [[Int: Date]] {
-            
-            // 2. Append log
-            logComplete.append(newLog)
-            
-            // 3. Back to Serialize
-            let updatedLog = try NSKeyedArchiver.archivedData(withRootObject: logComplete, requiringSecureCoding: false)
-            reqLog.log_complete = updatedLog as NSObject
+        // Deserialize Data
+        guard let logData = reqLog.log_complete as? Data,
+              var log = try NSKeyedUnarchiver.unarchivedObject(
+                ofClasses: [NSArray.self, NSDictionary.self, NSDate.self], from: logData) as? [[Int: Date]]
+        else {
+            throw ChallengeLogErrorCD.UnexpectedDeserializeError
         }
-        reqLog.log_update_at = newUpdateAt
+        // Append Data
+        log.append(updatedLog)
         
+        // Serialize Data
+        let updated = try NSKeyedArchiver.archivedData(withRootObject: log, requiringSecureCoding: false)
+        
+        // Update Data
+        reqLog.log_complete = updated as NSObject
+        reqLog.log_update_at = updatedAt
         try context.save()
     }
     
     //================================
     // MARK: - Delete ChallengeLog
     //================================
-    func deleteLog(from identifier: String) async throws {
-        do {
-            // parameter setting
-            let fetchReq: NSFetchRequest<ChallengeLogEntity> = ChallengeLogEntity.fetchRequest()
-            
-            // Request Query
-            fetchReq.predicate = NSPredicate(format: "log_user_id == %@", identifier)
-            fetchReq.fetchLimit = 1
-            
-            guard let reqLog = try context.fetch(fetchReq).first else {
-                // Exception Handling: Idnetifier
-                throw ChallengeLogErrorCD.ChallengeLogRetrievalByIdentifierFailed
-            }
-            
-            // Delete Log
-            context.delete(reqLog)
-            try context.save()
-            
-        } catch {
-            print("(CoreData) Error Delete ChallengeLog : \(error)")
-            throw ChallengeLogErrorCD.UnexpectedDeleteError
+    func deleteLog(from identifier: String) throws {
+        
+        // parameter setting
+        let fetchReq: NSFetchRequest<ChallengeLogEntity> = ChallengeLogEntity.fetchRequest()
+        
+        // Request Query
+        fetchReq.predicate = NSPredicate(format: "log_user_id == %@", identifier)
+        fetchReq.fetchLimit = 1
+        
+        // Search Data
+        guard let reqLog = try context.fetch(fetchReq).first else {
+            throw ChallengeLogErrorCD.ChallengeLogRetrievalByIdentifierFailed
         }
+        // Delete Data
+        context.delete(reqLog)
+        try context.save()
     }
 }
 
@@ -167,33 +131,21 @@ final class ChallengeLogServicesCoredata{
 // MARK: - Exception
 //===============================
 enum ChallengeLogErrorCD: LocalizedError {
-    case UnexpectedSetError
     case UnexpectedSerializeError
-    case UnexpectedGetError
     case UnexpectedDeserializeError
-    case UnexpectedUpdateError
-    case UnexpectedDeleteError
     case UnexpectedConvertError
     case ChallengeLogRetrievalByIdentifierFailed
     
     var errorDescription: String?{
         switch self {
-        case .ChallengeLogRetrievalByIdentifierFailed:
-            return "CoreData: Unable to retrieve 'ChallengeLog' data using the provided identifier."
-        case .UnexpectedSetError:
-            return "Coredata: There was an unexpected error while Set 'ChallengeLog' details"
         case .UnexpectedSerializeError:
             return "Coredata: There was an unexpected error while Serialize 'ChallengeLog' details"
-        case .UnexpectedGetError:
-            return "Coredata: There was an unexpected error while Get 'ChallengeLog' details"
         case .UnexpectedDeserializeError:
             return "Coredata: There was an unexpected error while Deserialize 'ChallengeLog' details"
-        case .UnexpectedUpdateError:
-            return "Coredata: There was an unexpected error while Update 'ChallengeLog' details"
-        case .UnexpectedDeleteError:
-            return "Coredata: There was an unexpected error while Delete 'ChallengeLog' details"
         case .UnexpectedConvertError:
             return "Coredata: There was an unexpected error while Convert 'ChallengeLog' details"
+        case .ChallengeLogRetrievalByIdentifierFailed:
+            return "CoreData: Unable to retrieve 'ChallengeLog' data using the provided identifier."
         }
     }
 }
