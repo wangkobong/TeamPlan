@@ -22,7 +22,7 @@ struct LoginView: View {
     @State private var showSignUpView: Bool = false
     @State private var isLoading: Bool = false
     @State private var isLogin: Bool = false
-    @State private var viewState: LoginViewState = .login
+    @AppStorage("mainViewState") var mainViewState: MainViewState?
 
     @ObservedObject var vm = GoogleSignInButtonViewModel()
     @EnvironmentObject var authViewModel: AuthenticationViewModel
@@ -32,17 +32,8 @@ struct LoginView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                switch viewState {
-                case .login:
-                    loginView
-                        .transition(transition)
-                case .toHome:
-                    HomeView()
-                        .transition(transition)
-                case .toSignup:
-                    SignupView()
-                        .transition(transition)
-                }
+                loginView
+                    .transition(transition)
                 
                 if isLoading {
                     LoadingView()
@@ -139,11 +130,11 @@ extension LoginView {
                                 switch user.status {
                                 case .exist:
                                     withAnimation(.spring()) {
-                                        viewState = .toHome
+                                        mainViewState = .main
                                     }
                                 case .new:
                                     withAnimation(.spring()) {
-                                        viewState = .toSignup
+                                        mainViewState = .signup
                                     }
                                 case .unknown:
                                     break

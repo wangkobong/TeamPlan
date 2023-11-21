@@ -22,7 +22,7 @@ final class HomeViewModel: ObservableObject {
     init() {
         self.addSubscribers()
         Task {
-            await self.getUser()
+            await self.getUserName()
         }
     }
     
@@ -37,7 +37,8 @@ final class HomeViewModel: ObservableObject {
     }
     
     @MainActor
-    private func getUser() async {
-
+    private func getUserName() async {
+        let userDefaultManager = UserDefaultManager.loadWith(key: "user")
+        self.userName = userDefaultManager?.userName ?? "Unkown"
     }
 }

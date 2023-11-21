@@ -8,6 +8,8 @@
 import Foundation
 import GoogleSignIn
 import KeychainSwift
+import Combine
+import SwiftUI
 
 final class AuthenticationViewModel: ObservableObject{
     
@@ -20,8 +22,14 @@ final class AuthenticationViewModel: ObservableObject{
     
     @Published var nickName: String = ""
     @Published var signupUser: AuthSocialLoginResDTO?
+
+    private var cancellables = Set<AnyCancellable>()
+    
     let signupService = SignupService()
-    init(){}
+    
+    init(){
+        self.addSubscribers()
+    }
     
     //====================
     // Google Login
@@ -40,38 +48,6 @@ final class AuthenticationViewModel: ObservableObject{
                         DispatchQueue.main.async {
                             self.signupUser = user
                         }
-//                        DispatchQueue.main.async {
-//                            self.loginLoadingService.getUser(authResult: user) { result in
-//                                switch result {
-//                                case .success(let loginUser):
-//                                    print("loginUser: \(loginUser)")
-//                                    let accountName = self.util.getAccountName(userEmail: loginUser.user_email)
-//                                    let identifier = "\(accountName)_\(loginUser.user_social_type.rawValue)"
-//                                    self.loginLoadingService.getStatistics(identifier: identifier) { result in
-//                                        switch result {
-//                                        case .success(let statistics):
-//                                            print("statistics: \(statistics)")
-////                                            self.loginLoadingService.getAccessLog(identifier: identifier) { result in
-////                                                switch result {
-////                                                case .success(let accessLog):
-////                                                    print("accessLog: \(accessLog)")
-////                                                case .failure(let error):
-////                                                    print(error.localizedDescription)
-////                                                }
-////                                            }
-//                                        case .failure(let error):
-//                                            print(error.localizedDescription)
-//                                        }
-//                                    }
-//                                case .failure(let error):
-//                                    print(error.localizedDescription)
-//                                }
-//                            }
-//
-//                            
-//                            
-//                        }
-
 
                     case .new:
                         print("########### New User ###########")
@@ -80,6 +56,9 @@ final class AuthenticationViewModel: ObservableObject{
                         }
                     case .unknown:
                         print("########### UNKNOWN ###########")
+                        DispatchQueue.main.async {
+                            self.signupUser = nil
+                        }
                     }
                     completion(.success(user))
                     let keychain = KeychainSwift()
@@ -117,6 +96,9 @@ final class AuthenticationViewModel: ObservableObject{
         let finalUserInfo = self.signupService.setNickName(newUser: accountInfo, nickName: userName)
         let signupService = SignupLoadingService(newUser: finalUserInfo)
         let signedUser = try await signupService.executor()
+        let userDefaultManager = UserDefaultManager.loadWith(key: "user")
+        userDefaultManager?.userName = signedUser.user_name
+        userDefaultManager?.identifier = signedUser.user_id
         return signedUser
     }
     
@@ -129,6 +111,10 @@ final class AuthenticationViewModel: ObservableObject{
         self.user = AuthenticatedUser()
     }
     */
+    
+    private func addSubscribers() {
+
+    }
 }
 
 

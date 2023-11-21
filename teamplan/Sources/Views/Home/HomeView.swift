@@ -18,6 +18,7 @@ struct HomeView: View {
     ]
     
     @StateObject var homeViewModel = HomeViewModel()
+    @EnvironmentObject var authViewModel: AuthenticationViewModel
     
     @State private var isChallenging: Bool = false
     @State private var isExistProject: Bool = false

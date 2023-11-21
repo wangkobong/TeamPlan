@@ -26,7 +26,7 @@ final class SignupService{
     // MARK: - Set NickName
     //===============================
     func setNickName(newUser: UserSignupDTO, nickName: String) -> UserSignupDTO {
-        
+
         // Complement SignupDTO
         return UserSignupDTO(identifier: newUser.identifier, email: newUser.email, provider: newUser.provider, nickname: nickName)
     }
