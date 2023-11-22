@@ -8,7 +8,7 @@
 
 import Foundation
 
-final class ChallengeService{
+final class ChallengeService {
     
     //===============================
     // MARK: - Global Parameter
@@ -19,21 +19,24 @@ final class ChallengeService{
     let statCenter = StatisticsCenter()
     
     var userId: String
-    var statistics: StatisticsDTO?
-    var challengeArray: [ChallengeObject]?
     
-    @Published var myChallenges: [MyChallengeDTO]?
-    
+    @Published var myChallenges: [MyChallengeDTO] = []
+    @Published var statistics: StatisticsDTO?
+    @Published var challengeArray: [ChallengeObject] = []
     //===============================
     // MARK: - Constructor
     //===============================
-    init(_ id: String){
+    init(_ id: String) {
         self.userId = id
     }
     
     // Preload Statistics for 'ChallengeView' Constructor
     func loadStatistics() throws {
-        self.statistics = StatisticsDTO(statObject: try statisticsCD.getStatistics(from: self.userId))
+        do {
+            self.statistics = StatisticsDTO(statObject: try statisticsCD.getStatistics(from: self.userId))
+        } catch let error {
+            throw error
+        }
     }
     
     // Preload Challenge Data
@@ -43,18 +46,18 @@ final class ChallengeService{
     
     // Preload MyChallenge Data
     func loadMyChallenges() throws {
-        try self.getMychallengesProcess()
+        try self.getMyChallengesProcess()
     }
     
     //===============================
     // MARK: Get MyChallenges
     //===============================
     func getMyChallenges() throws -> [MyChallengeDTO] {
-        return self.myChallenges ?? []
+        return self.myChallenges
     }
     
     // ###### Core Function ######
-    private func getMychallengesProcess() throws {
+    private func getMyChallengesProcess() throws {
         
         // Check Parameter
         guard let stat = self.statistics else {
@@ -89,7 +92,7 @@ final class ChallengeService{
         try updateStatistics(challengeId, nil, nil)
         
         // Refresh MyChallenge
-        try getMychallengesProcess()
+        try getMyChallengesProcess()
     }
     
     //===============================
@@ -188,7 +191,7 @@ extension ChallengeService {
     // Update Challenge : Next Target
     private func nextChallengeUpdate(_ id: Int) throws -> ChallengeObject {
         // Search Next Challenge
-        guard let currentChallenge = self.challengeArray?.first(where: { $0.chlg_id == id }),
+        guard let currentChallenge = self.challengeArray.first(where: { $0.chlg_id == id }),
               let nextChallenge = try getNextChallenge(challengeType: currentChallenge.chlg_type, currentStep: currentChallenge.chlg_step)
         else {
             throw ChallengeError.UnexpectedNextChallengeSearchError
@@ -203,9 +206,7 @@ extension ChallengeService {
     // Get Challenge : Next Target
     private func getNextChallenge(challengeType: ChallengeType, currentStep: Int) throws -> ChallengeObject? {
         // Check Parameter
-        guard let array = self.challengeArray else {
-            throw ChallengeError.UnexpectedChallengeArrayError
-        }
+        let array = self.challengeArray
         return array.first { $0.chlg_type == challengeType && $0.chlg_step == currentStep + 1 }
     }
 }
@@ -216,9 +217,7 @@ extension ChallengeService {
     //===============================
     func getChallenges() throws -> [ChallengeDTO] {
         // Check Parameter
-        guard let array = self.challengeArray else {
-            throw ChallengeError.UnexpectedChallengeArrayError
-        }
+        let array = self.challengeArray
         return array.map { ChallengeDTO(from: $0) }
     }
      
@@ -227,9 +226,7 @@ extension ChallengeService {
     //===============================
     func getChallenge(from id: Int) throws -> ChallengeDTO {
         // Check Parameter
-        guard let array = self.challengeArray else {
-            throw ChallengeError.UnexpectedChallengeArrayError
-        }
+        let array = self.challengeArray
         // Search Challenge
         guard let challenge = array.first(where: { $0.chlg_id == id }) else {
             throw ChallengeError.UnexpectedGetError
@@ -253,7 +250,7 @@ extension ChallengeService {
         try updateStatistics(challengeId)
         
         // Refresh MyChallenge
-        try getMychallengesProcess()
+        try getMyChallengesProcess()
     }
 }
 
@@ -263,9 +260,7 @@ extension ChallengeService {
 extension ChallengeService {
     func getPrevChallenge(challengeType: ChallengeType, currentStep: Int) throws -> ChallengeObject? {
         // Check Parameter
-        guard let array = self.challengeArray else {
-            throw ChallengeError.UnexpectedChallengeArrayError
-        }
+        let array = self.challengeArray
         // Check Current Challenge
         if currentStep <= 1 {
             return nil

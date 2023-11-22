@@ -41,8 +41,13 @@ final class AuthenticationViewModel: ObservableObject{
                     switch result {
                     case .success(let user):
                         switch user.status {
-                        case .exist, .new:
-                            print("########### Exist or New User ###########")
+                        case .exist:
+                            print("########### Exist ###########")
+                            DispatchQueue.main.async {
+                                self.signupUser = user
+                            }
+                        case .new:
+                            print("########### New User ###########")
                             DispatchQueue.main.async {
                                 self.signupUser = user
                             }

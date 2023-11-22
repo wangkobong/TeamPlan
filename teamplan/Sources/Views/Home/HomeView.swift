@@ -79,6 +79,7 @@ struct HomeView: View {
         .onAppear {
             isExistProject = !homeViewModel.myChallenges.isEmpty
             pageControlCount = max(homeViewModel.myChallenges.count, 1)
+            homeViewModel.configureData()
         }
     }
 }

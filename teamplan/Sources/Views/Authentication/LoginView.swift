@@ -137,8 +137,11 @@ extension LoginView {
                   
                         switch user.status {
                         case .exist:
-                            let loginResult = await tryLogin()
                             
+//                            mainViewState = .signup
+                            
+                            let loginResult = await tryLogin()
+
                             if loginResult {
                                 isLoading = false
                                 withAnimation(.spring()) {
