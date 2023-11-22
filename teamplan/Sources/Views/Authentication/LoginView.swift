@@ -34,9 +34,11 @@ struct LoginView: View {
             ZStack {
                 loginView
                     .transition(transition)
+                    .zIndex(0)
                 
                 if isLoading {
                     LoadingView()
+                        .zIndex(1)
                 }
             }
         }

@@ -19,6 +19,7 @@ struct HomeView: View {
     
     @StateObject var homeViewModel = HomeViewModel()
     @EnvironmentObject var authViewModel: AuthenticationViewModel
+    @AppStorage("mainViewState") var mainViewState: MainViewState?
     
     @State private var isChallenging: Bool = false
     @State private var isExistProject: Bool = false
@@ -100,6 +101,9 @@ extension HomeView {
                 do {
                     let google = AuthGoogleServices()
                     try google.logout()
+                    withAnimation(.easeIn(duration: 10)) {
+                        mainViewState = .login
+                    }
                 } catch {
                     print(error)
                 }
