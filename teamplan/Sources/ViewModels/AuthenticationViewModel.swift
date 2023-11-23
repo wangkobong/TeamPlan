@@ -34,45 +34,59 @@ final class AuthenticationViewModel: ObservableObject{
     //====================
     // Google Login
     //====================
-    @MainActor
-    func signInGoogle(completion: @escaping (Result<AuthSocialLoginResDTO, Error>) -> Void) async {
-        do {
-            
-            await loginService.loginGoogle { [self] result in
-                switch result {
-                    
-                case .success(let user):
-                    switch user.status {
-                    case .exist:
-                        print("########### Exist User ###########")
-                        DispatchQueue.main.async {
-                            self.signupUser = user
+    func signInGoogle() async throws -> AuthSocialLoginResDTO {
+        return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<AuthSocialLoginResDTO, Error>) in
+            Task {
+                await loginService.loginGoogle { result in
+                    switch result {
+                    case .success(let user):
+                        switch user.status {
+                        case .exist:
+                            print("########### Exist ###########")
+                            DispatchQueue.main.async {
+                                self.signupUser = user
+                            }
+                        case .new:
+                            print("########### New User ###########")
+                            DispatchQueue.main.async {
+                                self.signupUser = user
+                            }
+                        case .unknown:
+                            print("########### UNKNOWN ###########")
+                            DispatchQueue.main.async {
+                                self.signupUser = nil
+                            }
                         }
-
-                    case .new:
-                        print("########### New User ###########")
-                        DispatchQueue.main.async {
-                            self.signupUser = user
-                        }
-                    case .unknown:
-                        print("########### UNKNOWN ###########")
-                        DispatchQueue.main.async {
-                            self.signupUser = nil
-                        }
+                        continuation.resume(returning: user)
+                        let keychain = KeychainSwift()
+                        keychain.set(user.idToken, forKey: "idToken")
+                        keychain.set(user.accessToken, forKey: "accessToken")
+                    case .failure(let error):
+                        // Login Fail
+                        print("########### Error ###########")
+                        print(error)
+                        continuation.resume(throwing: error)
                     }
-                    completion(.success(user))
-                    let keychain = KeychainSwift()
-                    keychain.set(user.idToken, forKey: "idToken")
-                    keychain.set(user.accessToken, forKey: "accessToken")
-
-                case .failure(let error):
-                    // Login Fail
-                    print("########### Error ###########")
-                    print(error)
-                    completion(.failure(error))
                 }
             }
         }
+    }
+    
+    func tryLogin() async -> Bool {
+        if let loginUser = self.signupUser {
+            do {
+                let user = try await self.loginLoadingService.executor(with: loginUser)
+                let userDefaultManager = UserDefaultManager.loadWith(key: "user")
+                userDefaultManager?.userName = user.user_name
+                userDefaultManager?.identifier = user.user_id
+                return true
+            } catch {
+                print("Login error: \(error.localizedDescription)")
+                return false
+            }
+        }
+        
+        return false
     }
     
     func trySignup(userName: String) async throws -> UserDTO {

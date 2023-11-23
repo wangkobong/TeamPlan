@@ -22,6 +22,7 @@ struct LoginView: View {
     @State private var showSignUpView: Bool = false
     @State private var isLoading: Bool = false
     @State private var isLogin: Bool = false
+    @State private var showAlert = false
     @AppStorage("mainViewState") var mainViewState: MainViewState?
 
     @ObservedObject var vm = GoogleSignInButtonViewModel()
@@ -34,10 +35,19 @@ struct LoginView: View {
             ZStack {
                 loginView
                     .transition(transition)
+                    .zIndex(0)
                 
                 if isLoading {
                     LoadingView()
+                        .zIndex(1)
                 }
+            }
+            .alert(isPresented: $showAlert) {
+                Alert(
+                    title: Text("로그인 실패"),
+                    message: Text("로그인을 실패했습니다."),
+                    dismissButton: .default(Text("확인"))
+                )
             }
         }
     }
@@ -123,28 +133,37 @@ extension LoginView {
                 Task {
                     do {
                         isLoading = true
-                        await authViewModel.signInGoogle { result in
-                            switch result {
-                            case .success(let user):
+                        let user = try await authViewModel.signInGoogle()
+                  
+                        switch user.status {
+                        case .exist:
+                            
+//                            mainViewState = .signup
+                            
+                            let loginResult = await tryLogin()
+
+                            if loginResult {
                                 isLoading = false
-                                switch user.status {
-                                case .exist:
-                                    withAnimation(.spring()) {
-                                        mainViewState = .main
-                                    }
-                                case .new:
-                                    withAnimation(.spring()) {
-                                        mainViewState = .signup
-                                    }
-                                case .unknown:
-                                    break
+                                withAnimation(.spring()) {
+                                    mainViewState = .main
                                 }
-                            case .failure(let error):
-                                print(error.localizedDescription)
+                            } else {
                                 isLoading = false
-                                break
+                                showAlert = true
                             }
+ 
+                        case .new:
+                            isLoading = false
+                            withAnimation(.spring()) {
+                                mainViewState = .signup
+                            }
+                        case .unknown:
+                            isLoading = false
+                            break
                         }
+                    } catch {
+                        print(error.localizedDescription)
+                        isLoading = false
                     }
                 }
             }
@@ -154,3 +173,10 @@ extension LoginView {
 }
 
 
+//MARK: - METHODS
+extension LoginView {
+    private func tryLogin() async -> Bool {
+        let loginResult = await authViewModel.tryLogin()
+        return loginResult
+    }
+}

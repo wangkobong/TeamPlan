@@ -13,17 +13,19 @@ final class HomeViewModel: ObservableObject {
     
     @Published var userName: String = ""
     @Published var myChallenges: [MyChallengeDTO] = []
-    
-    private let homeService = HomeService(identifier: "")
-    private let loginService = LoginLoadingService()
-    private let challengeService = ChallengeService("")
+    let identifier: String
+    lazy var homeService = HomeService(identifier: self.identifier ?? "")
     private var cancellables = Set<AnyCancellable>()
     
     init() {
+        let userDefaultManager = UserDefaultManager.loadWith(key: "user")
+        let identifier = userDefaultManager?.identifier
+        self.identifier = identifier ?? ""
         self.addSubscribers()
         Task {
             await self.getUserName()
         }
+        configureData()
     }
     
     private func addSubscribers() {
@@ -34,11 +36,37 @@ final class HomeViewModel: ObservableObject {
             }
             .store(in: &cancellables)
          */
+        
+        homeService.challenge.$myChallenges
+            .sink { [weak self] myChallenges in
+                print("myChallenges: \(myChallenges)")
+            }
+            .store(in: &cancellables)
+        
+        homeService.challenge.$statistics
+            .sink { [weak self] statistics in
+                print("statistics: \(String(describing: statistics))")
+            }
+            .store(in: &cancellables)
+        
+        homeService.challenge.$challengeArray
+            .sink { [weak self] challengeArray in
+                print("challengeArray: \(String(describing: challengeArray))")
+            }
+            .store(in: &cancellables)
     }
     
     @MainActor
     private func getUserName() async {
         let userDefaultManager = UserDefaultManager.loadWith(key: "user")
         self.userName = userDefaultManager?.userName ?? "Unkown"
+    }
+    
+    func configureData() {
+        do {
+            try homeService.readyService()
+        } catch let error {
+            print(error.localizedDescription)
+        }
     }
 }
