@@ -13,12 +13,14 @@ final class HomeViewModel: ObservableObject {
     
     @Published var userName: String = ""
     @Published var myChallenges: [MyChallengeDTO] = []
-    let userDefaultManager = UserDefaultManager.loadWith(key: "user")
-    lazy var identifier = userDefaultManager?.identifier
+    let identifier: String
     lazy var homeService = HomeService(identifier: self.identifier ?? "")
     private var cancellables = Set<AnyCancellable>()
     
     init() {
+        let userDefaultManager = UserDefaultManager.loadWith(key: "user")
+        let identifier = userDefaultManager?.identifier
+        self.identifier = identifier ?? ""
         self.addSubscribers()
         Task {
             await self.getUserName()

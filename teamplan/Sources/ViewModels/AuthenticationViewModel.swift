@@ -76,6 +76,9 @@ final class AuthenticationViewModel: ObservableObject{
         if let loginUser = self.signupUser {
             do {
                 let user = try await self.loginLoadingService.executor(with: loginUser)
+                let userDefaultManager = UserDefaultManager.loadWith(key: "user")
+                userDefaultManager?.userName = user.user_name
+                userDefaultManager?.identifier = user.user_id
                 return true
             } catch {
                 print("Login error: \(error.localizedDescription)")
