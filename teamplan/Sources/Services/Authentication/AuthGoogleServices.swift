@@ -71,5 +71,6 @@ final class AuthGoogleServices{
         keychain.delete("accessToken")
         let userDefaultManager = UserDefaultManager.loadWith(key: "user")
         userDefaultManager?.identifier = ""
+        userDefaultManager?.userName = ""
     }
 }
