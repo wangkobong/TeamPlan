@@ -13,6 +13,8 @@ final class HomeViewModel: ObservableObject {
     
     @Published var userName: String = ""
     @Published var myChallenges: [MyChallengeDTO] = []
+    @Published var challengeArray: [ChallengeObject] = []
+    @Published var statistics: StatisticsDTO?
     let identifier: String
     lazy var homeService = HomeService(identifier: self.identifier ?? "")
     private var cancellables = Set<AnyCancellable>()
@@ -29,29 +31,25 @@ final class HomeViewModel: ObservableObject {
     }
     
     private func addSubscribers() {
-        /*
-        challengeService.$myChallenges
-            .sink { [weak self] challenges in
-                self?.myChallenges = challenges
-            }
-            .store(in: &cancellables)
-         */
         
         homeService.challenge.$myChallenges
             .sink { [weak self] myChallenges in
                 print("myChallenges: \(myChallenges)")
+                self?.myChallenges = myChallenges
             }
             .store(in: &cancellables)
         
         homeService.challenge.$statistics
             .sink { [weak self] statistics in
                 print("statistics: \(String(describing: statistics))")
+                self?.statistics = statistics
             }
             .store(in: &cancellables)
         
         homeService.challenge.$challengeArray
             .sink { [weak self] challengeArray in
                 print("challengeArray: \(String(describing: challengeArray))")
+                self?.challengeArray = challengeArray
             }
             .store(in: &cancellables)
     }
