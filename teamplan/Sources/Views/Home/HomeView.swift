@@ -383,7 +383,7 @@ extension HomeView {
             HStack(spacing: 17) {
                 ForEach(challengeCards, id: \.self) { challenge in
                     let screenWidth = UIScreen.main.bounds.size.width
-                    ChallengeCardView(challenge: challenge, parentsWidth: screenWidth)
+                    ChallengeCardFrontView(challenge: challenge, parentsWidth: screenWidth)
                         .background(.white)
                         .cornerRadius(4)
                         .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 0)
