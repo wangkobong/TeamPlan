@@ -31,9 +31,7 @@ final class HomeService {
     
     func readyService() throws {
         do {
-            try self.challenge.loadStatistics()
-            try self.challenge.loadChallenges()
-            try self.challenge.loadMyChallenges()
+            try self.challenge.readyService()
         } catch {
             print("(Service) Error while Init in HomeService : \(error)")
             throw HomeServiceError.UnexpectedInitError

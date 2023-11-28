@@ -46,7 +46,7 @@ struct StatisticsObject{
         self.stat_chlg_step = [
             [ChallengeType.serviceTerm.rawValue : 1],
             [ChallengeType.totalTodo.rawValue : 1],
-            [ChallengeType.projectRegist.rawValue : 1],
+            [ChallengeType.projectAlert.rawValue : 1],
             [ChallengeType.projectFinish.rawValue : 1],
             [ChallengeType.waterDrop.rawValue : 1]
         ]

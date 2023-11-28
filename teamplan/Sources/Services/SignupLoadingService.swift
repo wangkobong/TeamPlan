@@ -18,6 +18,7 @@ final class SignupLoadingService{
     let aclogCD = AccessLogServicesCoredata()
     let chlglogFS = ChallengeLogServicesFirestore()
     let chlglogCD = ChallengeLogServicesCoredata()
+    let chlgManager = ChallengeManager()
     
     var newProfile: UserObject
     var newStat: StatisticsObject
@@ -47,12 +48,11 @@ final class SignupLoadingService{
         
         // Execute Coredata
         do {
-            coredataResult = try await CoredataExecutor()
+            coredataResult = try CoredataExecutor()
         } catch {
             print(error)
             coredataResult = false
         }
-        
         // Execute Firestore
         do{
             firestoreResult = try await FirestoreExecutor()
@@ -66,53 +66,37 @@ final class SignupLoadingService{
         // Set NewUserPackage at Coredata & Firestore
         case (true, true):
             return UserDTO(userObject: self.newProfile)
-            
-        // Set NewUserPackage only at Coredata
-        case (true, false):
-            // Update UserStatus
-            self.newProfile.setUserStatus(userSatus: .unStableFS)
-            try userCD.updateUser(updatedUser: self.newProfile)
-            return UserDTO(userObject: self.newProfile)
-            
-        // Set NewUserPackage only at Firestore
-        case (false, true):
-            // Update UserStatus
-            self.newProfile.setUserStatus(userSatus: .unStableCD)
-            try userCD.updateUser(updatedUser: self.newProfile)
-            return UserDTO(userObject: self.newProfile)
-            
-        // Failed to Set NewUserPackage at Coredata & Firestore
-        case (false, false):
+        
+        default:
+            try await rollbackAll()
             throw SignupError.UnexpectedSignupError
         }
     }
     
     // Coredata Executor
-    func CoredataExecutor() async throws -> Bool {
+    func CoredataExecutor() throws -> Bool {
         do {
             // 1. User
-            try await setUserCD()
+            try setUserCD()
             rollbackStack.append(rollbackSetUserCD)
             
             // 2. Statistics
-            try await setStatisticsCD()
+            try setStatisticsCD()
             rollbackStack.append(rollbackSetStatisticsCD)
             
             // 3. AccessLog
-            try await setAccessLogCD()
+            try setAccessLogCD()
             rollbackStack.append(rollbackSetAccessLogCD)
             
             // 4. ChallengeLog
-            try await setChallengeLogCD()
+            try setChallengeLogCD()
             rollbackStack.append(rollbackSetChallengeLogCD)
-            
-            //TODO: 5. Challenge : Working Progress
             
             rollbackStack.removeAll()
             return true
             
         } catch {
-            try await rollbackAll()
+            print("(Service) There was an unexpected error while Execute Set Coredata in 'SignupLoading' : \(error)")
             throw error
         }
     }
@@ -136,11 +120,15 @@ final class SignupLoadingService{
             try await setChallengeLogFS()
             rollbackStack.append(rollbackSetChallengeLogFS)
             
+            // 5. Challenge
+            try await setChallenge()
+            rollbackStack.append(rollbackSetChallenge)
+            
             rollbackStack.removeAll()
             return true
             
         } catch {
-            try await rollbackAll()
+            print("(Service) There was an unexpected error while Execute Set Firestore in 'SignupLoading' : \(error)")
             throw error
         }
     }
@@ -170,10 +158,10 @@ final class SignupLoadingService{
     }
     
     // : Coredata
-    func setUserCD() async throws {
+    func setUserCD() throws {
         try userCD.setUser(reqUser: self.newProfile)
     }
-    private func rollbackSetUserCD() async throws {
+    private func rollbackSetUserCD() throws {
         try userCD.deleteUser(identifier: self.newProfile.user_id)
     }
     
@@ -189,10 +177,10 @@ final class SignupLoadingService{
     }
     
     // : Coredata
-    func setStatisticsCD() async throws {
+    func setStatisticsCD() throws {
         try statCD.setStatistics(reqStat: self.newStat)
     }
-    private func rollbackSetStatisticsCD() async throws {
+    private func rollbackSetStatisticsCD() throws {
         try statCD.deleteStatistics(identifier: self.newProfile.user_id)
     }
     
@@ -208,10 +196,10 @@ final class SignupLoadingService{
     }
     
     // : CoreData
-    func setAccessLogCD() async throws {
+    func setAccessLogCD() throws {
         try aclogCD.setLog(reqLog: self.newAccessLog)
     }
-    private func rollbackSetAccessLogCD() async throws {
+    private func rollbackSetAccessLogCD() throws {
         try aclogCD.deleteLog(identifier: self.newProfile.user_id)
     }
     
@@ -227,17 +215,23 @@ final class SignupLoadingService{
     }
     
     // : Coredata
-    func setChallengeLogCD() async throws {
+    func setChallengeLogCD() throws {
         try chlglogCD.setLog(reqLog: self.newChallengeLog)
     }
-    private func rollbackSetChallengeLogCD() async throws {
+    private func rollbackSetChallengeLogCD() throws {
         try chlglogCD.deleteLog(from: self.newProfile.user_id)
     }
     
     //===============================
     // MARK: - Set Challenge
     //===============================
-    // Working Progress
+    // : Firestore to Coredata
+    func setChallenge() async throws {
+        try await chlgManager.setChallenge()
+    }
+    private func rollbackSetChallenge() throws {
+        try chlgManager.delChallenge()
+    }
 }
 
 //===============================
