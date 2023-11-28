@@ -41,10 +41,14 @@ struct ChallengesView: View {
         ChallengeCardModel(image: "applelogo", title: "할수있다!", description: "물방울 100개 모으기"),
     ]
     
+    @State private var selectedCardIndex: Int? = nil
+    
     var body: some View {
         ScrollView {
             VStack {
                 
+                descriptionSection
+                    .padding(.bottom, 24)
                 topCardSection
                     .padding(.bottom, 21)
                 
@@ -75,33 +79,68 @@ struct ChallengesView_Previews: PreviewProvider {
 }
 
 extension ChallengesView {
+    
+    private var descriptionSection: some View {
+        VStack(spacing: 4) {
+            HStack {
+                Text("도전과제에 하나씩 도전해보세요!")
+                    .font(.appleSDGothicNeo(.bold, size: 17))
+                    .foregroundColor(.theme.darkGreyColor)
+                Spacer()
+            }
+            
+            HStack {
+                Text("도전과제는 '나의 도전과제'에 등록한 시점부터 수치가 계산됩니다.")
+                    .font(.appleSDGothicNeo(.regular, size: 12))
+                    .foregroundColor(.theme.darkGreyColor)
+                Spacer()
+            }
+        
+        }
+        .padding(.leading, 16)
+        .padding(.top, 14)
+    }
+    
     private var topCardSection: some View {
         VStack {
             HStack {
                 Text("나의 도전과제")
                     .font(.appleSDGothicNeo(.semiBold, size: 20))
-                    .foregroundColor(.theme.mainPurpleColor)
+                    .foregroundColor(.theme.blackColor)
                 Spacer()
             }
             .padding(.leading, 16)
             .padding(.top, 19)
             
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 17) {
-                    ForEach(myChallengeCards, id: \.self) { challenge in
-                        let screenWidth = UIScreen.main.bounds.size.width
-                        ChallengeCardView(challenge: challenge, parentsWidth: screenWidth)
-                            .background(.white)
-                            .cornerRadius(4)
-//                            .frame(width: 108, height: 144)
-
+            HStack(spacing: 17) {
+                ForEach(Array(myChallengeCards.enumerated()), id: \.element.id) { index, challenge in
+                    let screenWidth = UIScreen.main.bounds.size.width
+                    ZStack {
+                        if self.selectedCardIndex == index {
+                            ChallengeCardBackView(challenge: challenge, parentsWidth: screenWidth)
+                                .background(.white)
+                                .cornerRadius(4)
+                        } else {
+                            ChallengeCardFrontView(challenge: challenge, parentsWidth: screenWidth)
+                                .background(.white)
+                                .cornerRadius(4)
+                        }
                     }
-
+                    .rotation3DEffect(
+                        .degrees(self.selectedCardIndex == index ? 180 : 0),
+                        axis: (x: 0.0, y: 1.0, z: 0.0)
+                    )
+                    .onTapGesture {
+                        withAnimation(.linear) {
+                            self.selectedCardIndex = (self.selectedCardIndex == index) ? nil : index
+                        }
+                    }
                 }
-                
             }
             .padding(.leading, 16)
+            .padding(.trailing, 16)
             .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 0)
+
         }
     }
     private var gridSection: some View {
@@ -109,7 +148,7 @@ extension ChallengesView {
             HStack {
                 Text("모든 도전과제")
                     .font(.appleSDGothicNeo(.semiBold, size: 20))
-                    .foregroundColor(.theme.mainPurpleColor)
+                    .foregroundColor(.theme.blackColor)
                     .padding(.leading, 16)
                 Spacer()
             }

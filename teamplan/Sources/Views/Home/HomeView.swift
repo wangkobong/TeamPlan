@@ -77,18 +77,19 @@ struct HomeView: View {
             }
         }
         .onAppear {
-            isExistProject = !homeViewModel.myChallenges.isEmpty
+            isExistProject = false
+            isChallenging = !homeViewModel.myChallenges.isEmpty
             pageControlCount = max(homeViewModel.myChallenges.count, 1)
             homeViewModel.configureData()
         }
     }
 }
 
-//struct HomeView_Previews: PreviewProvider {
-//    static var previews: some View {
-//        HomeView()
-//    }
-//}
+struct HomeView_Previews: PreviewProvider {
+    static var previews: some View {
+        HomeView()
+    }
+}
 
 extension HomeView {
     private var navigationArea: some View {
@@ -195,9 +196,14 @@ extension HomeView {
     private var userNameArea: some View {
         VStack(alignment: .leading) {
             HStack {
-                Text("\(homeViewModel.userName)" + "님")
+                Text("\(homeViewModel.userName)" + "님,    ")
                     .font(.appleSDGothicNeo(.bold, size: 20))
                     .foregroundColor(.theme.blackColor)
+                    .background(
+                        Color.init(hex: "7248E1").opacity(0.5)
+                            .frame(height: 3) // underline's height
+                            .offset(y: 7) // underline's y pos
+                    )
                 Spacer()
             }
             HStack {
@@ -377,7 +383,7 @@ extension HomeView {
             HStack(spacing: 17) {
                 ForEach(challengeCards, id: \.self) { challenge in
                     let screenWidth = UIScreen.main.bounds.size.width
-                    ChallengeCardView(challenge: challenge, parentsWidth: screenWidth)
+                    ChallengeCardFrontView(challenge: challenge, parentsWidth: screenWidth)
                         .background(.white)
                         .cornerRadius(4)
                         .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 0)

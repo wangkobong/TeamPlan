@@ -63,8 +63,8 @@ struct UserObject{
         // Assigning values
         self.user_id = user_id
         self.user_fb_id = userEntity.user_fb_id ?? ""
-        self.user_email = user_name
-        self.user_name = user_email
+        self.user_email = user_email
+        self.user_name = user_name
         self.user_social_type = user_social_type
         self.user_status = user_status
         self.user_created_at = user_created_at
