@@ -29,7 +29,7 @@ struct ChallengeObject{
     let chlg_step: Int
     let chlg_selected: Bool
     let chlg_status: Bool
-    let chlg_lock: Bool
+    var chlg_lock: Bool
     
     // maintenance
     let chlg_selected_at: Date
@@ -69,22 +69,40 @@ struct ChallengeObject{
         self.chlg_finished_at = chlg_finished_at
     }
     
-    // Get Dummy
-    init(chlg_id: Int64, chlg_type: ChallengeType, chlg_title: String, chlg_desc: String, chlg_goal: Int64, chlg_reward: Int, chlg_step: Int, chlg_selected: Bool, chlg_status: Bool, chlg_lock: Bool, chlg_selected_at: Date, chlg_unselected_at: Date, chlg_finished_at: Date) {
-        self.chlg_id = Int(chlg_id)
-        self.chlg_user_id = "Dummy"
-        self.chlg_type = chlg_type
+    // : (Firestore) Get
+    init?(challengeData: [String : Any]){
+        guard let chlg_id = challengeData["chlg_id"] as? Int,
+              let chlg_type = challengeData["chlg_type"] as? Int,
+              let chlg_title = challengeData["chlg_title"] as? String,
+              let chlg_desc = challengeData["chlg_desc"] as? String,
+              let chlg_goal = challengeData["chlg_goal"] as? Int,
+              let chlg_reward = challengeData["chlg_reward"] as? Int,
+              let chlg_step = challengeData["chlg_step"] as? Int
+        else {
+            return nil
+        }
+        // Assigning values
+        self.chlg_id = chlg_id
+        self.chlg_user_id = ""
+        self.chlg_type = ChallengeType(rawValue: chlg_type)!
         self.chlg_title = chlg_title
         self.chlg_desc = chlg_desc
-        self.chlg_goal = Int(chlg_goal)
+        self.chlg_goal = chlg_goal
         self.chlg_reward = chlg_reward
         self.chlg_step = chlg_step
-        self.chlg_selected = chlg_selected
-        self.chlg_status = chlg_status
-        self.chlg_lock = chlg_lock
-        self.chlg_selected_at = chlg_selected_at
-        self.chlg_unselected_at = chlg_unselected_at
-        self.chlg_finished_at = chlg_finished_at
+        self.chlg_selected = false
+        self.chlg_status = false
+        self.chlg_lock = true
+        self.chlg_selected_at = Date()
+        self.chlg_unselected_at = Date()
+        self.chlg_finished_at = Date()
+    }
+    
+    //============================
+    // MARK: Func
+    //============================
+    mutating func resetUnlock(){
+        self.chlg_lock = false
     }
 }
 
@@ -92,7 +110,7 @@ enum ChallengeType: Int{
     case onboarding = 0
     case serviceTerm = 1
     case totalTodo = 2
-    case projectRegist = 3
+    case projectAlert = 3
     case projectFinish = 4
     case waterDrop = 5
     case unknownType = 6

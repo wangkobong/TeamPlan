@@ -30,23 +30,14 @@ final class ChallengeService {
         self.userId = id
     }
     
-    // Preload Statistics for 'ChallengeView' Constructor
-    func loadStatistics() throws {
+    func readyService() throws {
         do {
             self.statistics = StatisticsDTO(statObject: try statisticsCD.getStatistics(from: self.userId))
+            try self.challengeArray = challengeCD.getChallenges()
+            try self.getMyChallengesProcess()
         } catch let error {
             throw error
         }
-    }
-    
-    // Preload Challenge Data
-    func loadChallenges() throws {
-        try self.challengeArray = challengeCD.getChallenges()
-    }
-    
-    // Preload MyChallenge Data
-    func loadMyChallenges() throws {
-        try self.getMyChallengesProcess()
     }
     
     //===============================

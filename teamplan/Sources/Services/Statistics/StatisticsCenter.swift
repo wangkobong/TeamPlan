@@ -21,7 +21,7 @@ final class StatisticsCenter{
             return stat.stat_term
         case .totalTodo:
             return stat.stat_todo_reg
-        case .projectRegist:
+        case .projectAlert:
             return stat.stat_proj_reg
         case .projectFinish:
             return stat.stat_proj_fin
