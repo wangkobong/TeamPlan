@@ -11,13 +11,17 @@ import SwiftUI
 struct ChallengesView: View {
     
     @Environment(\.dismiss) var dismiss
+    @Binding var allChallenge: [ChallengeObject]
+    let pageSize = 12
+
+    @State private var currentPage = 0
     
     let columns = [
       //추가 하면 할수록 화면에 보여지는 개수가 변함
-        GridItem(.flexible()),
-        GridItem(.flexible()),
-        GridItem(.flexible()),
-        GridItem(.flexible())
+        GridItem(.adaptive(minimum: 57)),
+        GridItem(.adaptive(minimum: 57)),
+        GridItem(.adaptive(minimum: 57)),
+        GridItem(.adaptive(minimum: 57)),
     ]
     
     private let myChallengeCards: [ChallengeCardModel] = [
@@ -26,21 +30,11 @@ struct ChallengesView: View {
         ChallengeCardModel(image: "applelogo", title: "화이팅!", description: "물방울 10개 모으기")
     ]
     
-    private let allChallenge: [ChallengeCardModel] = [
-        ChallengeCardModel(image: "applelogo", title: "목표달성의 쾌감!", description: "물방울 3개 모으기"),
-        ChallengeCardModel(image: "applelogo", title: "프로젝트 완주", description: "프로젝트 한개 완주"),
-        ChallengeCardModel(image: "applelogo", title: "화이팅!", description: "물방울 10개 모으기"),
-        ChallengeCardModel(image: "applelogo", title: "할수있다!", description: "물방울 100개 모으기"),
-        ChallengeCardModel(image: "applelogo", title: "목표달성의 쾌감!", description: "물방울 3개 모으기"),
-        ChallengeCardModel(image: "applelogo", title: "프로젝트 완주", description: "프로젝트 한개 완주"),
-        ChallengeCardModel(image: "applelogo", title: "화이팅!", description: "물방울 10개 모으기"),
-        ChallengeCardModel(image: "applelogo", title: "할수있다!", description: "물방울 100개 모으기"),
-        ChallengeCardModel(image: "applelogo", title: "목표달성의 쾌감!", description: "물방울 3개 모으기"),
-        ChallengeCardModel(image: "applelogo", title: "프로젝트 완주", description: "프로젝트 한개 완주"),
-        ChallengeCardModel(image: "applelogo", title: "화이팅!", description: "물방울 10개 모으기"),
-        ChallengeCardModel(image: "applelogo", title: "할수있다!", description: "물방울 100개 모으기"),
-    ]
-    
+    private let itemsPerPage = 12
+    private var numberOfPages: Int {
+        return (allChallenge.count + itemsPerPage - 1) / itemsPerPage
+    }
+
     @State private var selectedCardIndex: Int? = nil
     
     var body: some View {
@@ -54,6 +48,7 @@ struct ChallengesView: View {
                 
                 gridSection
                 Spacer()
+                pageControl
             }
             .navigationBarBackButtonHidden(true)
             .navigationTitle("도전과제")
@@ -72,11 +67,11 @@ struct ChallengesView: View {
     }
 }
 
-struct ChallengesView_Previews: PreviewProvider {
-    static var previews: some View {
-        ChallengesView()
-    }
-}
+//struct ChallengesView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        ChallengesView()
+//    }
+//}
 
 extension ChallengesView {
     
@@ -110,7 +105,6 @@ extension ChallengesView {
                 Spacer()
             }
             .padding(.leading, 16)
-            .padding(.top, 19)
             
             HStack(spacing: 17) {
                 ForEach(Array(myChallengeCards.enumerated()), id: \.element.id) { index, challenge in
@@ -120,6 +114,7 @@ extension ChallengesView {
                             ChallengeCardBackView(challenge: challenge, parentsWidth: screenWidth)
                                 .background(.white)
                                 .cornerRadius(4)
+                                .rotation3DEffect(.degrees(180), axis: (x: 0.0, y: 1.0, z: 0.0))
                         } else {
                             ChallengeCardFrontView(challenge: challenge, parentsWidth: screenWidth)
                                 .background(.white)
@@ -144,6 +139,7 @@ extension ChallengesView {
         }
     }
     private var gridSection: some View {
+        
         VStack {
             HStack {
                 Text("모든 도전과제")
@@ -153,13 +149,42 @@ extension ChallengesView {
                 Spacer()
             }
             
-            LazyVGrid(columns: columns, spacing: 10) {
-                ForEach(allChallenge, id: \.self) { item in
-                    ChallengeDetailView(challenge: item)
-                        .frame(width: 62, height: 100)
+            TabView(selection: $currentPage) {
+                ForEach(0..<(allChallenge.count / 12), id: \.self) { pageIndex in
+                    let startIndex = pageIndex * 12
+                    let endIndex = min(startIndex + 12, allChallenge.count)
+                    let pageItems = Array(allChallenge[startIndex..<endIndex])
+                    
+                    LazyVGrid(columns: columns, spacing: 10) {
+                        ForEach(pageItems, id: \.self) { item in
+                            ChallengeDetailView(challenge: item)
+                                .frame(width: 62, height: 120)
+                        }
+                    }
+                    .tag(pageIndex)
+                    
                 }
             }
-            .padding()
+            .frame(height: 380)
+            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+
         }
+    }
+    
+    private var pageControl: some View {
+        HStack(spacing: 10) {
+            ForEach(0..<(allChallenge.count / 12), id: \.self) { index in
+                if index == currentPage {
+                    Circle()
+                        .frame(width: 9, height: 9)
+                        .foregroundColor(.theme.mainPurpleColor)
+                } else {
+                    Circle()
+                        .frame(width: 9, height: 9)
+                        .foregroundColor(.init(hex: "D9D9D9"))
+                }
+            }
+        }
+        .padding(.bottom, 24)
     }
 }

@@ -362,7 +362,7 @@ extension HomeView {
             Spacer()
             
             HStack {
-                NavigationLink(destination: ChallengesView(), isActive: $isChallengesViewActive) {
+                NavigationLink(destination: ChallengesView(allChallenge: $homeViewModel.challengeArray), isActive: $isChallengesViewActive) {
                     Text("전체보기")
                 }
                 Image("right_arrow_home")

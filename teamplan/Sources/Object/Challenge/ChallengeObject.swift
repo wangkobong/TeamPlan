@@ -11,7 +11,7 @@ import Foundation
 //============================
 // MARK: Entity
 //============================
-struct ChallengeObject{
+struct ChallengeObject: Hashable {
     // id
     let chlg_id: Int
     let chlg_user_id: String
