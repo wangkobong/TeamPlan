@@ -12,6 +12,7 @@ struct ChallengesView: View {
     
     @Environment(\.dismiss) var dismiss
     @Binding var allChallenge: [ChallengeObject]
+    @Binding var myChallenges: [MyChallengeDTO]
     let pageSize = 12
 
     @State private var currentPage = 0
@@ -25,9 +26,9 @@ struct ChallengesView: View {
     ]
     
     private let myChallengeCards: [ChallengeCardModel] = [
-        ChallengeCardModel(image: "applelogo", title: "목표달성의 쾌감!", description: "물방울 3개 모으기"),
-        ChallengeCardModel(image: "applelogo", title: "프로젝트 완주", description: "프로젝트 한개 완주"),
-        ChallengeCardModel(image: "applelogo", title: "화이팅!", description: "물방울 10개 모으기")
+        ChallengeCardModel(image: "applelogo", title: "목표달성의 쾌감!", description: "물방울 3개 모으기")
+//        ChallengeCardModel(image: "applelogo", title: "프로젝트 완주", description: "프로젝트 한개 완주"),
+//        ChallengeCardModel(image: "applelogo", title: "화이팅!", description: "물방울 10개 모으기")
     ]
     
     private let itemsPerPage = 12
@@ -107,7 +108,9 @@ extension ChallengesView {
             .padding(.leading, 16)
             
             HStack(spacing: 17) {
-                ForEach(Array(myChallengeCards.enumerated()), id: \.element.id) { index, challenge in
+                
+                ForEach(0..<min(3, myChallengeCards.count)) { index in
+                    let challenge = self.myChallengeCards[index]
                     let screenWidth = UIScreen.main.bounds.size.width
                     ZStack {
                         if self.selectedCardIndex == index {
@@ -129,6 +132,16 @@ extension ChallengesView {
                         withAnimation(.linear) {
                             self.selectedCardIndex = (self.selectedCardIndex == index) ? nil : index
                         }
+                    }
+                }
+                
+                if myChallengeCards.count < 3 {
+                    // 나머지 뷰를 채우는 코드
+                    ForEach(myChallengeCards.count..<3) { index in
+                        // 다른 뷰 표시 (여기서는 기본 Text를 사용하겠습니다.)
+                        ChallengeEmptyView()
+                            .background(.white)
+                            .cornerRadius(4)
                     }
                 }
             }
@@ -186,5 +199,34 @@ extension ChallengesView {
             }
         }
         .padding(.bottom, 24)
+    }
+}
+
+extension ChallengesView {
+    private func setMyChallengeCard(index: Int, challenge: ChallengeCardModel) -> some View {
+        let screenWidth = UIScreen.main.bounds.size.width
+            
+            return ZStack {
+                if self.selectedCardIndex == index {
+                    ChallengeCardBackView(challenge: challenge, parentsWidth: screenWidth)
+                        .background(.white)
+                        .cornerRadius(4)
+                        .rotation3DEffect(.degrees(180), axis: (x: 0.0, y: 1.0, z: 0.0))
+                } else {
+                    ChallengeCardFrontView(challenge: challenge, parentsWidth: screenWidth)
+                        .background(.white)
+                        .cornerRadius(4)
+                }
+            }
+            .rotation3DEffect(
+                .degrees(self.selectedCardIndex == index ? 180 : 0),
+                axis: (x: 0.0, y: 1.0, z: 0.0)
+            )
+            .onTapGesture {
+                withAnimation(.linear) {
+                    self.selectedCardIndex = (self.selectedCardIndex == index) ? nil : index
+                }
+            }
+
     }
 }
