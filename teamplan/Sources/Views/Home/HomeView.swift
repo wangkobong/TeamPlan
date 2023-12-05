@@ -384,7 +384,7 @@ extension HomeView {
     private var challengeCardsArea: some View {
         ZStack {
             HStack(spacing: 17) {
-                ForEach(challengeCards, id: \.self) { challenge in
+                ForEach(homeViewModel.myChallenges, id: \.self) { challenge in
                     let screenWidth = UIScreen.main.bounds.size.width
                     ChallengeCardFrontView(challenge: challenge, parentsWidth: screenWidth)
                         .background(.white)
