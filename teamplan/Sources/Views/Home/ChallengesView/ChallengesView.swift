@@ -13,6 +13,7 @@ struct ChallengesView: View {
     @Environment(\.dismiss) var dismiss
     @Binding var allChallenge: [ChallengeObject]
     @Binding var myChallenges: [MyChallengeDTO]
+    @State private var isPresented: Bool = false
     let pageSize = 12
 
     @State private var currentPage = 0
@@ -58,6 +59,12 @@ struct ChallengesView: View {
                     }
                 }
             }
+            .challengeAlert(isPresented: $isPresented) {
+                ChallengeAlertView(isPresented: $isPresented) {
+                    print("클릭")
+                }
+            }
+            
         }
     }
 }
@@ -136,6 +143,9 @@ extension ChallengesView {
                         ChallengeEmptyView()
                             .background(.white)
                             .cornerRadius(4)
+                            .onTapGesture {
+                                self.isPresented.toggle()
+                            }
                     }
                 }
             }

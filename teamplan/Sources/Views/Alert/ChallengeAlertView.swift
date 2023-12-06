@@ -15,11 +15,20 @@ enum ChallengeAlertType {
     case notice
 }
 
-struct ChallengeAlertView: View {
+public struct ChallengeAlertView: View {
+    
+    @Binding public var isPresented: Bool
+    public typealias Action = () -> ()
     
     let type: ChallengeAlertType = .notice
+    public var action: Action
     
-    var body: some View {
+    public init(isPresented: Binding<Bool>, action: @escaping Action) {
+        self._isPresented = isPresented
+        self.action = action
+    }
+    
+    public var body: some View {
         ZStack {
             switch type {
             case .didComplete:
@@ -32,18 +41,19 @@ struct ChallengeAlertView: View {
                 noticeAlert
             }
         }
+        .ignoresSafeArea()
         .frame(width: 296, height: 323)
-        .background(.white)
+        .background(ClearBackground())
         .cornerRadius(4)
         .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 0)
     }
 }
 
-struct ChallengeAlertView_Previews: PreviewProvider {
-    static var previews: some View {
-        ChallengeAlertView()
-    }
-}
+//struct ChallengeAlertView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        ChallengeAlertView(isPresented: .constant(true))
+//    }
+//}
 
 extension ChallengeAlertView {
     private var didCompleteAlert: some View {
@@ -74,7 +84,7 @@ extension ChallengeAlertView {
                 .padding(.horizontal, 40)
             
             Button {
-                
+                self.isPresented = false
             } label: {
                 Text("닫기")
                     .font(.appleSDGothicNeo(.bold, size: 14))
@@ -115,7 +125,7 @@ extension ChallengeAlertView {
             
             HStack {
                 Button {
-                    
+                    self.isPresented = false
                 } label: {
                     Text("닫기")
                         .font(.appleSDGothicNeo(.bold, size: 14))
@@ -131,7 +141,8 @@ extension ChallengeAlertView {
                     .frame(width: 16)
                 
                 Button {
-                    
+                    self.isPresented = false
+                    action()
                 } label: {
                     Text("포기하기")
                         .font(.appleSDGothicNeo(.bold, size: 14))
@@ -179,7 +190,7 @@ extension ChallengeAlertView {
             
             HStack {
                 Button {
-                    
+                    self.isPresented = false
                 } label: {
                     Text("닫기")
                         .font(.appleSDGothicNeo(.bold, size: 14))
@@ -195,7 +206,8 @@ extension ChallengeAlertView {
                     .frame(width: 16)
                 
                 Button {
-                    
+                    self.isPresented = false
+                    action()
                 } label: {
                     Text("도전하기")
                         .font(.appleSDGothicNeo(.bold, size: 14))
@@ -238,7 +250,7 @@ extension ChallengeAlertView {
             
             HStack {
                 Button {
-                    
+                    self.isPresented = false
                 } label: {
                     Text("닫기")
                         .font(.appleSDGothicNeo(.bold, size: 14))
@@ -254,7 +266,8 @@ extension ChallengeAlertView {
                     .frame(width: 16)
                 
                 Button {
-                    
+                    self.isPresented = false
+                    action()
                 } label: {
                     Text("도전하기")
                         .font(.appleSDGothicNeo(.bold, size: 14))
