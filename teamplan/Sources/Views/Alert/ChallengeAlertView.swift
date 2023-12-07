@@ -8,7 +8,7 @@
 
 import SwiftUI
 
-enum ChallengeAlertType {
+public enum ChallengeAlertType {
     case didComplete
     case willQuit
     case willChallenge
@@ -20,40 +20,47 @@ public struct ChallengeAlertView: View {
     @Binding public var isPresented: Bool
     public typealias Action = () -> ()
     
-    let type: ChallengeAlertType = .notice
+    let type: ChallengeAlertType
     public var action: Action
     
-    public init(isPresented: Binding<Bool>, action: @escaping Action) {
+    public init(isPresented: Binding<Bool>, type: ChallengeAlertType, action: @escaping Action) {
         self._isPresented = isPresented
+        self.type = type
         self.action = action
     }
     
     public var body: some View {
         ZStack {
-            switch type {
-            case .didComplete:
-                didCompleteAlert
-            case .willQuit:
-                willQuitAlert
-            case .willChallenge:
-                willChallengeAlert
-            case .notice:
-                noticeAlert
+            
+            Color.gray
+                .opacity(0.88)
+                .ignoresSafeArea()
+            ClearBackground()
+            VStack {
+                switch type {
+                case .didComplete:
+                    didCompleteAlert
+                case .willQuit:
+                    willQuitAlert
+                case .willChallenge:
+                    willChallengeAlert
+                case .notice:
+                    noticeAlert
+                }
             }
+            .frame(width: 296, height: 323)
+            .background(.white)
+            .cornerRadius(4)
+            .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 0)
         }
-        .ignoresSafeArea()
-        .frame(width: 296, height: 323)
-        .background(ClearBackground())
-        .cornerRadius(4)
-        .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 0)
     }
 }
 
-//struct ChallengeAlertView_Previews: PreviewProvider {
-//    static var previews: some View {
-//        ChallengeAlertView(isPresented: .constant(true))
-//    }
-//}
+struct ChallengeAlertView_Previews: PreviewProvider {
+    static var previews: some View {
+        ChallengeAlertView(isPresented: .constant(true), type: .notice, action: {})
+    }
+}
 
 extension ChallengeAlertView {
     private var didCompleteAlert: some View {
@@ -83,21 +90,19 @@ extension ChallengeAlertView {
                 .padding(.top, 12)
                 .padding(.horizontal, 40)
             
-            Button {
-                self.isPresented = false
-            } label: {
-                Text("닫기")
-                    .font(.appleSDGothicNeo(.bold, size: 14))
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(.theme.mainPurpleColor)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 44)
-            .background(Color.theme.mainPurpleColor.opacity(0.2))
-            .cornerRadius(8)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 16)
-
+            Text("닫기")
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .font(.appleSDGothicNeo(.bold, size: 14))
+                .multilineTextAlignment(.center)
+                .foregroundColor(.theme.mainPurpleColor)
+                .background(Color.theme.mainPurpleColor.opacity(0.2))
+                .cornerRadius(8)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
+                .onTapGesture {
+                    self.isPresented = false
+                }
         }
     }
     
@@ -124,40 +129,39 @@ extension ChallengeAlertView {
                 .padding(.horizontal, 40)
             
             HStack {
-                Button {
-                    self.isPresented = false
-                } label: {
-                    Text("닫기")
-                        .font(.appleSDGothicNeo(.bold, size: 14))
-                        .multilineTextAlignment(.center)
-                        .foregroundColor(.theme.mainPurpleColor)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 44)
-                .background(Color.theme.mainPurpleColor.opacity(0.2))
-                .cornerRadius(8)
+
+                Text("닫기")
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .font(.appleSDGothicNeo(.bold, size: 14))
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.theme.mainPurpleColor)
+                    .background(Color.theme.mainPurpleColor.opacity(0.2))
+                    .cornerRadius(8)
+                    .onTapGesture {
+                        self.isPresented = false
+                    }
                 
                 Spacer()
                     .frame(width: 16)
                 
-                Button {
-                    self.isPresented = false
-                    action()
-                } label: {
-                    Text("포기하기")
-                        .font(.appleSDGothicNeo(.bold, size: 14))
-                        .multilineTextAlignment(.center)
-                        .foregroundColor(.theme.mainPurpleColor)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 44)
-                .cornerRadius(8)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .inset(by: 0.5)
-                        .stroke(Color(red: 0.45, green: 0.28, blue: 0.88), lineWidth: 1)
-                    
-                )
+                Text("포기하기")
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .font(.appleSDGothicNeo(.bold, size: 14))
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.theme.mainPurpleColor)
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .inset(by: 0.5)
+                            .stroke(Color(red: 0.45, green: 0.28, blue: 0.88), lineWidth: 1)
+                    )
+                    .onTapGesture {
+                        self.isPresented = false
+                        action()
+                    }
+
             }
             .frame(maxWidth: .infinity)
             .frame(height: 44)
@@ -189,35 +193,34 @@ extension ChallengeAlertView {
                 .padding(.horizontal, 40)
             
             HStack {
-                Button {
-                    self.isPresented = false
-                } label: {
-                    Text("닫기")
-                        .font(.appleSDGothicNeo(.bold, size: 14))
-                        .multilineTextAlignment(.center)
-                        .foregroundColor(.theme.mainPurpleColor)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 44)
-                .background(Color.theme.mainPurpleColor.opacity(0.2))
-                .cornerRadius(8)
+                
+                Text("닫기")
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .font(.appleSDGothicNeo(.bold, size: 14))
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.theme.mainPurpleColor)
+                    .background(Color.theme.mainPurpleColor.opacity(0.2))
+                    .cornerRadius(8)
+                    .onTapGesture {
+                        self.isPresented = false
+                    }
                 
                 Spacer()
                     .frame(width: 16)
                 
-                Button {
-                    self.isPresented = false
-                    action()
-                } label: {
-                    Text("도전하기")
-                        .font(.appleSDGothicNeo(.bold, size: 14))
-                        .multilineTextAlignment(.center)
-                        .foregroundColor(.theme.whiteColor)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 44)
-                .background(Color.theme.mainPurpleColor)
-                .cornerRadius(8)
+                Text("도전하기")
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .font(.appleSDGothicNeo(.bold, size: 14))
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.theme.whiteColor)
+                    .background(Color.theme.mainPurpleColor)
+                    .cornerRadius(8)
+                    .onTapGesture {
+                        self.isPresented = false
+                        action()
+                    }
             }
             .frame(maxWidth: .infinity)
             .frame(height: 44)
@@ -249,35 +252,33 @@ extension ChallengeAlertView {
                 .padding(.horizontal, 40)
             
             HStack {
-                Button {
-                    self.isPresented = false
-                } label: {
-                    Text("닫기")
-                        .font(.appleSDGothicNeo(.bold, size: 14))
-                        .multilineTextAlignment(.center)
-                        .foregroundColor(.theme.mainPurpleColor)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 44)
-                .background(Color.theme.mainPurpleColor.opacity(0.2))
-                .cornerRadius(8)
+                
+                Text("닫기")
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .font(.appleSDGothicNeo(.bold, size: 14))
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.theme.mainPurpleColor)
+                    .background(Color.theme.mainPurpleColor.opacity(0.2))
+                    .cornerRadius(8)
+                    .onTapGesture {
+                        self.isPresented = false
+                    }
                 
                 Spacer()
                     .frame(width: 16)
                 
-                Button {
-                    self.isPresented = false
-                    action()
-                } label: {
-                    Text("도전하기")
-                        .font(.appleSDGothicNeo(.bold, size: 14))
-                        .multilineTextAlignment(.center)
-                        .foregroundColor(.theme.greyColor)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 44)
-                .background(Color(red: 0.9, green: 0.9, blue: 0.9))
-                .cornerRadius(8)
+                Text("도전하기")
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .font(.appleSDGothicNeo(.bold, size: 14))
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.theme.greyColor)
+                    .background(Color(red: 0.9, green: 0.9, blue: 0.9))
+                    .cornerRadius(8)
+                    .onTapGesture {
+                        
+                    }
             }
             .frame(maxWidth: .infinity)
             .frame(height: 44)

@@ -14,6 +14,7 @@ struct ChallengesView: View {
     @Binding var allChallenge: [ChallengeObject]
     @Binding var myChallenges: [MyChallengeDTO]
     @State private var isPresented: Bool = false
+    @State private var type: ChallengeAlertType = .notice
     let pageSize = 12
 
     @State private var currentPage = 0
@@ -60,7 +61,7 @@ struct ChallengesView: View {
                 }
             }
             .challengeAlert(isPresented: $isPresented) {
-                ChallengeAlertView(isPresented: $isPresented) {
+                ChallengeAlertView(isPresented: $isPresented, type: setAlertType()) {
                     print("클릭")
                 }
             }
@@ -144,6 +145,7 @@ extension ChallengesView {
                             .background(.white)
                             .cornerRadius(4)
                             .onTapGesture {
+                                self.type = .willChallenge
                                 self.isPresented.toggle()
                             }
                     }
@@ -176,6 +178,14 @@ extension ChallengesView {
                         ForEach(pageItems, id: \.self) { item in
                             ChallengeDetailView(challenge: item)
                                 .frame(width: 62, height: 120)
+                                .onTapGesture {
+                                    if item.chlg_lock {
+                                        self.type = .notice
+                                    } else if item.chlg_selected {
+                                        self.type = .willQuit
+                                    } 
+                                    self.isPresented.toggle()
+                                }
                         }
                     }
                     .tag(pageIndex)
@@ -203,5 +213,20 @@ extension ChallengesView {
             }
         }
         .padding(.bottom, 24)
+    }
+}
+
+extension ChallengesView {
+    private func setAlertType() -> ChallengeAlertType {
+        switch self.type {
+        case .didComplete:
+            return .didComplete
+        case .willChallenge:
+            return .willChallenge
+        case .willQuit:
+            return .willQuit
+        case .notice:
+            return .notice
+        }
     }
 }
