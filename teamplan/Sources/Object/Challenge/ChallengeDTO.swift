@@ -11,7 +11,7 @@ import Foundation
 //============================
 // MARK: MyChallenges
 //============================
-struct MyChallengeDTO {
+struct MyChallengeDTO: Hashable {
     // id
     let cahllengeID: Int
     

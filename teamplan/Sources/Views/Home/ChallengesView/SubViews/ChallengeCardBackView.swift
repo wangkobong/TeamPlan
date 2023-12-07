@@ -10,7 +10,7 @@ import SwiftUI
 
 struct ChallengeCardBackView: View {
     
-    let challenge: ChallengeCardModel
+    let challenge: MyChallengeDTO
     let parentsWidth: CGFloat
     
     var body: some View {
@@ -20,7 +20,7 @@ struct ChallengeCardBackView: View {
                 .font(.appleSDGothicNeo(.bold, size: 12))
                 .foregroundColor(.theme.blackColor)
                 .multilineTextAlignment(.center)
-            Text(challenge.description)
+            Text(challenge.desc)
                 .font(.appleSDGothicNeo(.regular, size: 12))
                 .foregroundColor(.theme.greyColor)
 
@@ -59,18 +59,18 @@ struct ChallengeCardBackView: View {
     }
 }
 
-struct ChallengeOverleafView_Previews: PreviewProvider {
-    static var previews: some View {
-        ChallengeCardBackView(
-            challenge: ChallengeCardModel(
-                image: "applelogo",
-                title: "목표달성의 쾌감!",
-                description: "물방울 3개 모으기"),
-            parentsWidth: 400
-        )
-        .previewLayout(.sizeThatFits)
-    }
-}
+//struct ChallengeOverleafView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        ChallengeCardBackView(
+//            challenge: ChallengeCardModel(
+//                image: "applelogo",
+//                title: "목표달성의 쾌감!",
+//                description: "물방울 3개 모으기"),
+//            parentsWidth: 400
+//        )
+//        .previewLayout(.sizeThatFits)
+//    }
+//}
 
 
 extension ChallengeCardBackView {

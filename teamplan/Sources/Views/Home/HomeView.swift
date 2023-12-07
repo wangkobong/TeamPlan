@@ -11,7 +11,7 @@ import KeychainSwift
 
 struct HomeView: View {
     
-    private let challengeCards: [ChallengeCardModel] = [
+    private let challengeCardsExample: [ChallengeCardModel] = [
         ChallengeCardModel(image: "applelogo", title: "목표달성의 쾌감!", description: "물방울 3개 모으기"),
         ChallengeCardModel(image: "applelogo", title: "프로젝트 완주", description: "프로젝트 한개 완주"),
         ChallengeCardModel(image: "applelogo", title: "화이팅!", description: "물방울 10개 모으기")
@@ -362,7 +362,10 @@ extension HomeView {
             Spacer()
             
             HStack {
-                NavigationLink(destination: ChallengesView(), isActive: $isChallengesViewActive) {
+                NavigationLink(destination: ChallengesView(
+                                                    allChallenge: $homeViewModel.challengeArray,
+                                                    myChallenges: $homeViewModel.myChallenges),
+                               isActive: $isChallengesViewActive) {
                     Text("전체보기")
                 }
                 Image("right_arrow_home")
@@ -381,9 +384,9 @@ extension HomeView {
     private var challengeCardsArea: some View {
         ZStack {
             HStack(spacing: 17) {
-                ForEach(challengeCards, id: \.self) { challenge in
+                ForEach(challengeCardsExample, id: \.self) { challenge in
                     let screenWidth = UIScreen.main.bounds.size.width
-                    ChallengeCardFrontView(challenge: challenge, parentsWidth: screenWidth)
+                    ChallengeExampleView(challenge: challenge, parentsWidth: screenWidth)
                         .background(.white)
                         .cornerRadius(4)
                         .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 0)

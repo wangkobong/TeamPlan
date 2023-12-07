@@ -17,6 +17,7 @@ final class HomeViewModel: ObservableObject {
     @Published var statistics: StatisticsDTO?
     let identifier: String
     lazy var homeService = HomeService(identifier: self.identifier ?? "")
+    let challengeManager = ChallengeManager()
     private var cancellables = Set<AnyCancellable>()
     
     init() {
@@ -48,7 +49,6 @@ final class HomeViewModel: ObservableObject {
         
         homeService.challenge.$challengeArray
             .sink { [weak self] challengeArray in
-                print("challengeArray: \(String(describing: challengeArray))")
                 self?.challengeArray = challengeArray
             }
             .store(in: &cancellables)
@@ -67,4 +67,5 @@ final class HomeViewModel: ObservableObject {
             print(error.localizedDescription)
         }
     }
+    
 }
