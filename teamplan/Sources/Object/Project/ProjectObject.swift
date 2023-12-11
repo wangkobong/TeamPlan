@@ -25,33 +25,56 @@ struct ProjectObject{
     var proj_finished: Bool
     
     // todo
-    var proj_todo: [TodoObject]
-    var proj_todo_registed: Int
-    var proj_todo_finished: Int
-    
-    // maintenance
+    var proj_todo: [TodoObject]?
+    var proj_todo_registed: Int = 0
+    var proj_todo_finished: Int = 0
+
+    // Maintenance
     let proj_registed_at: Date
-    var proj_changed_at: Date
-    let proj_finished_at: Date
+    var proj_changed_at: Date?
+    var proj_finished_at: Date?
     
-    // Constructor
-    // Coredata
-    init(projectEntity: ProjectEntity){
-        self.proj_id = Int(projectEntity.proj_id)
-        self.proj_user_id = projectEntity.proj_user_id ?? "Unknown"
-        self.proj_title = projectEntity.proj_title ?? ""
-        self.proj_started_at = projectEntity.proj_started_at ?? Date()
-        self.proj_deadline = projectEntity.proj_deadline ?? Date()
-        self.proj_finished = projectEntity.proj_finished
-        self.proj_todo_registed = Int(projectEntity.proj_todo_registed)
-        self.proj_todo_finished = Int(projectEntity.proj_todo_finished)
-        self.proj_registed_at = projectEntity.proj_registed_at ?? Date()
-        self.proj_changed_at = projectEntity.proj_changed_at ?? Date()
-        self.proj_finished_at = projectEntity.proj_finished_at ?? Date()
-                
-        // Initialize the todos array
-        self.proj_todo = (projectEntity.todo_relationship as? Set<TodoEntity> ?? []).map(TodoObject.init(todoEntity:))
+    //----------------------------
+    // MARK: Constructor
+    //----------------------------
+    // : Get
+    init?(entity: ProjectEntity){
+        guard let userId = entity.proj_user_id,
+              let title = entity.proj_title,
+              let startedAt = entity.proj_started_at,
+              let deadline = entity.proj_deadline,
+              let registedAt = entity.proj_registed_at,
+              let updatedAt = entity.proj_changed_at,
+              let finishedAt = entity.proj_finished_at,
+              let todo = entity.todo_relationship as? Set<TodoEntity>
+        else {
+            return nil
+        }
+        // Assigning values
+        self.proj_id = Int(entity.proj_id)
+        self.proj_user_id = userId
+        self.proj_title = title
+        self.proj_started_at = startedAt
+        self.proj_deadline = deadline
+        self.proj_finished = entity.proj_finished
+        self.proj_todo_registed = Int(entity.proj_todo_registed)
+        self.proj_todo_finished = Int(entity.proj_todo_finished)
+        self.proj_registed_at = registedAt
+        self.proj_changed_at = updatedAt
+        self.proj_finished_at = finishedAt
+        self.proj_todo = todo.map{ TodoObject(todoEntity: $0) }
     }
+    
+    // : Set
+    init(from dto: ProjectSetDTO, id: Int, userId: String) {
+            self.proj_id = id
+            self.proj_user_id = userId
+            self.proj_title = dto.title
+            self.proj_started_at = dto.startedAt
+            self.proj_deadline = dto.deadline
+            self.proj_finished = false
+            self.proj_registed_at = Date()
+        }
     
     // DummyTest
     init(proj_id: Int64, proj_title: String, proj_started_at: Date, proj_deadline: Date, proj_finished: Bool, proj_todo: [TodoObject], proj_todo_registed: Int, proj_todo_finished: Int, proj_registed_at: Date, proj_changed_at: Date, proj_finished_at: Date) {
@@ -67,6 +90,16 @@ struct ProjectObject{
         self.proj_registed_at = proj_registed_at
         self.proj_changed_at = proj_changed_at
         self.proj_finished_at = proj_finished_at
+    }
+    
+    //----------------------------
+    // MARK: Func
+    //----------------------------
+    mutating func updateDeadline(to newDeadline: Date){
+        self.proj_deadline = newDeadline
+    }
+    mutating func updateTitle(to newTitle: String){
+        self.proj_title = newTitle
     }
 }
 
