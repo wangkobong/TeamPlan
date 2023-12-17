@@ -68,8 +68,8 @@ final class ProjectServicesCoredata{
         return projectData
     }
     
-    // Get All Project
-    func getProjects(from userId: String) throws -> [ProjectObject] {
+    // Get ProjectCards
+    func getProjectCards(by userId: String) throws -> [ProjectCardDTO] {
         
         // parameter setting
         let fetchReq: NSFetchRequest<ProjectEntity> = ProjectEntity.fetchRequest()
@@ -79,7 +79,7 @@ final class ProjectServicesCoredata{
         
         // Convert to Object & Get All
         let reqProjects = try context.fetch(fetchReq)
-        let projectsData = reqProjects.compactMap { ProjectObject(entity: $0) }
+        let projectsData = reqProjects.compactMap { ProjectCardDTO(from: $0) }
         if projectsData.count != reqProjects.count {
             throw ProjectErrorCD.UnexpectedConvertError
         }

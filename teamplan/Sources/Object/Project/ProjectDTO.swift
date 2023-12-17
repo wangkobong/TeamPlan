@@ -67,10 +67,22 @@ struct ProjectSetDTO{
     }
 }
 
+//============================
+// MARK: Update - Project
+//============================
 struct ProjectUpdateDTO{
+    // id
+    var userId: String?
+    var projectId: Int?
+    var todoId: Int?
+    
     // content
     var newTitle: String?
     var newDeadline: Date?
+    
+    // Todo
+    var todo: TodoObject?
+    var todoStatus: Bool?
     
     init(to newDeadLine: Date){
         self.newDeadline = newDeadLine
@@ -80,3 +92,4 @@ struct ProjectUpdateDTO{
         self.newTitle = newTitle
     }
 }
+
