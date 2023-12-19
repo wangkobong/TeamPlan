@@ -103,7 +103,7 @@ final class ChallengeService {
         try updateStatistics(challengeId, nextChallenge.chlg_type, targetChallenge.chlg_reward)
         
         // Update ChallengeLog
-        try challengeLogCD.updateLog(from: self.userId, updatedLog: [challengeId : updatedDate], updatedAt: updatedDate)
+        try challengeLogCD.updateLog(with: self.userId, updatedLog: [challengeId : updatedDate], updatedAt: updatedDate)
         
         // Return Next Challenge
         return ChallengeRewardDTO(from: targetChallenge, to: nextChallenge)

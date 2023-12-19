@@ -189,18 +189,18 @@ final class SignupLoadingService{
     //===============================
     // : Firestore
     func setAccessLogFS() async throws {
-        try await aclogFS.setLog(reqLog: self.newAccessLog)
+        try await aclogFS.setLog(with: self.newAccessLog)
     }
     private func rollbackSetAccessLogFS() async throws {
-        try await aclogFS.deleteLog(to: self.newProfile.user_id)
+        try await aclogFS.deleteLog(with: self.newProfile.user_id)
     }
     
     // : CoreData
     func setAccessLogCD() throws {
-        try aclogCD.setLog(reqLog: self.newAccessLog)
+        try aclogCD.setLog(with: self.newAccessLog)
     }
     private func rollbackSetAccessLogCD() throws {
-        try aclogCD.deleteLog(identifier: self.newProfile.user_id)
+        try aclogCD.deleteLog(with: self.newProfile.user_id)
     }
     
     //===============================
@@ -208,18 +208,18 @@ final class SignupLoadingService{
     //===============================
     // : Firestore
     func setChallengeLogFS() async throws {
-        try await chlglogFS.setLog(reqLog: self.newChallengeLog)
+        try await chlglogFS.setLog(with: self.newChallengeLog)
     }
     private func rollbackSetChallengeLogFS() async throws {
-        try await chlglogFS.deleteLog(identifier: self.newProfile.user_id)
+        try await chlglogFS.deleteLog(with: self.newProfile.user_id)
     }
     
     // : Coredata
     func setChallengeLogCD() throws {
-        try chlglogCD.setLog(reqLog: self.newChallengeLog)
+        try chlglogCD.setLog(with: self.newChallengeLog)
     }
     private func rollbackSetChallengeLogCD() throws {
-        try chlglogCD.deleteLog(from: self.newProfile.user_id)
+        try chlglogCD.deleteLog(with: self.newProfile.user_id)
     }
     
     //===============================

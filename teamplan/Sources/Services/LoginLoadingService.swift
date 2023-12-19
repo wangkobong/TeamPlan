@@ -167,15 +167,15 @@ extension LoginLoadingService{
     }
     
     private func fetchLogFromCoredata(from userId: String) throws -> AccessLog? {
-        return try? acclogCD.getLog(from: userId)
+        return try? acclogCD.getLog(with: userId)
     }
     
     private func fetchLogFromFirestore(from userId: String) async throws -> AccessLog {
-        return try await acclogFS.getLog(from: userId)
+        return try await acclogFS.getLog(with: userId)
     }
     
     private func setLogToCoredata(data logData: AccessLog) throws {
-        try acclogCD.setLog(reqLog: logData)
+        try acclogCD.setLog(with: logData)
     }
 }
 
@@ -190,7 +190,7 @@ extension LoginLoadingService{
         try statCD.updateStatistics(to: self.userStat)
         
         // Update AccessLog
-        try acclogCD.updateLog(from: self.userId, updatedAt: self.loginDate)
+        try acclogCD.updateLog(with: self.userId, when: self.loginDate)
     }
     
     func recordLoginTimeAtFirestore() async throws {

@@ -29,15 +29,9 @@ struct AccessLog{
     }
     
     // Coredata
-    init?(logEntity: AccessLogEntity) {
-        guard let log_user_id = logEntity.log_user_id,
-              let log_access = logEntity.log_access as? [Date]
-        else {
-            return nil
-        }
-        // Assigning values
-        self.log_user_id = log_user_id
-        self.log_access = log_access
+    init(with userId: String, and log: [Date]) {
+        self.log_user_id = userId
+        self.log_access = log
     }
     
     // Firestore
