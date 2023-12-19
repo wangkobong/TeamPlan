@@ -23,14 +23,14 @@ final class StatisticsServicesCoredata{
     //================================
     // MARK: - Set Statistics
     //================================
-    func setStatistics(reqStat: StatisticsObject) throws {
+    func setStatistics(with object: StatisticsObject) throws {
         
         // Create Entity & Set Data
-        try setStatEntity(from: reqStat)
+        try setStatEntity(with: object)
         try context.save()
     }
     // Support Function
-    private func setStatEntity(from reqStat: StatisticsObject) throws {
+    private func setStatEntity(with reqStat: StatisticsObject) throws {
         
         // Prepare Entity Create
         let json_stat_chlg_step = try util.convertToJSON(data: reqStat.stat_chlg_step)
@@ -74,7 +74,7 @@ final class StatisticsServicesCoredata{
     private func convertToObject(reqStat: StatisticsEntity) throws -> StatisticsObject {
         
         // Convert JSON to Array
-        let chlgStep = try util.convertFromJSON(jsonString: reqStat.stat_chlg_step, type: [[Int : Int]].self)
+        let chlgStep = try util.convertFromJSON(jsonString: reqStat.stat_chlg_step, type: [Int : Int].self)
         let myChlg = try util.convertFromJSON(jsonString: reqStat.stat_mychlg, type: [Int].self)
         
         // Create Object
@@ -155,11 +155,6 @@ final class StatisticsServicesCoredata{
 enum StaticErrorCD: LocalizedError {
     case StatRetrievalByIdentifierFailed
     case UnexpectedConvertError
-    // Legacy Only
-    case UnexpectedSetError
-    case UnexpectedGetError
-    case UnexpectedUpdateError
-    case NoUpdateNecessary
     
     var errorDescription: String?{
         switch self {
@@ -167,15 +162,6 @@ enum StaticErrorCD: LocalizedError {
             return "Coredata: Unable to retrieve 'Statistics' data using the provided identifier."
         case .UnexpectedConvertError:
             return "Coredata: There was an unexpected error while Convert 'Statistics' details"
-        // Legacy Only
-        case .UnexpectedSetError:
-            return "Coredata: There was an unexpected error while Set 'Statistics' details"
-        case .UnexpectedGetError:
-            return "Coredata: There was an unexpected error while Get 'Statistics' details"
-        case .UnexpectedUpdateError:
-            return "Coredata: There was an unexpected error while Update 'Statistics' details"
-        case .NoUpdateNecessary:
-            return "Coredata: 'Statistics' Update is No Necessary"
         }
     }
 }

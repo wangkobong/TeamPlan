@@ -24,7 +24,7 @@ struct StatisticsDTO{
     var stat_todo_reg: Int
     
     //content: Challenge
-    var stat_chlg_step: [[Int : Int]]
+    var stat_chlg_step: [Int : Int]
     var stat_mychlg: [Int]
     
     // maintenance
@@ -53,7 +53,7 @@ struct StatisticsDTO{
         self.stat_proj_alert = 0
         self.stat_proj_ext = 0
         self.stat_todo_reg = 0
-        self.stat_chlg_step = [[:]]
+        self.stat_chlg_step = [:]
         self.stat_mychlg = []
         self.stat_upload_at = Date()
     }

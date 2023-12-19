@@ -145,7 +145,7 @@ extension LoginLoadingService{
     }
     
     private func setStatToCoredata(data statData: StatisticsObject) throws {
-        try statCD.setStatistics(reqStat: statData)
+        try statCD.setStatistics(with: statData)
     }
 }
 

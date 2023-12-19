@@ -178,7 +178,7 @@ final class SignupLoadingService{
     
     // : Coredata
     func setStatisticsCD() throws {
-        try statCD.setStatistics(reqStat: self.newStat)
+        try statCD.setStatistics(with: self.newStat)
     }
     private func rollbackSetStatisticsCD() throws {
         try statCD.deleteStatistics(identifier: self.newProfile.user_id)

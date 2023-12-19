@@ -97,10 +97,20 @@ final class Utilities {
 //============================
 // Dictionary
 extension Dictionary {
-    func mapKeys<T: Hashable>(_ transform: (Key) -> T) -> [T: Value] {
-        var newDict = [T: Value]()
+    func mapKeys<T: Hashable>(transform: (Key) -> T) -> [T: Value] {
+        var newDict: [T: Value] = [:]
         for (key, value) in self {
             newDict[transform(key)] = value
+        }
+        return newDict
+    }
+
+    func compactMapKeys<T: Hashable>(transform: (Key) -> T?) -> [T: Value] {
+        var newDict: [T: Value] = [:]
+        for (key, value) in self {
+            if let newKey = transform(key) {
+                newDict[newKey] = value
+            }
         }
         return newDict
     }

@@ -156,15 +156,16 @@ extension ChallengeService {
     
     // Update Statistics: Challenge Step
     private func updateChallengeStep(_ stat: StatisticsDTO, _ type: ChallengeType) throws -> StatisticsDTO {
-        // Search ChallengeStep Data
-        guard let idx = stat.stat_chlg_step.firstIndex(where: { $0.keys.contains(type.rawValue) } ),
-              let currentVal = stat.stat_chlg_step[idx][type.rawValue] else {
+        var updatedStat = stat
+        
+        // Check if the key exists and update its value
+        if let currentVal = updatedStat.stat_chlg_step[type.rawValue] {
+            updatedStat.stat_chlg_step[type.rawValue] = currentVal + 1
+        } else {
+            // If the key doesn't exist, handle the error
             throw ChallengeError.UnexpectedStepUpdateError
         }
-        // Update ChallengeStep Data
-        var updatedstat = stat
-        updatedstat.stat_chlg_step[idx][type.rawValue] = currentVal + 1
-        return updatedstat
+        return updatedStat
     }
 }
 
