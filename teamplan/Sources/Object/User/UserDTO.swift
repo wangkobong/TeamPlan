@@ -12,22 +12,22 @@ import Foundation
 // MARK: After Auth
 //============================
 struct UserDTO{
-    // id
-    let user_id: String
     
+    //--------------------
     // content
+    //--------------------
+    let user_id: String
     let user_email: String
     let user_name: String
-    
-    // status:
     let user_social_type: Providers
     let user_status: UserStatus
-    
-    // maintenance:
     let user_updated_at: Date
     
+    //--------------------
+    // constructor
+    //--------------------
     // Signup
-    init(userObject: UserObject){
+    init(with userObject: UserObject){
         self.user_id = userObject.user_id
         self.user_email = userObject.user_email
         self.user_name = userObject.user_name
@@ -49,51 +49,29 @@ struct UserDTO{
 //============================
 // MARK: Signup/SignupLoading
 //============================
-/// Request DTO : View -> Service
 struct UserSignupDTO{
-    // info
+    
+    //--------------------
+    // content
+    //--------------------
     let identifier: String
     let email: String
     let provider: Providers
     var nickName: String
     
-    // Constructor
-    init(
-        identifier: String,
-        email: String,
-        provider: Providers
-    ) {
-        self.identifier = identifier
-        self.email = email
-        self.provider = provider
+    //--------------------
+    // constructor
+    //--------------------
+    init(with userId: String, and dto: AuthSocialLoginResDTO) {
+        self.identifier = userId
+        self.email = dto.email
+        self.provider = dto.provider
         self.nickName = ""
     }
-    
-    init(
-        identifier: String,
-        email: String,
-        provider: Providers,
-        nickname: String
-    ) {
-        self.identifier = identifier
-        self.email = email
-        self.provider = provider
-        self.nickName = nickname
-    }
-}
-
-//============================
-// MARK: Home
-//============================
-struct UserHomeResDTO{
-    // id
-    let user_id: String
-    
-    // content
-    let user_name: String
-    
-    init(userObject: UserObject){
-        self.user_id = userObject.user_id
-        self.user_name = userObject.user_name
+    //--------------------
+    // function
+    //--------------------
+    mutating func updateNickName(with newVal: String){
+        self.nickName = newVal
     }
 }

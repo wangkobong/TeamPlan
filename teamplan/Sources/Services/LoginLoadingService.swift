@@ -98,12 +98,12 @@ extension LoginLoadingService{
         
         // Check Coredata
         if let user = try fetchUserFromCoredata(from: userId) {
-            return UserDTO(userObject: user)
+            return UserDTO(with: user)
         }
         // Check Firestore
         let user = try await fetchUserFromFirestore(from: userId)
         try setUserToCoredata(data: user)
-        return UserDTO(userObject: user)
+        return UserDTO(with: user)
     }
     
     private func fetchUserFromCoredata(from userId: String) throws -> UserObject? {

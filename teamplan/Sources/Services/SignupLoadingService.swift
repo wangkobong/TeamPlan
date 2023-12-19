@@ -65,7 +65,7 @@ final class SignupLoadingService{
             
         // Set NewUserPackage at Coredata & Firestore
         case (true, true):
-            return UserDTO(userObject: self.newProfile)
+            return UserDTO(with: self.newProfile)
         
         default:
             try await rollbackAll()

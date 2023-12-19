@@ -12,24 +12,25 @@ import Foundation
 // MARK: Entity
 //============================
 struct ChallengeLog{
-    // id
+
+    //--------------------
+    // content
+    //--------------------
     let log_user_id: String
-    
-    //content
     var log_complete: [[Int : Date]]
     var log_update_at: Date
     
-    //============================
-    // MARK: Constructor
-    //============================
-    // : SignupService
+    //--------------------
+    // constructor
+    //--------------------
+    // SignupService
     init(identifier: String, signupDate: Date){
         self.log_user_id = identifier
-        self.log_complete = [[:]]
+        self.log_complete = [[0 : signupDate]]
         self.log_update_at = signupDate
     }
     
-    // : Get (Coredatat)
+    // Coredatat
     init?(from entity: ChallengeLogEntity, log: [[Int : Date]]){
         guard let log_user_id = entity.log_user_id,
               let log_update_at = entity.log_update_at
@@ -41,62 +42,51 @@ struct ChallengeLog{
         self.log_update_at = log_update_at
     }
     
-    // : Get (Firestore)
+    // Firestore
     init?(challengeData: [String : Any]) {
         guard let log_user_id = challengeData["log_user_id"] as? String,
               let log_complete_string = challengeData["log_complete"] as? [[Int : String]],
-              let log_update_at_string = challengeData["log_update_at"] as? String
+              let log_update_at_string = challengeData["log_update_at"] as? String,
+              let log_update_at = DateFormatter.standardFormatter.date(from: log_update_at_string)
         else {
             return nil
         }
-        // Date Converter
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
-        
-        // Ready Array
-        var log_complete: [[Int: Date]] = []
-        for dict in log_complete_string {
-            
-            // Ready Dictionary
-            var convertedDict: [Int : Date] = [:]
-            for (key, dateString) in dict {
-                if let date = formatter.date(from: dateString) {
-                    convertedDict[key] = date
-                }
-            }
-            if !convertedDict.isEmpty {
-                log_complete.append(convertedDict)
-            }
-        }
-        
-        guard let log_update_at = formatter.date(from: log_update_at_string) else {
-                return nil
-        }
+        let convertedLog = log_complete_string.compactMap { Self.convertToObject(with: $0) }
         
         // Assigning values
         self.log_user_id = log_user_id
-        self.log_complete = log_complete
+        self.log_complete = convertedLog
         self.log_update_at = log_update_at
     }
     
-    //============================
-    // MARK: Func
-    //============================
-    func toDictionary() -> [String : Any] {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
-        
-        let logCompleteStrings = self.log_complete.map { dict in
-            dict.mapValues { formatter.string(from: $0) }}
-        let logUpdateStrings = formatter.string(from: self.log_update_at)
-        
+    //--------------------
+    // function
+    //--------------------
+    // Dictionary Converter
+    func toDictionary() -> [String: Any] {
+        let logCompleteStrings = log_complete.map { $0.mapValues { DateFormatter.standardFormatter.string(from: $0) } }
+        let logUpdateString = DateFormatter.standardFormatter.string(from: log_update_at)
+
         return [
-            "log_user_id" : self.log_user_id,
-            "log_complete" : logCompleteStrings,
-            "log_update_at" : logUpdateStrings
+            "log_user_id": log_user_id,
+            "log_complete": logCompleteStrings,
+            "log_update_at": logUpdateString
         ]
     }
     
+    // Object Converter
+    private static func convertToObject(with object: [Int : String]) -> [Int : Date]? {
+        var convertedObject: [Int : Date] = [:]
+        
+        for(key, data) in object {
+            if let date = DateFormatter.standardFormatter.date(from: data) {
+                convertedObject[key] = date
+            }
+        }
+        return convertedObject.isEmpty ? nil : convertedObject
+    }
+    
+    // mutating
     mutating func recordLog(num challengeId: Int, at addedDate: Date){
         self.log_complete.append([challengeId : addedDate])
     }
