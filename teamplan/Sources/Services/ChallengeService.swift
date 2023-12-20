@@ -11,238 +11,271 @@ import Foundation
 final class ChallengeService {
     
     //===============================
-    // MARK: - Global Parameter
+    // MARK: - Parameter
     //===============================
     let challengeCD = ChallengeServicesCoredata()
     let challengeLogCD = ChallengeLogServicesCoredata()
-    let statisticsCD = StatisticsServicesCoredata()
-    let statCenter = StatisticsCenter()
+    let statCD = StatisticsServicesCoredata()
     
     var userId: String
+    let statCenter: StatisticsCenter
     
     @Published var myChallenges: [MyChallengeDTO] = []
-    @Published var statistics: StatisticsDTO?
+    @Published var statDTO: StatChallengeDTO
     @Published var challengeArray: [ChallengeObject] = []
+    
     //===============================
     // MARK: - Constructor
     //===============================
-    init(_ id: String) {
-        self.userId = id
+    init(with userId: String) {
+        self.userId = userId
+        self.statCenter = StatisticsCenter(with: userId)
+        self.statDTO = StatChallengeDTO()
     }
-    
+    // Init function
     func readyService() throws {
-        do {
-            self.statistics = StatisticsDTO(statObject: try statisticsCD.getStatistics(from: self.userId))
-            try self.challengeArray = challengeCD.getChallenges()
-            try self.getMyChallengesProcess()
-        } catch let error {
-            throw error
+        // Step1. get Statistics
+        try readyStatistics()
+        // Step2. get Challenges
+        challengeArray = try challengeCD.getChallenges()
+        // Step3. get MyChallenge
+        try readyMyChallenge()
+    }
+    // Init Statistics
+    private func readyStatistics() throws {
+        // Step1. Ready to Use ChallengeStatisticsDTO
+        guard let dto = try statCD.getStatisticsForDTO(with: userId, type: .challenge) as? StatChallengeDTO else {
+            throw ChallengeError.UnexpectedGetError
+        }
+        self.statDTO = dto
+        // Step2. Ready to Use ChallengeStatisticsCenter
+        try self.statCenter.readyCenter()
+    }
+    // Init MyChallenge
+    private func readyMyChallenge() throws {
+        // Step1. Check MyChallenge Empty Case
+        if statDTO.stat_mychlg.isEmpty{
+            return
+        }
+        // Step2. Filled MyChallenge Array with Statistics Data
+        for idx in statDTO.stat_mychlg {
+            try addToMyChallenge(with: idx)
         }
     }
+}
+//===============================
+// MARK: MyChallenges
+//===============================
+extension ChallengeService {
+
+    //--------------------
+    // Set MyChallenge
+    //--------------------
+    func setMyChallenges(with challengeId: Int) throws {
+        // Step1. Check MyChallenge Size
+        guard myChallenges.count < 3 else {
+            throw ChallengeError.MyChallengeLimitExceeded
+        }
+        // Step2. Add to MyChallenge
+        try addToMyChallenge(with: challengeId)
+        
+        // Step3.  Apply Challenge Update
+        try updateChallengeStatus(with: challengeId, type: .set)
+        
+        // Step4. Apply Statistics Update
+        try updateStatistics()
+    }
     
-    //===============================
-    // MARK: Get MyChallenges
-    //===============================
+    //--------------------
+    // Get MyChallenge
+    //--------------------
     func getMyChallenges() throws -> [MyChallengeDTO] {
         return self.myChallenges
     }
     
-    // ###### Core Function ######
-    private func getMyChallengesProcess() throws {
+    //-------------------------------
+    // (Update) Disable MyChallenge
+    //-------------------------------
+    func disableMyChallenge(with challengeId: Int) throws {
+        // Step1. Remove MyChallenge at Array
+        removeChallengeFromArrays(with: challengeId)
         
-        // Check Parameter
-        guard let stat = self.statistics else {
-            throw ChallengeError.UnexpectedStatError
-        }
-        
-        // get MyChallenge from Total Challenge
-        var myChallenges: [MyChallengeDTO] = []
-        for idx in stat.stat_mychlg {
-            // Get Challenge
-            let myChallenge = try challengeCD.getChallenge(from: idx)
-            // Get UserProgress related Challenge
-            let userProgress = statCenter.userProgress(from: myChallenge.chlg_type, from: stat)
-            // Struct MyChallenge
-            myChallenges.append(MyChallengeDTO(chlgObject: myChallenge, userProgress: userProgress))
-        }
-        
-        // Set only first three items
-        self.myChallenges =  Array(myChallenges.prefix(3))
+        // Step2. Apply Challenge Update
+        try updateChallengeStatus(with: challengeId, type: .disable)
+
+        // Step3. Apply Statistics Update
+        try updateStatistics()
     }
     
-    //===============================
-    // MARK: Disable MyChallenge (Update)
-    //===============================
-    // Disable
-    func disableMyChallenge(from challengeId: Int) throws {
-        // Search & Update Challenge
-        let updatedChallenge = ChallengeStatusDTO(target: challengeId, select: false, disableTime: Date())
-        try challengeCD.updateChallenge(from: updatedChallenge)
+    //-------------------------------
+    // (Update) Reward MyChallenge
+    //-------------------------------
+    func rewardMyChallenge(with challengeId: Int) throws -> ChallengeRewardDTO {
+        // Step1. Processing Challenge Reward
+        try rewardProcess(with: challengeId)
         
-        // Update Statistics : Remove MyChallenge
-        try updateStatistics(challengeId, nil, nil)
+        // Step2. Apply Challenge Update (Reward)
+        try updateChallengeStatus(with: challengeId, type: .reward)
         
-        // Refresh MyChallenge
-        try getMyChallengesProcess()
+        // Step3. Apply Statistics Update
+        try updateStatistics()
+        
+        // Step4. Update Challenge (Next)
+        let rewardDTO = try updateNextChallenge(with: challengeId)
+        
+        return rewardDTO
     }
     
-    //===============================
-    // MARK: Reward MyChallenge (Update)
-    //===============================
-    // Reward
-    func rewardMyChallenge(from challengeId: Int) throws -> ChallengeRewardDTO {
+    // * Core Process
+    private func rewardProcess(with challengeId: Int) throws {
+        // Step1. Search Additional Challenge Data
+        let challenge = try fetchChallenge(with: challengeId)
+        
+        // Step2. Update Statistics
+        statDTO.stat_drop += challenge.chlg_reward
+        
+        // Step3. Update Challenge Step
+        try updateChallengeStep(with: challenge)
+
+        // Step4. Remove Challenge from 'MyChallenge'
+        removeChallengeFromArrays(with: challengeId)
+        
+        // Step5. ChallengeLog Record
+        try updatedChallengeLog(with: challengeId)
+    }
+    
+    //-------------------------------
+    // Update Function
+    //-------------------------------
+    // * Update Challenge Status
+    private func updateChallengeStatus(with challengeId: Int, type: functionType) throws {
+        // Step1. Search Additional Challenge Data
+        let challenge = try fetchChallenge(with: challengeId)
+        // Step2. Struct UpdateDTO
+        var updatedStatus = ChallengeStatusDTO(with: challenge)
         let updatedDate = Date()
         
-        // Update Reward Challenge
-        let targetChallenge = try rewardChallengeUpdate(challengeId, updatedDate)
-        
-        // Update Next Challenge
-        let nextChallenge = try nextChallengeUpdate(challengeId)
-        
-        // Update Statistics
-        try updateStatistics(challengeId, nextChallenge.chlg_type, targetChallenge.chlg_reward)
-        
-        // Update ChallengeLog
-        try challengeLogCD.updateLog(with: self.userId, updatedLog: [challengeId : updatedDate], updatedAt: updatedDate)
-        
-        // Return Next Challenge
-        return ChallengeRewardDTO(from: targetChallenge, to: nextChallenge)
-    }
-}
-
-//===============================
-// MARK: - Support Func: Statistics
-//===============================
-extension ChallengeService {
-    
-    // Update Statistics (Set MyChallenge)
-    private func updateStatistics(_ id: Int) throws {
-        // Check Parameter
-        guard var stat = self.statistics else {
-            throw ChallengeError.UnexpectedStatError
+        // Step3. Update by Type
+        switch type{
+        case .set:
+            updatedStatus.updateSelected(with: true)
+            updatedStatus.updateSelectedAt(with: updatedDate)
+        case .disable:
+            updatedStatus.updateSelected(with: false)
+            updatedStatus.updateUnselectedAt(with: updatedDate)
+        case .reward:
+            updatedStatus.updateStatus(with: true)
+            updatedStatus.updateFinishedAt(with: updatedDate)
+            updatedStatus.updateSelected(with: false)
+        case .next:
+            updatedStatus.updateLock(with: false)
         }
-        // Add Challenge to MyChallenge & Update Statistics
-        stat.stat_mychlg.append(id)
-        try statisticsCD.updateStatistics(to: stat)
-        
-        // Refresh Statistics
-        self.statistics = stat
+        // Step4. Update with DTO
+        try challengeCD.updateChallenge(with: updatedStatus)
     }
     
-    // Update Statistics (Disable or Reward MyChallenge)
-    private func updateStatistics(_ id: Int, _ type: ChallengeType?, _ reward: Int?) throws {
-        // Check Parameter
-        guard var stat = self.statistics else {
-            throw ChallengeError.UnexpectedStatError
-        }
-        // reward MyChallenge Active Only
-        if let type = type, let reward = reward {
-            // Update ChallengeStep
-            stat = try updateChallengeStep(stat, type)
-            // Update DropCount
-            stat.updateWaterDrop(to: stat.stat_drop + reward)
-        }
-        // Search Target Challenge at MyChallenges
-        guard let idx = stat.stat_mychlg.firstIndex(of: id) else {
-            throw ChallengeError.UnexpectedMyChallengeSearchError
-        }
-        // Remove Challenge from MyChallenges & Update
-        stat.stat_mychlg.remove(at: idx)
-        try statisticsCD.updateStatistics(to: stat)
-            
-        // Refresh Statistics
-        self.statistics = stat
+    // * Statistics Update
+    private func updateStatistics() throws {
+        let updatedStatistics = StatUpdateDTO(challengeDTO: statDTO)
+        try statCD.updateStatistics(with: updatedStatistics)
     }
     
-    // Update Statistics: Challenge Step
-    private func updateChallengeStep(_ stat: StatisticsDTO, _ type: ChallengeType) throws -> StatisticsDTO {
-        var updatedStat = stat
-        
-        // Check if the key exists and update its value
-        if let currentVal = updatedStat.stat_chlg_step[type.rawValue] {
-            updatedStat.stat_chlg_step[type.rawValue] = currentVal + 1
+    // * Challenge Log Update
+    private func updatedChallengeLog(with challengeId: Int) throws {
+        try challengeLogCD.updateLog(with: userId, challenge: challengeId, updatedAt: Date())
+    }
+    
+    // * Challenge Step Update
+    private func updateChallengeStep(with challenge: ChallengeObject) throws {
+        let challengeType = challenge.chlg_type.rawValue
+        if let currentVal = statDTO.stat_chlg_step[challengeType] {
+            statDTO.stat_chlg_step[challengeType] = currentVal + 1
         } else {
-            // If the key doesn't exist, handle the error
             throw ChallengeError.UnexpectedStepUpdateError
         }
-        return updatedStat
-    }
-}
-
-//===============================
-// MARK: - Support Func: Challenge
-//===============================
-extension ChallengeService {
-    // Update Challenge : Reward Target
-    private func rewardChallengeUpdate(_ id: Int, _ date: Date) throws -> ChallengeObject {
-        let updatedChallenge = ChallengeStatusDTO(target: id, when: date)
-        try challengeCD.updateChallenge(from: updatedChallenge)
-        return try challengeCD.getChallenge(from: id)
-    }
-
-    // Update Challenge : Next Target
-    private func nextChallengeUpdate(_ id: Int) throws -> ChallengeObject {
-        // Search Next Challenge
-        guard let currentChallenge = self.challengeArray.first(where: { $0.chlg_id == id }),
-              let nextChallenge = try getNextChallenge(challengeType: currentChallenge.chlg_type, currentStep: currentChallenge.chlg_step)
-        else {
-            throw ChallengeError.UnexpectedNextChallengeSearchError
-        }
-
-        // Struct DTO & Update
-        let updatedChallenge = ChallengeStatusDTO(target: nextChallenge.chlg_id, status: true)
-        try challengeCD.updateChallenge(from: updatedChallenge)
-        return nextChallenge
     }
     
-    // Get Challenge : Next Target
-    private func getNextChallenge(challengeType: ChallengeType, currentStep: Int) throws -> ChallengeObject? {
-        // Check Parameter
-        let array = self.challengeArray
-        return array.first { $0.chlg_type == challengeType && $0.chlg_step == currentStep + 1 }
+    // * Next Challenge Update
+    private func updateNextChallenge(with challengeId: Int) throws -> ChallengeRewardDTO {
+        let currentChallenge = try fetchChallenge(with: challengeId)
+        let nextChallenge = try findNextChallenge(with: challengeId)
+        
+        try updateChallengeStatus(with: nextChallenge.chlg_id, type: .next)
+        
+        return ChallengeRewardDTO(with: currentChallenge, and: nextChallenge)
+    }
+
+    //-------------------------------
+    // Helper Function
+    //-------------------------------
+    // * Fetch Challenge
+    private func fetchChallenge(with challengeId: Int) throws -> ChallengeObject {
+        guard let challenge = challengeArray.first(where: { $0.chlg_id == challengeId }) else {
+            throw ChallengeError.UnexpectedChallengeArrayError
+        }
+        return challenge
+    }
+    
+    // * Add Challenge to 'MyChallenge' Array
+    private func addToMyChallenge(with challengeId: Int) throws {
+        // Step1. Get Challenge from ChallengeArray
+        let myChallenge = try fetchChallenge(with: challengeId)
+        // Step2. Get UserProgress
+        let userProgress = statCenter.getUserProgress(type: myChallenge.chlg_type)
+        // Step3. Struct MyChallengeDTO
+        let dto = MyChallengeDTO(with: myChallenge, and: userProgress)
+        // Step4. Append MyChallenge
+        myChallenges.append(dto)
+        statDTO.stat_mychlg.append(challengeId)
+    }
+
+    // * Remove challenge from arrays
+    private func removeChallengeFromArrays(with challengeId: Int) {
+        myChallenges.removeAll { $0.cahllengeID == challengeId }
+        statDTO.stat_mychlg.removeAll { $0 == challengeId }
+    }
+    
+    // * Find Next Challenge ID
+    private func findNextChallenge(with challengeId: Int) throws -> ChallengeObject {
+        // Step1. Search Additional Challenge Data
+        let currentChallenge = try fetchChallenge(with: challengeId)
+        // Step2. Search Next Challenge Data
+        if let nextChallenge = challengeArray.first(where: {
+            $0.chlg_type == currentChallenge.chlg_type && $0.chlg_step == currentChallenge.chlg_step + 1
+        }) {
+            return nextChallenge
+        } else {
+            throw ChallengeError.NoMoreNextChallenge
+        }
     }
 }
 
+
+//===============================
+// MARK: Challenge
+//===============================
 extension ChallengeService {
-    //===============================
-    // MARK: Get Challenges
-    //===============================
+    
+    //-------------------------------
+    // Get Challenges
+    //-------------------------------
     func getChallenges() throws -> [ChallengeDTO] {
-        // Check Parameter
-        let array = self.challengeArray
-        return array.map { ChallengeDTO(from: $0) }
+        return challengeArray.map { ChallengeDTO(with: $0) }
     }
      
-    //===============================
-    // MARK: Get Challenge
-    //===============================
-    func getChallenge(from id: Int) throws -> ChallengeDTO {
-        // Check Parameter
-        let array = self.challengeArray
-        // Search Challenge
-        guard let challenge = array.first(where: { $0.chlg_id == id }) else {
-            throw ChallengeError.UnexpectedGetError
-        }
-        // Search Prev Challenge
+    //-------------------------------
+    // Get Challenge
+    //-------------------------------
+    func getChallenge(from challengeId: Int) throws -> ChallengeDTO {
+        
+        // Step1. Fetch Challenge
+        let challenge = try fetchChallenge(with: challengeId)
+        
+        // Step2. Fetch Prev Challenge
         guard let prevChallenge = try getPrevChallenge(challengeType: challenge.chlg_type, currentStep: challenge.chlg_step) else {
-            return ChallengeDTO(from: challenge)
+            return ChallengeDTO(with: challenge)
         }
-        return ChallengeDTO(from: challenge, prev: prevChallenge)
-    }
-    
-    //===============================
-    // MARK: Update Challenge
-    //===============================
-    func setMyChallenge(from challengeId: Int) throws {
-        // Search & Update Challenge
-        let updatedChallenge = ChallengeStatusDTO(target: challengeId, select: true, selectTime: Date())
-        try challengeCD.updateChallenge(from: updatedChallenge)
-        
-        // Update Statistics : Add MyChallenge
-        try updateStatistics(challengeId)
-        
-        // Refresh MyChallenge
-        try getMyChallengesProcess()
+        return ChallengeDTO(with: challenge, and: prevChallenge)
     }
 }
 
@@ -251,16 +284,17 @@ extension ChallengeService {
 //===============================
 extension ChallengeService {
     func getPrevChallenge(challengeType: ChallengeType, currentStep: Int) throws -> ChallengeObject? {
-        // Check Parameter
-        let array = self.challengeArray
+        
         // Check Current Challenge
         if currentStep <= 1 {
             return nil
-            // Search Privous Challenge
-        } else if let prevChallenge = array.first(where: { $0.chlg_type == challengeType && $0.chlg_step == currentStep - 1 }) {
+            
+        // Search Privous Challenge
+        } else if let prevChallenge = challengeArray.first(where: { $0.chlg_type == challengeType && $0.chlg_step == currentStep - 1 }) {
             return prevChallenge
+            
+        //Exception Handling: Failed to Search
         } else {
-            //Exception Handling: Failed to Search
             throw ChallengeError.UnexpectedPrevChallengeSearchError
         }
     }
@@ -271,31 +305,41 @@ extension ChallengeService {
 //===============================
 enum ChallengeError: LocalizedError {
     case UnexpectedGetError
-    case UnexpectedStatError
     case UnexpectedChallengeArrayError
     case UnexpectedMyChallengeSearchError
-    case UnexpectedNextChallengeSearchError
     case UnexpectedPrevChallengeSearchError
     case UnexpectedStepUpdateError
+    case MyChallengeLimitExceeded
+    case NoMoreNextChallenge
     
     var errorDescription: String?{
         switch self {
+        case .MyChallengeLimitExceeded:
+            return "Service: MyChallenge Limit Exceeded"
         case .UnexpectedGetError:
             return "Service: There was an unexpected error while Get Challenge in 'ChallengeService'"
-        case .UnexpectedStatError:
-            return "Service: There was an unexpected error while Check Statistics Data in 'ChallengeService'"
         case .UnexpectedChallengeArrayError:
-            return "Service: There was an unexpected error while Check Challenge Array in 'ChallengeService'"
+            return "Service: There was an unexpected error while Get Challenge From Array in 'ChallengeService'"
         case .UnexpectedMyChallengeSearchError:
             return "Service: There was an unexpected error while Search MyChallenge in 'ChallengeService'"
-        case .UnexpectedNextChallengeSearchError:
-            return "Service: There was an unexpected error while Search Next Challenge in 'ChallengeService'"
         case .UnexpectedPrevChallengeSearchError:
             return "Service: There was an unexpected error while Search Prev Challenge in 'ChallengeService'"
         case .UnexpectedStepUpdateError:
             return "Service: There was an unexpected error while Update ChallengeStep in 'ChallengeService'"
+        case .NoMoreNextChallenge:
+            return "Service: There is no more Available Challenge"
         }
     }
+}
+
+//===============================
+// MARK: - Enum
+//===============================
+enum functionType {
+    case set
+    case disable
+    case reward
+    case next
 }
 
 

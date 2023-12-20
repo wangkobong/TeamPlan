@@ -170,10 +170,10 @@ final class SignupLoadingService{
     //===============================
     // : Firestore
     func setStatisticsFS() async throws {
-        try await statFS.setStatistics(reqStat: self.newStat)
+        try await statFS.setStatistics(with: self.newStat)
     }
     private func rollbackSetStatisticsFS() async throws {
-        try await statFS.deleteStatistics(to: self.newProfile.user_id)
+        try await statFS.deleteStatistics(with: self.newProfile.user_id)
     }
     
     // : Coredata
@@ -181,7 +181,7 @@ final class SignupLoadingService{
         try statCD.setStatistics(with: self.newStat)
     }
     private func rollbackSetStatisticsCD() throws {
-        try statCD.deleteStatistics(identifier: self.newProfile.user_id)
+        try statCD.deleteStatistics(with: self.newProfile.user_id)
     }
     
     //===============================

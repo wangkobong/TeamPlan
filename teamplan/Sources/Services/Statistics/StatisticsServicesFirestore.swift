@@ -21,11 +21,11 @@ final class StatisticsServicesFirestore{
     //================================
     // MARK: - Set Statistics
     //================================
-    func setStatistics(reqStat : StatisticsObject) async throws {
+    func setStatistics(with object: StatisticsObject) async throws {
         
         // Search & Set Data
         let collectionRef = fs.collection("Stat")
-        try await collectionRef.addDocument(data: reqStat.toDictionary())
+        try await collectionRef.addDocument(data: object.toDictionary())
     }
     
     //================================
@@ -33,54 +33,41 @@ final class StatisticsServicesFirestore{
     //================================
     func getStatistics(from userId: String) async throws -> StatisticsObject {
         
-        // Search Data
-        let collectionRef = fs.collection("Stat")
-        let docsRef = try await collectionRef.whereField("stat_user_id", isEqualTo: userId).getDocuments()
-        
-        // Exception Handling : Search Error
-        guard docsRef.documents.count == 1 else {
-            if docsRef.documents.count > 1 {
-                throw StatErrorFS.MultipleStatFound
-            } else {
-                throw StatErrorFS.InternalError
-            }
-        }
-        
-        // Convert to Object & Get
-        let docs = docsRef.documents.first!
-        guard let reqStat = StatisticsObject(statData: docs.data()) else {
+        // Fetch Data
+        let docs = try await fetchDocs(with: userId)
+        // Convert to Object
+        guard let object = StatisticsObject(statData: docs.data()) else {
             throw StatErrorFS.UnexpectedConvertError
         }
-        return reqStat
+        return object
     }
 
     //================================
     // MARK: - Update Statistics
     //================================
-    func updateStatistics(to updatedData: StatisticsObject) async throws {
+    func updateStatistics(with object: StatisticsObject) async throws {
         
-        // Search Data
-        let collectionRef = fs.collection("Stat")
-        let docsRef = try await collectionRef.whereField("stat_user_id", isEqualTo: updatedData.stat_user_id).getDocuments()
-        
-        // Exception Handling : Search Error
-        guard docsRef.documents.count == 1 else {
-            if docsRef.documents.count > 1 {
-                throw StatErrorFS.MultipleStatFound
-            } else {
-                throw StatErrorFS.InternalError
-            }
-        }
-        
-        // Update Documents
-        let docs = docsRef.documents.first!
-        try await docs.reference.updateData(updatedData.toDictionary())
+        // Fetch Data
+        let docs = try await fetchDocs(with: object.stat_user_id)
+        // Update Data
+        try await docs.reference.updateData(object.toDictionary())
     }
     
     //================================
     // MARK: - Delete Statistics
     //================================
-    func deleteStatistics(to userId: String) async throws {
+    func deleteStatistics(with userId: String) async throws {
+        
+        // Fetch Data
+        let docs = try await fetchDocs(with: userId)
+        // Delete Data
+        try await docs.reference.delete()
+    }
+    
+    //================================
+    // MARK: - Support Function
+    //================================
+    private func fetchDocs(with userId: String) async throws -> QueryDocumentSnapshot {
         
         // Search Data
         let collectionRef = fs.collection("Stat")
@@ -94,9 +81,7 @@ final class StatisticsServicesFirestore{
                 throw StatErrorFS.InternalError
             }
         }
-        // Delete Documents
-        let docs = docsRef.documents.first!
-        try await docs.reference.delete()
+        return docsRef.documents.first!
     }
 }
 

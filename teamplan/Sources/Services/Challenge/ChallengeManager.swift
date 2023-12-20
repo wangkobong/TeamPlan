@@ -29,11 +29,11 @@ final class ChallengeManager{
         // Reset Unlock Status
         for idx in self.challengeArray.indices {
             if self.challengeArray[idx].chlg_step == 1{
-                self.challengeArray[idx].resetUnlock()
+                self.challengeArray[idx].updateLock(with: false)
             }
         }
         // Set Challenges to Coredata
-        try challengeCD.setChallenges(reqChallenges: self.challengeArray)
+        try challengeCD.setChallenges(with: self.challengeArray)
     }
     //===============================
     // MARK: - Delete Challenges

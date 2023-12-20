@@ -9,31 +9,26 @@
 import Foundation
 
 struct StatisticsObject{
-    // id
-    let stat_user_id: String
     
-    //content: Etc
+    //--------------------
+    // content
+    //--------------------
+    let stat_user_id: String
     var stat_term: Int
     var stat_drop: Int
-    
-    //content: Project & Todo
     var stat_proj_reg: Int
     var stat_proj_fin: Int
     var stat_proj_alert: Int
     var stat_proj_ext: Int
     var stat_todo_reg: Int
-    
-    //content: Challenge
     var stat_chlg_step: [Int : Int]
     var stat_mychlg: [Int]
-    
-    // maintenance
     var stat_upload_at: Date
     
-    //============================
-    // MARK: Constructor : Service
-    //============================
-    // : SignupService
+    //--------------------
+    // constructor
+    //--------------------
+    // SignupService
     init(identifier: String, signupDate: Date){
         self.stat_user_id = identifier
         self.stat_term = 0
@@ -54,10 +49,10 @@ struct StatisticsObject{
         self.stat_upload_at = signupDate
     }
     
-    //============================
-    // MARK: Constructor : Coredata
-    //============================
-    // Get
+    //--------------------
+    // constructor
+    //--------------------
+    // Coredata
     init?(statEntity: StatisticsEntity, chlgStep: [Int : Int], mychlg: [Int]){
         guard let stat_user_id = statEntity.stat_user_id,
               let stat_upload_at = statEntity.stat_upload_at
@@ -93,11 +88,8 @@ struct StatisticsObject{
         self.stat_mychlg = updatedStat.stat_mychlg
         self.stat_upload_at = updatedStat.stat_upload_at
     }
-    
-    //============================
-    // MARK: Constructor : Firestore
-    //============================
-    // Get
+
+    // Firestore
     init?(statData: [String : Any]){
         // Pharsing Normal Data
         guard let stat_user_id = statData["stat_user_id"] as? String,
@@ -124,14 +116,13 @@ struct StatisticsObject{
         self.stat_proj_ext = stat_proj_ext
         self.stat_todo_reg = stat_todo_reg
         self.stat_upload_at = stat_upload_at
-        
         self.stat_mychlg = statData["stat_mychlg"] as? [Int] ?? []
         self.stat_chlg_step = stat_chlg_step_firestore.compactMapKeys { Int($0) }
     }
     
-    //============================
-    // MARK: Func
-    //============================
+    //--------------------
+    // function
+    //--------------------
     func toDictionary() -> [String : Any] {
         let stat_chlg_step_firestore = self.stat_chlg_step.mapKeys{ String($0) }
         

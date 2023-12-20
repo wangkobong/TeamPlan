@@ -187,7 +187,7 @@ extension LoginLoadingService{
     func recordLoginTimeAtCoredata() throws {
         
         // Update Statistics
-        try statCD.updateStatistics(to: self.userStat)
+        //try statCD.updateStatistics(with: self.userStat)
         
         // Update AccessLog
         try acclogCD.updateLog(with: self.userId, when: self.loginDate)
@@ -196,7 +196,7 @@ extension LoginLoadingService{
     func recordLoginTimeAtFirestore() async throws {
         
         // Update Statistics
-        try await statFS.updateStatistics(to: StatisticsObject(updatedStat: self.userStat))
+        try await statFS.updateStatistics(with: StatisticsObject(updatedStat: self.userStat))
         
         // Update AccessLog
         try await acclogFS.updateLog(to: self.userLog)

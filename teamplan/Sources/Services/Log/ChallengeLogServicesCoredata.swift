@@ -70,7 +70,7 @@ final class ChallengeLogServicesCoredata{
     //================================
     // MARK: - Update ChallengeLog
     //================================
-    func updateLog(with userId: String, updatedLog: [Int:Date], updatedAt: Date) throws {
+    func updateLog(with userId: String, challenge: Int, updatedAt: Date) throws {
         
         // parameter setting
         let fetchReq: NSFetchRequest<ChallengeLogEntity> = ChallengeLogEntity.fetchRequest()
@@ -84,9 +84,10 @@ final class ChallengeLogServicesCoredata{
             throw ChallengeLogErrorCD.ChallengeLogRetrievalByIdentifierFailed
         }
         // Convert to Data
-        let log = try util.convertFromJSON(jsonString: entity.log_complete, type: [Int : Date].self)
+        var log = try util.convertFromJSON(jsonString: entity.log_complete, type: [Int : Date].self)
         
         //TODO: Update Data
+        log[challenge] = updatedAt
         
         // Convert to JSON
         let log_json = try util.convertToJSON(data: log)
