@@ -8,70 +8,60 @@
 
 import Foundation
 
+//============================
+// MARK: Entity
+//============================
 struct AccessLog{
     
-    //============================
-    // MARK: Data
-    //============================
-    // id
-    let log_user_id: String
-    
+    //--------------------
     // content
+    //--------------------
+    let log_user_id: String
     var log_access: [Date]
     
-    //============================
-    // MARK: Constuctor
-    //============================
-    // : Signup (Service)
+    //--------------------
+    // constructor
+    //--------------------
+    // Signup
     init(identifier: String, signupDate: Date){
         self.log_user_id = identifier
         self.log_access = [signupDate]
     }
-    // : Get (Coredata)
-    init?(logEntity: AccessLogEntity) {
-        guard let log_user_id = logEntity.log_user_id,
-              let log_access = logEntity.log_access as? [Date]
-        else {
-            return nil
-        }
-        // Assigning values
-        self.log_user_id = log_user_id
-        self.log_access = log_access
+    
+    // Coredata
+    init(with userId: String, and log: [Date]) {
+        self.log_user_id = userId
+        self.log_access = log
     }
-    // : Get (Firestore)
+    
+    // Firestore
     init?(logData: [String : Any]) {
         guard let log_user_id = logData["log_user_id"] as? String,
               let log_access_string = logData["log_access"] as? [String]
         else {
             return nil
         }
-        // Date Converter
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
-        
-        let logDates = log_access_string.compactMap { formatter.date(from: $0) }
+        // Data Convert
+        let logDates = log_access_string.compactMap { DateFormatter.standardFormatter.date(from: $0) }
         guard logDates.count == log_access_string.count else {
             return nil
         }
-        
         // Assigning values
         self.log_user_id = log_user_id
         self.log_access = logDates
     }
-    // : Default
+    
+    // Default
     init(){
         self.log_user_id = "unknown"
         self.log_access = []
     }
     
-    //============================
-    // MARK: Func
-    //============================
+    //--------------------
+    // Function
+    //--------------------
     func toDictionary() -> [String : Any] {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
-        
-        let logStrings = self.log_access.map { formatter.string(from: $0) }
+        let logStrings = log_access.map { DateFormatter.standardFormatter.string(from: $0) }
         
         return [
             "log_user_id" : self.log_user_id,

@@ -15,19 +15,20 @@ import GoogleSignIn
 //============================
 struct AuthSocialLoginResDTO{
     
-    // login info
+    //--------------------
+    // content
+    //--------------------
     let email: String
     let provider: Providers
     
-    // Token
     let idToken: String
     let accessToken: String
-    
-    // status
     var status: UserType
     
-    // Constructor
-    // Google Authentication: NewUser | ExistUser
+    //--------------------
+    // constructor
+    //--------------------
+    // Google
     init(loginResult: GIDSignInResult, userType: UserType){
         self.provider = .google
         self.email = loginResult.user.profile!.email
@@ -36,7 +37,7 @@ struct AuthSocialLoginResDTO{
         self.status = userType
     }
     
-    // Apple Authentication: NewUser | ExistUser
+    // Apple
     init(loginResult: User, idToken: String, userType: UserType){
         self.provider = .apple
         self.email = loginResult.email!

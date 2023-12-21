@@ -47,3 +47,49 @@ struct ProjectCardDTO{
         self.finishedTodo = Int(projectObject.proj_todo_finished)
     }
 }
+
+//============================
+// MARK: Set - Project
+//============================
+struct ProjectSetDTO{
+    // content
+    let title: String
+    
+    // status
+    let startedAt: Date
+    let deadline: Date
+    
+    // Constructor
+    init(title: String, startedAt: Date, deadline: Date) {
+        self.title = title
+        self.startedAt = startedAt
+        self.deadline = deadline
+    }
+}
+
+//============================
+// MARK: Update - Project
+//============================
+struct ProjectUpdateDTO{
+    // id
+    var userId: String?
+    var projectId: Int?
+    var todoId: Int?
+    
+    // content
+    var newTitle: String?
+    var newDeadline: Date?
+    
+    // Todo
+    var todo: TodoObject?
+    var todoStatus: Bool?
+    
+    init(to newDeadLine: Date){
+        self.newDeadline = newDeadLine
+    }
+    
+    init(to newTitle: String){
+        self.newTitle = newTitle
+    }
+}
+

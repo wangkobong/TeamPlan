@@ -12,34 +12,30 @@ import Foundation
 // MARK: Entity
 //============================
 struct ChallengeObject: Hashable {
-    // id
+
+    //--------------------
+    // content
+    //--------------------
     let chlg_id: Int
     let chlg_user_id: String
     
-    // category
     let chlg_type: ChallengeType
-    
-    // content
     let chlg_title: String
     let chlg_desc: String
     let chlg_goal: Int
     let chlg_reward: Int
-    
-    // status
     let chlg_step: Int
     let chlg_selected: Bool
     let chlg_status: Bool
     var chlg_lock: Bool
-    
-    // maintenance
     let chlg_selected_at: Date
     let chlg_unselected_at: Date
     let chlg_finished_at: Date
     
-    //============================
-    // MARK: Constructor
-    //============================
-    // : (Coredata) Get
+    //--------------------
+    // constructor
+    //--------------------
+    // Coredata
     init?(chlgEntity: ChallengeEntity) {
         guard let chlg_user_id = chlgEntity.chlg_user_id,
               let chlg_type = ChallengeType(rawValue: Int(chlgEntity.chlg_type)),
@@ -51,7 +47,6 @@ struct ChallengeObject: Hashable {
         else {
             return nil
         }
-        
         // Assigning values
         self.chlg_id = Int(chlgEntity.chlg_id)
         self.chlg_user_id = chlg_user_id
@@ -69,7 +64,7 @@ struct ChallengeObject: Hashable {
         self.chlg_finished_at = chlg_finished_at
     }
     
-    // : (Firestore) Get
+    // Firestore
     init?(challengeData: [String : Any]){
         guard let chlg_id = challengeData["chlg_id"] as? Int,
               let chlg_type = challengeData["chlg_type"] as? Int,
@@ -98,14 +93,17 @@ struct ChallengeObject: Hashable {
         self.chlg_finished_at = Date()
     }
     
-    //============================
-    // MARK: Func
-    //============================
-    mutating func resetUnlock(){
-        self.chlg_lock = false
+    //--------------------
+    // constructor
+    //--------------------
+    mutating func updateLock(with newVal: Bool){
+        self.chlg_lock = newVal
     }
 }
 
+//============================
+// MARK: Type
+//============================
 enum ChallengeType: Int{
     case onboarding = 0
     case serviceTerm = 1

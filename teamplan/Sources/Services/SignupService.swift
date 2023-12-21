@@ -17,17 +17,6 @@ final class SignupService{
     //===============================
     func getAccountInfo(newUser: AuthSocialLoginResDTO) throws -> UserSignupDTO {
         
-        // create identifier & SignupDTO
-        let userId = try util.getIdentifier(from: newUser)
-        return UserSignupDTO(identifier: userId, email: newUser.email, provider: newUser.provider)
-    }
-    
-    //===============================
-    // MARK: - Set NickName
-    //===============================
-    func setNickName(newUser: UserSignupDTO, nickName: String) -> UserSignupDTO {
-
-        // Complement SignupDTO
-        return UserSignupDTO(identifier: newUser.identifier, email: newUser.email, provider: newUser.provider, nickname: nickName)
+        return UserSignupDTO(with: try util.getIdentifier(from: newUser), and: newUser)
     }
 }

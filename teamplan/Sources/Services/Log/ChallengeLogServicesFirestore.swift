@@ -20,17 +20,17 @@ final class ChallengeLogServicesFirestore{
     //================================
     // MARK: - Set ChallengeLog
     //================================
-    func setLog(reqLog: ChallengeLog) async throws {
+    func setLog(with log: ChallengeLog) async throws {
         
         // Search & Set Data
         let collectionRef = fs.collection("ChallengeLog")
-        try await collectionRef.addDocument(data: reqLog.toDictionary())
+        try await collectionRef.addDocument(data: log.toDictionary())
     }
     
     //================================
     // MARK: - Get ChallengeLog
     //================================
-    func getLog(from userId: String) async throws -> ChallengeLog {
+    func getLog(with userId: String) async throws -> ChallengeLog {
         
         // Search Table
         let collectionRef = fs.collection("ChallengeLog")
@@ -55,11 +55,11 @@ final class ChallengeLogServicesFirestore{
     //================================
     // MARK: - Update ChallengeLog
     //================================
-    func updateLog(to updatedData: ChallengeLog) async throws {
+    func updateLog(to updatedLog: ChallengeLog) async throws {
         
         // Search Table
         let collectionRef = fs.collection("ChallengeLog")
-        let docsRef = try await collectionRef.whereField("log_user_id", isEqualTo: updatedData.log_user_id).getDocuments()
+        let docsRef = try await collectionRef.whereField("log_user_id", isEqualTo: updatedLog.log_user_id).getDocuments()
         
         // Exception Handling : Search Error
         guard docsRef.documents.count == 1 else {
@@ -71,17 +71,17 @@ final class ChallengeLogServicesFirestore{
         }
         // Update Documents
         let docs = docsRef.documents.first!
-        try await docs.reference.updateData(updatedData.toDictionary())
+        try await docs.reference.updateData(updatedLog.toDictionary())
     }
     
     //================================
     // MARK: - Delete ChallengeLog
     //================================
-    func deleteLog(identifier: String) async throws {
+    func deleteLog(with userId: String) async throws {
         
         // Target Table
         let collectionRef = fs.collection("ChallengeLog")
-        let docsRef = try await collectionRef.whereField("log_user_id", isEqualTo: identifier).getDocuments()
+        let docsRef = try await collectionRef.whereField("log_user_id", isEqualTo: userId).getDocuments()
         
         // Exception Handling : Search Error
         guard docsRef.documents.count == 1 else {

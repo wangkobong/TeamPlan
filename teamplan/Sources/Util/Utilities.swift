@@ -11,17 +11,16 @@ import Foundation
 final class Utilities {
     
     //============================
-    // MARK: Get Identifier
+    // MARK: Account Helper
     //============================
+    // Identifier
     func getIdentifier(from authRes: AuthSocialLoginResDTO) throws -> String {
         
         let accountName = try getAccountName(from: authRes.email)
         return "\(accountName)_\(authRes.provider.rawValue)"
     }
     
-    //============================
-    // MARK: Extract AccountName
-    //============================
+    // Account Name
     private func getAccountName(from userEmail: String) throws -> String {
         
         guard let atIndex = userEmail.firstIndex(of: "@"), atIndex != userEmail.startIndex else {
@@ -31,8 +30,9 @@ final class Utilities {
     }
 
     //============================
-    // MARK: Time Calculation
+    // MARK: Time Helper
     //============================
+    // Compare
     func compareTime(currentTime: Date, lastTime: Date) -> Bool {
         
         let calendar = Calendar.current
@@ -45,8 +45,9 @@ final class Utilities {
     }
     
     //============================
-    // MARK: Updated Field Check
+    // MARK: Update Helper
     //============================
+    // Check
     func updateFieldIfNeeded<T: Equatable>(_ currentValue: inout T, newValue: T) -> Bool {
         if currentValue != newValue {
             currentValue = newValue
@@ -58,7 +59,7 @@ final class Utilities {
     //============================
     // MARK: JSON Converter
     //============================
-    // Convert Data to JSONString
+    // Data to JSON
     func convertToJSON<T: Codable>(data: T) throws -> String {
         do {
             let jsonData = try JSONEncoder().encode(data)
@@ -74,7 +75,7 @@ final class Utilities {
         }
     }
     
-    // Convert JSONString to Origin Data
+    // JSON to Data
     func convertFromJSON<T: Codable>(jsonString: String?, type: T.Type) throws -> T {
         do {
             guard let jsonString = jsonString else {
@@ -92,16 +93,36 @@ final class Utilities {
 }
 
 //============================
-// MARK: Dictionary Extension
+// MARK: Extension
 //============================
+// Dictionary
 extension Dictionary {
-    func mapKeys<T: Hashable>(_ transform: (Key) -> T) -> [T: Value] {
-        var newDict = [T: Value]()
+    func mapKeys<T: Hashable>(transform: (Key) -> T) -> [T: Value] {
+        var newDict: [T: Value] = [:]
         for (key, value) in self {
             newDict[transform(key)] = value
         }
         return newDict
     }
+
+    func compactMapKeys<T: Hashable>(transform: (Key) -> T?) -> [T: Value] {
+        var newDict: [T: Value] = [:]
+        for (key, value) in self {
+            if let newKey = transform(key) {
+                newDict[newKey] = value
+            }
+        }
+        return newDict
+    }
+}
+
+// DateFormatter
+extension DateFormatter {
+    static let standardFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
+        return formatter
+    }()
 }
 
 //================================

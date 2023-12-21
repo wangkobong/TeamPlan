@@ -20,18 +20,18 @@ final class ChallengeServicesCoredata{
     }
     
     //================================
-    // MARK: - Set Challenges
+    // MARK: - Set Challenge
     //================================
-    func setChallenges(reqChallenges: [ChallengeObject]) throws {
+    func setChallenges(with array: [ChallengeObject]) throws {
         
         // Create Entity & Set Data
-        for challenges in reqChallenges {
-            setEntity(from: challenges)
+        for challenge in array {
+            setEntity(with: challenge)
         }
         try context.save()
     }
     // Support Function
-    private func setEntity(from challenge: ChallengeObject) {
+    private func setEntity(with challenge: ChallengeObject) {
         let chlgEntity = ChallengeEntity(context: context)
         
         chlgEntity.chlg_id = Int32(challenge.chlg_id)
@@ -51,28 +51,80 @@ final class ChallengeServicesCoredata{
     }
     
     //================================
-    // MARK: - Get Challenges
+    // MARK: - Get Challenge
     //================================
-    func getChallenges() throws -> [ChallengeObject] {
+    // Single
+    func getChallenge(with challengeId: Int) throws -> ChallengeObject{
         
-        // get Challenges
-        let fetchReq: NSFetchRequest<ChallengeEntity> = ChallengeEntity.fetchRequest()
-        let reqChallenge = try self.context.fetch(fetchReq)
+        // Fetch Entity
+       let entity = try fetchEntity(with: challengeId)
         
-        // Convert to Object Array
-        let challengeData = reqChallenge.compactMap { ChallengeObject(chlgEntity: $0) }
-        
-        // Exception Handling: Convert
-        if challengeData.count != reqChallenge.count {
+        // Convert to Object & Get
+        guard let object = ChallengeObject(chlgEntity: entity) else {
             throw ChallengeErrorCD.UnexpectedConvertError
         }
-        return challengeData
+        return object
+    }
+    
+    // Array
+    func getChallenges() throws -> [ChallengeObject] {
+        
+        // Fetch EntityArray
+        let entities = try fetchEntities()
+        
+        // Convert to Object Array
+        let array = entities.compactMap { ChallengeObject(chlgEntity: $0) }
+        
+        // Exception Handling: Convert
+        if array.count != entities.count {
+            throw ChallengeErrorCD.UnexpectedConvertError
+        }
+        return array
+    }
+
+    
+    //================================
+    // MARK: - update Challenge
+    //================================
+    func updateChallenge(with dto: ChallengeStatusDTO) throws {
+        
+        // Fetch Entity
+        let entity = try fetchEntity(with: dto.chlg_id)
+        
+        // Update Data
+        checkUpdate(from: entity, to: dto)
+        try context.save()
+    }
+    // Support Function
+    private func checkUpdate(from origin: ChallengeEntity, to updated: ChallengeStatusDTO) {
+        origin.chlg_selected = updated.chlg_selected
+        origin.chlg_status = updated.chlg_status
+        origin.chlg_lock = updated.chlg_lock
+        origin.chlg_selected_at = updated.chlg_selected_at
+        origin.chlg_unselected_at = updated.chlg_unselected_at
+        origin.chlg_finished_at = updated.chlg_finished_at
     }
     
     //================================
-    // MARK: - Get Challenge
+    // MARK: - Delete Challenges
     //================================
-    func getChallenge(from challengeId: Int) throws -> ChallengeObject{
+    func deleteChallenges() throws {
+        
+        // parameter setting
+        let entities = try fetchEntities()
+        
+        // Delete Data
+        for challenge in entities {
+            context.delete(challenge)
+        }
+        try context.save()
+    }
+    
+    //================================
+    // MARK: - Support Function
+    //================================
+    // Signle Entity
+    private func fetchEntity(with challengeId: Int) throws -> ChallengeEntity {
         
         // parameter setting
         let fetchReq: NSFetchRequest<ChallengeEntity> = ChallengeEntity.fetchRequest()
@@ -82,62 +134,21 @@ final class ChallengeServicesCoredata{
         fetchReq.fetchLimit = 1
         
         // Search Data
-        guard let reqChallenge = try context.fetch(fetchReq).first else {
+        guard let entity = try context.fetch(fetchReq).first else {
             throw ChallengeErrorCD.ChallengeRetrievalByIdentifierFailed
         }
-        // Convert to Object & Get
-        guard let challengeData = ChallengeObject(chlgEntity: reqChallenge) else {
-            throw ChallengeErrorCD.UnexpectedConvertError
-        }
-        return challengeData
+        return entity
     }
     
-    //================================
-    // MARK: - update Challenge
-    //================================
-    func updateChallenge(from updatedChallenge: ChallengeStatusDTO) throws {
-        
-        // parameter setting
-        let fetchReq: NSFetchRequest<ChallengeEntity> = ChallengeEntity.fetchRequest()
-        
-        // Request Query
-        fetchReq.predicate = NSPredicate(format: "chlg_id == %d", updatedChallenge.chlg_id)
-        fetchReq.fetchLimit = 1
-        
-        // Search Data
-        guard let reqChallenge = try context.fetch(fetchReq).first else {
-            throw ChallengeErrorCD.ChallengeRetrievalByIdentifierFailed
-        }
-        // Update Data
-        checkUpdate(from: reqChallenge, to: updatedChallenge)
-        try context.save()
-    }
-    // Support Function
-    private func checkUpdate(from origin: ChallengeEntity, to updated: ChallengeStatusDTO) {
-        origin.chlg_selected = updated.chlg_selected ?? origin.chlg_selected
-        origin.chlg_status = updated.chlg_status ?? origin.chlg_status
-        origin.chlg_lock = updated.chlg_lock ?? origin.chlg_lock
-        origin.chlg_selected_at = updated.chlg_selected_at ?? origin.chlg_selected_at
-        origin.chlg_unselected_at = updated.chlg_unselected_at ?? origin.chlg_unselected_at
-        origin.chlg_finished_at = updated.chlg_finished_at ?? origin.chlg_finished_at
-    }
-    
-    //================================
-    // MARK: - Delete Challenges
-    //================================
-    func deleteChallenges() throws {
+    // Array Entity
+    private func fetchEntities() throws -> [ChallengeEntity] {
         
         // parameter setting
         let fetchReq: NSFetchRequest<ChallengeEntity> = ChallengeEntity.fetchRequest()
         
         // Search Data
-        let reqChallenges = try self.context.fetch(fetchReq)
-        
-        // Delete Data
-        for challenge in reqChallenges {
-            context.delete(challenge)
-        }
-        try context.save()
+        let entities = try self.context.fetch(fetchReq)
+        return entities
     }
 }
 

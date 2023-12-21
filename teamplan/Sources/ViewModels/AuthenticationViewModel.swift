@@ -106,8 +106,8 @@ final class AuthenticationViewModel: ObservableObject{
         guard let signupUser = self.signupUser else { throw SignupError.invalidUser }
 
         
-        let accountInfo = try self.signupService.getAccountInfo(newUser: signupUser)
-        let finalUserInfo = self.signupService.setNickName(newUser: accountInfo, nickName: userName)
+        var finalUserInfo = try self.signupService.getAccountInfo(newUser: signupUser)
+        finalUserInfo.updateNickName(with: userName)
         let signupService = SignupLoadingService(newUser: finalUserInfo)
         let signedUser = try await signupService.executor()
         let userDefaultManager = UserDefaultManager.loadWith(key: "user")

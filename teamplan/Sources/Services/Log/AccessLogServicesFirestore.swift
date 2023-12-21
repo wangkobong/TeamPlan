@@ -20,17 +20,17 @@ final class AccessLogServicesFirestore{
     //================================
     // MARK: - Set AccessLog
     //================================
-    func setLog(reqLog: AccessLog) async throws {
+    func setLog(with log: AccessLog) async throws {
         
         // Search & Set Data
         let collectionRef = fs.collection("AccessLog")
-        try await collectionRef.addDocument(data: reqLog.toDictionary())
+        try await collectionRef.addDocument(data: log.toDictionary())
     }
     
     //================================
     // MARK: - Get AccessLog
     //================================
-    func getLog(from userId: String) async throws -> AccessLog {
+    func getLog(with userId: String) async throws -> AccessLog {
         
         // Search Data
         let collectionRef = fs.collection("AccessLog")
@@ -56,11 +56,11 @@ final class AccessLogServicesFirestore{
     //================================
     // MARK: - Update AccessLog
     //================================
-    func updateLog(to updatedData: AccessLog) async throws {
+    func updateLog(to updatedLog: AccessLog) async throws {
         
         // Search Data
         let collectionRef = fs.collection("AccessLog")
-        let docsRef = try await collectionRef.whereField("log_user_id", isEqualTo: updatedData.log_user_id).getDocuments()
+        let docsRef = try await collectionRef.whereField("log_user_id", isEqualTo: updatedLog.log_user_id).getDocuments()
         
         // Exception Handling : Search Error
         guard docsRef.documents.count == 1 else {
@@ -72,14 +72,14 @@ final class AccessLogServicesFirestore{
         }
         // Update Log
         let docs = docsRef.documents.first!
-        try await docs.reference.updateData(updatedData.toDictionary())
+        try await docs.reference.updateData(updatedLog.toDictionary())
     }
     
     
     //================================
     // MARK: - Delete AccessLog
     //================================
-    func deleteLog(to userId: String) async throws {
+    func deleteLog(with userId: String) async throws {
         
         // Search Data
         let collectionRef = fs.collection("AccessLog")

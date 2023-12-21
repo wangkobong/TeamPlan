@@ -18,15 +18,15 @@ final class HomeService {
     let challenge: ChallengeService
     let phrase = UserPhrase()
     
-    let identifier: String
+    let userId: String
     var statistics: StatisticsDTO?
     
     //===============================
     // MARK: - Initializer
     //===============================
-    init(identifier: String){
-        self.identifier = identifier
-        self.challenge = ChallengeService(identifier)
+    init(with userId: String){
+        self.userId = userId
+        self.challenge = ChallengeService(with: userId)
     }
     
     func readyService() throws {
@@ -56,15 +56,11 @@ final class HomeService {
     func getProjectCard() throws -> [ProjectCardDTO] {
         do {
             // Get All Projects
-            let requestProjects = try self.projectCD.getProjects(from: self.identifier)
-            
-            return requestProjects
-            // Sorted by DeadLine
-                .sorted { $0.proj_deadline > $1.proj_deadline }
-            // Set Top3
-                .prefix(3)
-            // Convert to ProjectCard
-                .map { ProjectCardDTO(from: $0) }
+            let projects = try self.projectCD.getProjectCards(by: userId)
+            // Sort by deadline
+            let sortedProjects = projects.sorted { $0.deadline < $1.deadline }
+            // Return top 3 projects
+            return Array(sortedProjects.prefix(upTo: 3))
         } catch {
             print("(Service) Error get ProjectCard in HomeService : \(error)")
             throw HomeServiceError.UnexpectedProjectCardGetError
@@ -82,11 +78,11 @@ extension HomeService{
     }
     // Disable MyChallenge
     func disableMyChallenge(from challengeId: Int) throws {
-        try challenge.disableMyChallenge(from: challengeId)
+        try challenge.disableMyChallenge(with: challengeId)
     }
     // Reward MyChallenge
     func rewardMyChallenge(from challengeId: Int) throws -> ChallengeRewardDTO {
-        try challenge.rewardMyChallenge(from: challengeId)
+        try challenge.rewardMyChallenge(with: challengeId)
     }
 }
 

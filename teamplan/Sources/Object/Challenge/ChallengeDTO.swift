@@ -9,68 +9,64 @@
 import Foundation
 
 //============================
-// MARK: MyChallenges
+// MARK: MyChallenge
 //============================
 struct MyChallengeDTO: Hashable {
-    // id
-    let cahllengeID: Int
-    
-    // category
-    let type: ChallengeType
-    
+
+    //--------------------
     // content
+    //--------------------
+    let cahllengeID: Int
+    let type: ChallengeType
     let title: String
     let desc: String
     let goal: Int
     let progress: Int
     
-    // Constructor
-    init(chlgObject: ChallengeObject, userProgress: Int){
-        self.cahllengeID = chlgObject.chlg_id
-        self.type = chlgObject.chlg_type
-        self.title = chlgObject.chlg_title
-        self.desc = chlgObject.chlg_desc
-        self.goal = Int(chlgObject.chlg_goal)
+    //--------------------
+    // constructor
+    //--------------------
+    init(with object: ChallengeObject, and userProgress: Int){
+        self.cahllengeID = object.chlg_id
+        self.type = object.chlg_type
+        self.title = object.chlg_title
+        self.desc = object.chlg_desc
+        self.goal = Int(object.chlg_goal)
         self.progress = userProgress
     }
 }
 
 //============================
-// MARK: Challenges
+// MARK: Challenge
 //============================
 struct ChallengeDTO{
-    // id
+
+    //--------------------
+    // content
+    //--------------------
     let id: Int
-    
-    // category
     let type: ChallengeType
-    
-    // Target content
     let title: String
     let desc: String
     let goal: Int
     let reward: Int
-    
-    // Prev content
+    let step: Int?
+    let isComplete: Bool?
+    let isSelected: Bool?
+    let isUnlock: Bool?
+    let setMyChallengeAt: Date?
+    let disableMyChallengeAt: Date?
+    let completeAt: Date?
     let prevId: Int?
     let prevTitle: String?
     let prevDesc: String?
     let prevGoal: Int?
     
-    // status
-    let step: Int?
-    let isComplete: Bool?
-    let isSelected: Bool?
-    let isUnlock: Bool?
-    
-    // Statistics
-    let setMyChallengeAt: Date?
-    let disableMyChallengeAt: Date?
-    let completeAt: Date?
-    
-    // Constructor
+    //--------------------
+    // constructor
+    //--------------------
     // Detail
-    init(from object: ChallengeObject, prev prevObject: ChallengeObject){
+    init(with object: ChallengeObject, and prevObject: ChallengeObject){
         self.id = object.chlg_id
         self.type = object.chlg_type
         self.title = object.chlg_title
@@ -91,7 +87,7 @@ struct ChallengeDTO{
     }
     
     // Total
-    init(from object: ChallengeObject){
+    init(with object: ChallengeObject){
         self.id = object.chlg_id
         self.type = object.chlg_type
         self.title = object.chlg_title
@@ -112,20 +108,25 @@ struct ChallengeDTO{
     }
 }
 
-// Reward Challenge
+//============================
+// MARK: Reward
+//============================
 struct ChallengeRewardDTO {
+
+    //--------------------
     // content
+    //--------------------
     let title: String
     let desc: String
     let type: ChallengeType
     let reward: Int
-    
-    // Statistics
     let setMyChallengeAt: Date
     let completeAt: Date
     
-    // Constructor
-    init(from object: ChallengeObject, to nextObject: ChallengeObject) {
+    //--------------------
+    // constructor
+    //--------------------
+    init(with object: ChallengeObject, and nextObject: ChallengeObject) {
         self.title = nextObject.chlg_title
         self.desc = nextObject.chlg_desc
         self.type = nextObject.chlg_type
@@ -136,71 +137,53 @@ struct ChallengeRewardDTO {
 }
 
 //============================
-// MARK: Challenges Status
+// MARK: Update
 //============================
 struct ChallengeStatusDTO {
-    // id
+    
+    //--------------------
+    // content
+    //--------------------
     let chlg_id: Int
+    var chlg_selected: Bool
+    var chlg_status: Bool
+    var chlg_lock: Bool
+    var chlg_selected_at: Date
+    var chlg_unselected_at: Date
+    var chlg_finished_at: Date
     
-    // status
-    let chlg_selected: Bool?
-    let chlg_status: Bool?
-    let chlg_lock: Bool?
-    
-    // maintenance
-    let chlg_selected_at: Date?
-    let chlg_unselected_at: Date?
-    let chlg_finished_at: Date?
-    
-    // ===== MyChallenge Select
-    init(target challengeId: Int, select myChallenge: Bool, selectTime time: Date){
-        self.chlg_id = challengeId
-        self.chlg_selected = myChallenge
-        self.chlg_selected_at = time
-        
-        // unchanged
-        self.chlg_status = nil
-        self.chlg_lock = nil
-        self.chlg_unselected_at = nil
-        self.chlg_finished_at = nil
+    //--------------------
+    // constructor
+    //--------------------
+    init(with object: ChallengeObject){
+        self.chlg_id = object.chlg_id
+        self.chlg_selected = object.chlg_selected
+        self.chlg_status = object.chlg_status
+        self.chlg_lock = object.chlg_lock
+        self.chlg_selected_at = object.chlg_selected_at
+        self.chlg_unselected_at = object.chlg_unselected_at
+        self.chlg_finished_at = object.chlg_finished_at
     }
     
-    // ===== MyChallenge Disable
-    init(target challengeId: Int, select myChallenge: Bool, disableTime time: Date){
-        self.chlg_id = challengeId
-        self.chlg_selected = myChallenge
-        self.chlg_unselected_at = time
-        
-        // unchanged
-        self.chlg_status = nil
-        self.chlg_lock = nil
-        self.chlg_selected_at = nil
-        self.chlg_finished_at = nil
+    //--------------------
+    // func
+    //--------------------
+    mutating func updateSelected(with newVal: Bool){
+        self.chlg_selected = newVal
     }
-    
-    // ===== Challenge Complete
-    init(target challengeId: Int, when completeTime: Date){
-        self.chlg_id = challengeId
-        self.chlg_selected = false
-        self.chlg_status = true
-        self.chlg_unselected_at = completeTime
-        self.chlg_finished_at = completeTime
-        
-        // unchanged
-        self.chlg_lock = nil
-        self.chlg_selected_at = nil
+    mutating func updateStatus(with newVal: Bool){
+        self.chlg_status = newVal
     }
-    
-    // ===== unlock
-    init(target challengeId: Int, status unlock: Bool){
-        self.chlg_id = challengeId
-        self.chlg_lock = unlock
-        
-        // unchanged
-        self.chlg_selected = nil
-        self.chlg_status = nil
-        self.chlg_selected_at = nil
-        self.chlg_unselected_at = nil
-        self.chlg_finished_at = nil
+    mutating func updateLock(with newVal: Bool){
+        self.chlg_lock = newVal
+    }
+    mutating func updateSelectedAt(with newVal: Date){
+        self.chlg_selected_at = newVal
+    }
+    mutating func updateUnselectedAt(with newVal: Date){
+        self.chlg_unselected_at = newVal
+    }
+    mutating func updateFinishedAt(with newVal: Date){
+        self.chlg_finished_at = newVal
     }
 }

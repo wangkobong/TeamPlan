@@ -98,12 +98,12 @@ extension LoginLoadingService{
         
         // Check Coredata
         if let user = try fetchUserFromCoredata(from: userId) {
-            return UserDTO(userObject: user)
+            return UserDTO(with: user)
         }
         // Check Firestore
         let user = try await fetchUserFromFirestore(from: userId)
         try setUserToCoredata(data: user)
-        return UserDTO(userObject: user)
+        return UserDTO(with: user)
     }
     
     private func fetchUserFromCoredata(from userId: String) throws -> UserObject? {
@@ -145,7 +145,7 @@ extension LoginLoadingService{
     }
     
     private func setStatToCoredata(data statData: StatisticsObject) throws {
-        try statCD.setStatistics(reqStat: statData)
+        try statCD.setStatistics(with: statData)
     }
 }
 
@@ -167,15 +167,15 @@ extension LoginLoadingService{
     }
     
     private func fetchLogFromCoredata(from userId: String) throws -> AccessLog? {
-        return try? acclogCD.getLog(from: userId)
+        return try? acclogCD.getLog(with: userId)
     }
     
     private func fetchLogFromFirestore(from userId: String) async throws -> AccessLog {
-        return try await acclogFS.getLog(from: userId)
+        return try await acclogFS.getLog(with: userId)
     }
     
     private func setLogToCoredata(data logData: AccessLog) throws {
-        try acclogCD.setLog(reqLog: logData)
+        try acclogCD.setLog(with: logData)
     }
 }
 
@@ -187,16 +187,16 @@ extension LoginLoadingService{
     func recordLoginTimeAtCoredata() throws {
         
         // Update Statistics
-        try statCD.updateStatistics(to: self.userStat)
+        //try statCD.updateStatistics(with: self.userStat)
         
         // Update AccessLog
-        try acclogCD.updateLog(from: self.userId, updatedAt: self.loginDate)
+        try acclogCD.updateLog(with: self.userId, when: self.loginDate)
     }
     
     func recordLoginTimeAtFirestore() async throws {
         
         // Update Statistics
-        try await statFS.updateStatistics(to: StatisticsObject(updatedStat: self.userStat))
+        try await statFS.updateStatistics(with: StatisticsObject(updatedStat: self.userStat))
         
         // Update AccessLog
         try await acclogFS.updateLog(to: self.userLog)
