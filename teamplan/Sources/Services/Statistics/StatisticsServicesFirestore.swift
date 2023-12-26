@@ -45,12 +45,22 @@ final class StatisticsServicesFirestore{
     //================================
     // MARK: - Update Statistics
     //================================
+    // Object
     func updateStatistics(with object: StatisticsObject) async throws {
         
         // Fetch Data
         let docs = try await fetchDocs(with: object.stat_user_id)
         // Update Data
         try await docs.reference.updateData(object.toDictionary())
+    }
+    
+    // DTO
+    func updateStatistics(with dto: StatUpdateDTO) async throws {
+        
+        // Fetch Data
+        let docs = try await fetchDocs(with: dto.stat_user_id)
+        //Update Data
+        try await docs.reference.updateData(dto.toDictionary())
     }
     
     //================================

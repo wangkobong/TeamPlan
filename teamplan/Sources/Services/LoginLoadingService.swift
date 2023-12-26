@@ -13,6 +13,7 @@ final class LoginLoadingService{
     //================================
     // MARK: - Parameter Setting
     //================================
+    // Service Parameter
     let util = Utilities()
     let userCD = UserServicesCoredata()
     let userFS = UserServicesFirestore()
@@ -21,72 +22,108 @@ final class LoginLoadingService{
     let acclogCD = AccessLogServicesCoredata()
     let acclogFS = AccessLogServicesFirestore()
     
-    var loginDate : Date
+    // Component Parameter
     var userId: String
+    var loginDate : Date
     var userData: UserDTO
-    var userStat: StatisticsDTO
+    var userStat: StatLoginDTO
     var userLog: AccessLog
+    
+    // Update Parameter
+    var userStatUpdate: StatUpdateDTO?
     
     init(){
         self.loginDate = Date()
         self.userId = ""
         self.userData = UserDTO()
-        self.userStat = StatisticsDTO()
+        self.userStat = StatLoginDTO()
         self.userLog = AccessLog()
     }
     
     //===============================
     // MARK: - Executor
     //===============================
-    func executor(with authResult: AuthSocialLoginResDTO) async throws -> UserDTO {
+    func executor(with dto: AuthSocialLoginResDTO) async throws -> UserDTO {
         
-        // Prepare User Data
-        self.userId = try await getIdentifier(from: authResult)
+        // Step1. Prepare User Data
+        self.userId = try await getIdentifier(from: dto)
         try await fetchExecutor(from: self.userId)
         
-        // Re-Login Process
-        if try checkLoginTime(){
-            return self.userData
+        // Step2. ReLogin User Filter
+        if try reLoginCheck() {
+            return userData
         }
-        // First Login Process
-        // Update & Adjust Coredata
-        self.userStat.updateServiceTerm(to: self.userStat.stat_term + 1)
-        try recordLoginTimeAtCoredata()
         
-        // Update Firestore (7 Days Term)
-        if checkLoginTerm() {
-            try await recordLoginTimeAtFirestore()
+        // (Optional) First Use of Day Only
+        updateServiceTerm()
+        // Coredata Update : Daily
+        try updateLocalStatistics()
+        // Firestore Update : Weakly
+        if isWeeklyUpdateDue() {
+            try await updateServerStatistics()
         }
-        return self.userData
+        return userData
     }
-    // Support Function (Fetch Parallel)
+    // -----------------------------
+    // Step 0. Fetch User Data
+    // -----------------------------
     private func fetchExecutor(from userId: String) async throws {
         
-        async let userData = fetchUser(from: userId)
-        async let userStat = fetchStatistics(from: userId)
-        async let userLog = fetchLog(from: userId)
+        async let userData = fetchUser(with: userId)
+        async let userStat = fetchStatistics(with: userId)
+        async let userLog = fetchLog(with: userId)
 
         self.userData = try await userData
         self.userStat = try await userStat
         self.userLog = try await userLog
+        self.userStatUpdate = StatUpdateDTO(loginDTO: self.userStat)
     }
-    // Support Function (First Login Check)
-    private func checkLoginTime() throws -> Bool {
-        // Get LastLogin Info
-        guard let lastLogin = self.userLog.log_access.last else {
+    // -----------------------------
+    // Step 1. Revisit User Check
+    // -----------------------------
+    private func reLoginCheck() throws -> Bool {
+        guard let lastLogin = userLog.log_access.last else {
             throw LoginLoadingServiceError.EmptyAccessLog
         }
-        // Compare Time
-        return util.compareTime(currentTime: self.loginDate, lastTime: lastLogin)
+        return util.compareTime(currentTime: loginDate, lastTime: lastLogin)
     }
-    // Support Function (ServiceTerm Check)
-    private func checkLoginTerm() -> Bool {
+    // -----------------------------
+    // Step 1-1. Update Servcie Term
+    // -----------------------------
+    private func updateServiceTerm() {
+        userStat.updateServiceTerm(with: userStat.stat_term + 1)
+    }
+    // -----------------------------
+    // Step 2. Update Local Statistics Data (Daily)
+    // -----------------------------
+    private func updateLocalStatistics() throws {
+        // (Local) Update Statistics
+        try statCD.updateStatistics(with: StatUpdateDTO(loginDTO: userStat))
+        // (Local) Update AccessLog
+        try acclogCD.updateLog(with: userId, when: loginDate)
+    }
+    // -----------------------------
+    // Step 3. Update Local Statistics Data (Weekly)
+    // -----------------------------
+    private func updateServerStatistics() async throws {
+        guard let updateStat = userStatUpdate else {
+            throw LoginLoadingServiceError.EmptyStatistics
+        }
+        // (Server) Update Statistics
+        try await statFS.updateStatistics(with: updateStat)
+        // (Server) Update AccessLog
+        try await acclogFS.updateLog(to: try acclogCD.getLog(with: userId))
+    }
+    // -----------------------------
+    // Support Function
+    // -----------------------------
+    private func isWeeklyUpdateDue() -> Bool {
         return userStat.stat_term % 7 == 0
     }
 }
 
 //================================
-// MARK: - Get User
+// MARK: - Fetch User
 //================================
 extension LoginLoadingService{
     
@@ -94,27 +131,27 @@ extension LoginLoadingService{
         return try util.getIdentifier(from: authResult)
     }
     
-    func fetchUser(from userId: String) async throws -> UserDTO {
+    func fetchUser(with userId: String) async throws -> UserDTO {
         
         // Check Coredata
-        if let user = try fetchUserFromCoredata(from: userId) {
-            return UserDTO(with: user)
+        if let localUser = try fetchUserFromCoredata(with: userId) {
+            return UserDTO(with: localUser)
         }
         // Check Firestore
-        let user = try await fetchUserFromFirestore(from: userId)
-        try setUserToCoredata(data: user)
-        return UserDTO(with: user)
+        let serverUser = try await fetchUserFromFirestore(with: userId)
+        try setUserToCoredata(with: serverUser)
+        return UserDTO(with: serverUser)
     }
     
-    private func fetchUserFromCoredata(from userId: String) throws -> UserObject? {
+    private func fetchUserFromCoredata(with userId: String) throws -> UserObject? {
         return try? userCD.getUser(from: userId)
     }
     
-    private func fetchUserFromFirestore(from userId: String) async throws -> UserObject {
+    private func fetchUserFromFirestore(with userId: String) async throws -> UserObject {
         return try await userFS.getUser(from: userId)
     }
     
-    private func setUserToCoredata(data userData: UserObject) throws {
+    private func setUserToCoredata(with userData: UserObject) throws {
         try userCD.setUser(reqUser: userData)
     }
 }
@@ -124,27 +161,27 @@ extension LoginLoadingService{
 //================================
 extension LoginLoadingService{
     
-    func fetchStatistics(from userId: String) async throws -> StatisticsDTO {
+    func fetchStatistics(with userId: String) async throws -> StatLoginDTO {
         
         // Check Coredata
-        if let stat = try fetchStatFromCoredata(from: userId) {
-            return StatisticsDTO(statObject: stat)
+        if let localStat = try fetchStatFromCoredata(with: userId) {
+            return localStat
         }
         // Check Firestore
-        let stat = try await fetchStatFromFirestore(from: userId)
-        try setStatToCoredata(data: stat)
-        return StatisticsDTO(statObject: stat)
+        let serverStat = try await fetchStatFromFirestore(with: userId)
+        try setStatToCoredata(with: serverStat)
+        return StatLoginDTO(with: serverStat)
     }
     
-    private func fetchStatFromCoredata(from userId: String) throws -> StatisticsObject? {
-        return try? statCD.getStatistics(from: userId)
+    private func fetchStatFromCoredata(with userId: String) throws -> StatLoginDTO? {
+        return try statCD.getStatisticsForDTO(with: userId, type: .login) as? StatLoginDTO
     }
     
-    private func fetchStatFromFirestore(from userId: String) async throws -> StatisticsObject {
+    private func fetchStatFromFirestore(with userId: String) async throws -> StatisticsObject {
         return try await statFS.getStatistics(from: userId)
     }
     
-    private func setStatToCoredata(data statData: StatisticsObject) throws {
+    private func setStatToCoredata(with statData: StatisticsObject) throws {
         try statCD.setStatistics(with: statData)
     }
 }
@@ -154,52 +191,28 @@ extension LoginLoadingService{
 //================================
 extension LoginLoadingService{
     
-    func fetchLog(from userId: String) async throws -> AccessLog {
+    func fetchLog(with userId: String) async throws -> AccessLog {
         
         // Check Coredata
-        if let log = try fetchLogFromCoredata(from: userId) {
-            return log
+        if let localLog = try fetchLogFromCoredata(with: userId) {
+            return localLog
         }
         // Check Firestore
-        let log = try await fetchLogFromFirestore(from: userId)
-        try setLogToCoredata(data: log)
-        return log
+        let serverLog = try await fetchLogFromFirestore(with: userId)
+        try setLogToCoredata(with: serverLog)
+        return serverLog
     }
     
-    private func fetchLogFromCoredata(from userId: String) throws -> AccessLog? {
+    private func fetchLogFromCoredata(with userId: String) throws -> AccessLog? {
         return try? acclogCD.getLog(with: userId)
     }
     
-    private func fetchLogFromFirestore(from userId: String) async throws -> AccessLog {
+    private func fetchLogFromFirestore(with userId: String) async throws -> AccessLog {
         return try await acclogFS.getLog(with: userId)
     }
     
-    private func setLogToCoredata(data logData: AccessLog) throws {
+    private func setLogToCoredata(with logData: AccessLog) throws {
         try acclogCD.setLog(with: logData)
-    }
-}
-
-//================================
-// MARK: - Update Data
-//================================
-extension LoginLoadingService{
-    
-    func recordLoginTimeAtCoredata() throws {
-        
-        // Update Statistics
-        //try statCD.updateStatistics(with: self.userStat)
-        
-        // Update AccessLog
-        try acclogCD.updateLog(with: self.userId, when: self.loginDate)
-    }
-    
-    func recordLoginTimeAtFirestore() async throws {
-        
-        // Update Statistics
-        try await statFS.updateStatistics(with: StatisticsObject(updatedStat: self.userStat))
-        
-        // Update AccessLog
-        try await acclogFS.updateLog(to: self.userLog)
     }
 }
 
@@ -207,12 +220,24 @@ extension LoginLoadingService{
 // MARK: - Exception
 //================================
 enum LoginLoadingServiceError: LocalizedError {
+    case UnexpectedUserFetchFailed
+    case UnexpectedStatFetchFailed
+    case UnexpectedLogFetchFailed
     case EmptyAccessLog
+    case EmptyStatistics
     
     var errorDescription: String? {
         switch self {
+        case .UnexpectedUserFetchFailed:
+            return "Service: There was an unexpected error while Fetch 'User' details"
+        case .UnexpectedStatFetchFailed:
+            return "Service: There was an unexpected error while Fetch 'Statistics' details"
+        case .UnexpectedLogFetchFailed:
+            return "Service: There was an unexpected error while Fetch 'Log' details"
         case .EmptyAccessLog:
             return "AccessLog Not Found"
+        case .EmptyStatistics:
+            return "Statistics Not Found"
         }
     }
 }
