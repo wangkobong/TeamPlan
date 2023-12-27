@@ -14,9 +14,7 @@ struct ChallengesView: View {
     @Binding var allChallenge: [ChallengeObject]
     @Binding var myChallenges: [MyChallengeDTO]
     @State private var isPresented: Bool = false
-    @State private var type: ChallengeAlertType = .notice
-    let pageSize = 12
-
+    @State private var type: ChallengeAlertType = .lock
     @State private var currentPage = 0
     
     let columns = [
@@ -61,11 +59,22 @@ struct ChallengesView: View {
                 }
             }
             .challengeAlert(isPresented: $isPresented) {
-                ChallengeAlertView(isPresented: $isPresented, type: setAlertType()) {
+                ChallengeAlertView(isPresented: $isPresented, type: self.type) {
                     print("클릭")
                 }
             }
-            
+            .onAppear {
+                allChallenge.forEach {
+                    print("-------")
+                    print("desc: \($0.chlg_desc)")
+                    print("desc2: \($0.chlg_title)")
+                    print("isSelected: \($0.chlg_selected)")
+                    print("lock: \($0.chlg_lock)")
+                    print("isComplete: \($0.chlg_status)")
+                    print("prevGoal: \($0.chlg_goal)")
+                    print("prevTitle: \($0.chlg_title)")
+                }
+            }
         }
     }
 }
@@ -179,11 +188,15 @@ extension ChallengesView {
                             ChallengeDetailView(challenge: item)
                                 .frame(width: 62, height: 120)
                                 .onTapGesture {
-                                    if item.chlg_lock {
-                                        self.type = .notice
-                                    } else if item.chlg_selected {
-                                        self.type = .willQuit
-                                    } 
+                                    self.setAlert(challenge: item)
+                                    print("-------")
+                                    print("desc: \(item.chlg_desc)")
+                                    print("desc2: \(item.chlg_title)")
+                                    print("isSelected: \(item.chlg_selected)")
+                                    print("lock: \(item.chlg_lock)")
+                                    print("isComplete: \(item.chlg_status)")
+                                    print("prevGoal: \(item.chlg_goal)")
+                                    print("prevTitle: \(item.chlg_title)")
                                     self.isPresented.toggle()
                                 }
                         }
@@ -217,16 +230,20 @@ extension ChallengesView {
 }
 
 extension ChallengesView {
-    private func setAlertType() -> ChallengeAlertType {
-        switch self.type {
-        case .didComplete:
-            return .didComplete
-        case .willChallenge:
-            return .willChallenge
-        case .willQuit:
-            return .willQuit
-        case .notice:
-            return .notice
+    private func setAlert(challenge: ChallengeObject) {
+        
+        // 완료한 도전과제
+        if challenge.chlg_status == true && challenge.chlg_selected == false && challenge.chlg_lock == false {
+            self.type = .didComplete
+        // 등록된 도전과제
+        } else if challenge.chlg_status == false && challenge.chlg_selected == true && challenge.chlg_lock == false {
+            self.type = .didSelected
+        // 도전하기
+        } else if challenge.chlg_status == false && challenge.chlg_selected == false && challenge.chlg_lock == false {
+            self.type = .willChallenge
+        // 잠금해제 안됨
+        } else if challenge.chlg_status == false && challenge.chlg_selected == false && challenge.chlg_lock == true {
+            self.type = .lock
         }
     }
 }
