@@ -16,6 +16,7 @@ struct ChallengesView: View {
     @State private var isPresented: Bool = false
     @State private var type: ChallengeAlertType = .lock
     @State private var currentPage = 0
+    @State private var indexForAlert = 0
     
     let columns = [
       //추가 하면 할수록 화면에 보여지는 개수가 변함
@@ -59,7 +60,7 @@ struct ChallengesView: View {
                 }
             }
             .challengeAlert(isPresented: $isPresented) {
-                ChallengeAlertView(isPresented: $isPresented, type: self.type) {
+                ChallengeAlertView(isPresented: $isPresented, allChallenge: $allChallenge, type: self.type, index: self.indexForAlert) {
                     print("클릭")
                 }
             }
@@ -184,10 +185,13 @@ extension ChallengesView {
                     let pageItems = Array(allChallenge[startIndex..<endIndex])
                     
                     LazyVGrid(columns: columns, spacing: 10) {
-                        ForEach(pageItems, id: \.self) { item in
+                        ForEach(pageItems.indices, id: \.self) { index in
+                            let absoluteIndex = startIndex + index
+                            let item = pageItems[index]
                             ChallengeDetailView(challenge: item)
                                 .frame(width: 62, height: 120)
                                 .onTapGesture {
+                                    self.indexForAlert = absoluteIndex
                                     self.setAlert(challenge: item)
                                     print("-------")
                                     print("desc: \(item.chlg_desc)")
