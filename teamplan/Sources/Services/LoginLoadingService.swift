@@ -19,8 +19,12 @@ final class LoginLoadingService{
     let userFS = UserServicesFirestore()
     let statCD = StatisticsServicesCoredata()
     let statFS = StatisticsServicesFirestore()
+    let chlgCD = ChallengeServicesCoredata()
+    let chlgManager = ChallengeManager()
     let acclogCD = AccessLogServicesCoredata()
     let acclogFS = AccessLogServicesFirestore()
+    let chlglogCD = ChallengeLogServicesCoredata()
+    let chlglogFS = ChallengeLogServicesFirestore()
     
     // Component Parameter
     var userId: String
@@ -31,6 +35,9 @@ final class LoginLoadingService{
     
     // Update Parameter
     var userStatUpdate: StatUpdateDTO?
+    
+    // Restore UserData Parameter
+    private var rollbackStack: [() throws -> Void ] = []
     
     init(){
         self.loginDate = Date()
@@ -44,40 +51,78 @@ final class LoginLoadingService{
     // MARK: - Executor
     //===============================
     func executor(with dto: AuthSocialLoginResDTO) async throws -> UserDTO {
-        
-        // Step1. Prepare User Data
+        // Extract Identifier
         self.userId = try await getIdentifier(from: dto)
-        try await fetchExecutor(from: self.userId)
         
-        // Step2. ReLogin User Filter
+        // Local Data Check
+        try await checkUserDataFromLocal()
+        
+        // Get Data from Local
+        try localExecutor(from: self.userId)
+        
+        // ReLogin User Filter
         if try reLoginCheck() {
             return userData
         }
-        
         // (Optional) First Use of Day Only
         updateServiceTerm()
-        // Coredata Update : Daily
+        // Local Update : Daily
         try updateLocalStatistics()
-        // Firestore Update : Weakly
+        // Server Update : Weakly
         if isWeeklyUpdateDue() {
             try await updateServerStatistics()
         }
         return userData
     }
     // -----------------------------
-    // Step 0. Fetch User Data
+    // Step 0. Cehck Local Data
     // -----------------------------
-    private func fetchExecutor(from userId: String) async throws {
-        
-        async let userData = fetchUser(with: userId)
-        async let userStat = fetchStatistics(with: userId)
-        async let userLog = fetchLog(with: userId)
+    private func checkUserDataFromLocal() async throws {
+        do {
+            // For Test: Reset Local Data
+            try resetLocal()
+            
+            // Get Data From Local
+            try localExecutor(from: userId)
+        } catch {
+            // Get Data From Server
+            print(error)
+            try await serverExecutor()
+        }
+    }
+    
+    // Get Data from Server
+    private func serverExecutor() async throws {
+        do {
+            try await restoreExecutor()
+        } catch {
+            //TODO: Only Have Access Record at FirebaseAuth User
+            throw error
+        }
+    }
+    
+    // Get Data from Local
+    private func localExecutor(from userId: String) throws {
 
-        self.userData = try await userData
-        self.userStat = try await userStat
-        self.userLog = try await userLog
+        let userData = try fetchUser(with: userId)
+        let userStat = try fetchStatistics(with: userId)
+        let userLog = try fetchLog(with: userId)
+
+        self.userData = userData
+        self.userStat = userStat
+        self.userLog = userLog
         self.userStatUpdate = StatUpdateDTO(loginDTO: self.userStat)
     }
+    
+    // Test Function
+    private func resetLocal() throws {
+        try userCD.deleteUser(identifier: userId)
+        try statCD.deleteStatistics(with: userId)
+        try chlgManager.delChallenge(with: userId)
+        try acclogCD.deleteLog(with: userId)
+        try chlglogCD.deleteLog(with: userId)
+    }
+    
     // -----------------------------
     // Step 1. Revisit User Check
     // -----------------------------
@@ -123,7 +168,7 @@ final class LoginLoadingService{
 }
 
 //================================
-// MARK: - Fetch User
+// MARK: - Get User
 //================================
 extension LoginLoadingService{
     
@@ -131,28 +176,17 @@ extension LoginLoadingService{
         return try util.getIdentifier(from: authResult)
     }
     
-    func fetchUser(with userId: String) async throws -> UserDTO {
+    func fetchUser(with userId: String) throws -> UserDTO {
         
         // Check Coredata
-        if let localUser = try fetchUserFromCoredata(with: userId) {
-            return UserDTO(with: localUser)
+        guard let user = try fetchUserFromCoredata(with: userId) else {
+            throw LoginLoadingServiceError.UnexpectedUserFetchFailed
         }
-        // Check Firestore
-        let serverUser = try await fetchUserFromFirestore(with: userId)
-        try setUserToCoredata(with: serverUser)
-        return UserDTO(with: serverUser)
+        return UserDTO(with: user)
     }
     
     private func fetchUserFromCoredata(with userId: String) throws -> UserObject? {
         return try? userCD.getUser(from: userId)
-    }
-    
-    private func fetchUserFromFirestore(with userId: String) async throws -> UserObject {
-        return try await userFS.getUser(from: userId)
-    }
-    
-    private func setUserToCoredata(with userData: UserObject) throws {
-        try userCD.setUser(reqUser: userData)
     }
 }
 
@@ -161,28 +195,17 @@ extension LoginLoadingService{
 //================================
 extension LoginLoadingService{
     
-    func fetchStatistics(with userId: String) async throws -> StatLoginDTO {
+    func fetchStatistics(with userId: String) throws -> StatLoginDTO {
         
         // Check Coredata
-        if let localStat = try fetchStatFromCoredata(with: userId) {
-            return localStat
+        guard let stat = try fetchStatFromCoredata(with: userId) else {
+            throw LoginLoadingServiceError.UnexpectedStatFetchFailed
         }
-        // Check Firestore
-        let serverStat = try await fetchStatFromFirestore(with: userId)
-        try setStatToCoredata(with: serverStat)
-        return StatLoginDTO(with: serverStat)
+        return stat
     }
     
     private func fetchStatFromCoredata(with userId: String) throws -> StatLoginDTO? {
         return try statCD.getStatisticsForDTO(with: userId, type: .login) as? StatLoginDTO
-    }
-    
-    private func fetchStatFromFirestore(with userId: String) async throws -> StatisticsObject {
-        return try await statFS.getStatistics(from: userId)
-    }
-    
-    private func setStatToCoredata(with statData: StatisticsObject) throws {
-        try statCD.setStatistics(with: statData)
     }
 }
 
@@ -191,28 +214,181 @@ extension LoginLoadingService{
 //================================
 extension LoginLoadingService{
     
-    func fetchLog(with userId: String) async throws -> AccessLog {
+    func fetchLog(with userId: String) throws -> AccessLog {
         
         // Check Coredata
-        if let localLog = try fetchLogFromCoredata(with: userId) {
-            return localLog
+        guard let log = try fetchLogFromCoredata(with: userId) else {
+            throw LoginLoadingServiceError.UnexpectedLogFetchFailed
         }
-        // Check Firestore
-        let serverLog = try await fetchLogFromFirestore(with: userId)
-        try setLogToCoredata(with: serverLog)
-        return serverLog
+        return log
     }
     
     private func fetchLogFromCoredata(with userId: String) throws -> AccessLog? {
         return try? acclogCD.getLog(with: userId)
     }
+}
+
+//================================
+// MARK: - Restore UserData
+//================================
+extension LoginLoadingService{
     
-    private func fetchLogFromFirestore(with userId: String) async throws -> AccessLog {
+    private func restoreExecutor() async throws {
+        do {
+            // User
+            let user = try await getUserFS()
+            try setUserCD(with: user)
+            rollbackStack.append(rollbackSetUserCD)
+            
+            // Statistics
+            let stat = try await getStatFS()
+            try setStatCD(with: stat)
+            rollbackStack.append(rollbackSetStatCD)
+            
+            // Access Log
+            let accLog = try await getAccLogFS()
+            try setAccLogCD(with: accLog)
+            rollbackStack.append(rollbackSetAccLogCD)
+            
+            // Challenge Log
+            let chlgLog = try await getChlgLogFS()
+            try setChlgLogCD(with: chlgLog)
+            rollbackStack.append(rollbackSetChlgLogCD)
+            
+            // Challenge
+            let chlgArray = try await getChlgFS()
+            try setChlgCD()
+            try restoreUserProgress(stat: stat, ary: chlgArray, log: chlgLog.log_complete)
+            
+            rollbackStack.removeAll()
+            
+        } catch {
+            try rollbackAll()
+            print("(Service) There was an unexpected error while Fetch UserData at 'LoginLoading' : \(error)")
+            throw error
+        }
+    }
+    
+    private func rollbackAll() throws {
+        do {
+            for rollback in rollbackStack.reversed() {
+                try rollback()
+            }
+            rollbackStack.removeAll()
+        } catch {
+            throw error
+        }
+    }
+
+    // -----------------------------
+    // Fetch Data from Firestore
+    // -----------------------------
+    // User
+    private func getUserFS() async throws -> UserObject {
+        return try await userFS.getUser(from: userId)
+    }
+    
+    // -----------------------------
+    // Statistics
+    private func getStatFS() async throws -> StatisticsObject {
+        return try await statFS.getStatistics(from: userId)
+    }
+    
+    // -----------------------------
+    // Challenge
+    private func getChlgFS() async throws -> [ChallengeObject] {
+        try await chlgManager.fetchChallenge()
+        chlgManager.configChallenge(with: userId)
+        return try chlgManager.getChallenge()
+    }
+    
+    // -----------------------------
+    // Access Log
+    private func getAccLogFS() async throws -> AccessLog {
         return try await acclogFS.getLog(with: userId)
     }
     
-    private func setLogToCoredata(with logData: AccessLog) throws {
-        try acclogCD.setLog(with: logData)
+    // -----------------------------
+    // Challenge Log
+    private func getChlgLogFS() async throws -> ChallengeLog {
+        return try await chlglogFS.getLog(with: userId)
+    }
+    
+    
+    // -----------------------------
+    // Set Data at Coredata
+    // -----------------------------
+    // User
+    private func setUserCD(with object: UserObject) throws {
+        try userCD.setUser(reqUser: object)
+    }
+    
+    private func rollbackSetUserCD() throws {
+        try userCD.deleteUser(identifier: userId)
+    }
+    
+    // -----------------------------
+    // Statistics
+    private func setStatCD(with object: StatisticsObject) throws {
+        try statCD.setStatistics(with: object)
+    }
+    
+    private func rollbackSetStatCD() throws {
+        try statCD.deleteStatistics(with: userId)
+    }
+    
+    // -----------------------------
+    // Challenge
+    private func setChlgCD() throws {
+        try chlgManager.setChallenge()
+    }
+    
+    private func rollbackSetChlgCD() throws {
+        try chlgCD.deleteChallenges(with: userId)
+    }
+
+    // -----------------------------
+    // Access Log
+    private func setAccLogCD(with log: AccessLog) throws {
+        try acclogCD.setLog(with: log)
+    }
+    
+    private func rollbackSetAccLogCD() throws {
+        try acclogCD.deleteLog(with: userId)
+    }
+    
+    // -----------------------------
+    // Challenge Log
+    private func setChlgLogCD(with log: ChallengeLog) throws {
+        try chlglogCD.setLog(with: log)
+    }
+    
+    private func rollbackSetChlgLogCD() throws {
+        try chlglogCD.deleteLog(with: userId)
+    }
+    
+    // -----------------------------
+    // Support Function
+    // -----------------------------
+    private func restoreUserProgress(stat: StatisticsObject, ary: [ChallengeObject], log: [Int : Date]) throws {
+        
+        // Check Log
+        guard !log.isEmpty else {
+            throw LoginLoadingServiceError.UnexpectedLogFetchFailed
+        }
+        
+        // Update Challenge Status with Log
+        for (key, date) in log {
+            guard let challenge = ary.first(where: { $0.chlg_id == key }) else {
+                throw LoginLoadingServiceError.UnexpectedChallengeFetchFailed
+            }
+            var updated = ChallengeStatusDTO(with: challenge)
+            updated.updateLock(with: false)
+            updated.updateStatus(with: true)
+            updated.updateFinishedAt(with: date)
+            try chlgCD.updateChallenge(with: updated)
+            print(updated)
+        }
     }
 }
 
@@ -222,6 +398,7 @@ extension LoginLoadingService{
 enum LoginLoadingServiceError: LocalizedError {
     case UnexpectedUserFetchFailed
     case UnexpectedStatFetchFailed
+    case UnexpectedChallengeFetchFailed
     case UnexpectedLogFetchFailed
     case EmptyAccessLog
     case EmptyStatistics
@@ -233,6 +410,8 @@ enum LoginLoadingServiceError: LocalizedError {
         case .UnexpectedStatFetchFailed:
             return "Service: There was an unexpected error while Fetch 'Statistics' details"
         case .UnexpectedLogFetchFailed:
+            return "Service: There was an unexpected error while Fetch 'Challenge' details"
+        case .UnexpectedChallengeFetchFailed:
             return "Service: There was an unexpected error while Fetch 'Log' details"
         case .EmptyAccessLog:
             return "AccessLog Not Found"

@@ -54,10 +54,10 @@ final class ChallengeServicesCoredata{
     // MARK: - Get Challenge
     //================================
     // Single
-    func getChallenge(with challengeId: Int) throws -> ChallengeObject{
+    func getChallenge(with challengeId: Int, owner userId: String) throws -> ChallengeObject{
         
         // Fetch Entity
-       let entity = try fetchEntity(with: challengeId)
+       let entity = try fetchEntity(with: challengeId, onwer: userId)
         
         // Convert to Object & Get
         guard let object = ChallengeObject(chlgEntity: entity) else {
@@ -67,10 +67,10 @@ final class ChallengeServicesCoredata{
     }
     
     // Array
-    func getChallenges() throws -> [ChallengeObject] {
+    func getChallenges(onwer userId: String) throws -> [ChallengeObject] {
         
         // Fetch EntityArray
-        let entities = try fetchEntities()
+        let entities = try fetchEntities(owner: userId)
         
         // Convert to Object Array
         let array = entities.compactMap { ChallengeObject(chlgEntity: $0) }
@@ -81,7 +81,6 @@ final class ChallengeServicesCoredata{
         }
         return array
     }
-
     
     //================================
     // MARK: - update Challenge
@@ -89,7 +88,7 @@ final class ChallengeServicesCoredata{
     func updateChallenge(with dto: ChallengeStatusDTO) throws {
         
         // Fetch Entity
-        let entity = try fetchEntity(with: dto.chlg_id)
+        let entity = try fetchEntity(with: dto.chlg_id, onwer: dto.chlg_user_id)
         
         // Update Data
         checkUpdate(from: entity, to: dto)
@@ -108,10 +107,10 @@ final class ChallengeServicesCoredata{
     //================================
     // MARK: - Delete Challenges
     //================================
-    func deleteChallenges() throws {
+    func deleteChallenges(with userId: String) throws {
         
         // parameter setting
-        let entities = try fetchEntities()
+        let entities = try fetchEntities(owner: userId)
         
         // Delete Data
         for challenge in entities {
@@ -124,13 +123,13 @@ final class ChallengeServicesCoredata{
     // MARK: - Support Function
     //================================
     // Signle Entity
-    private func fetchEntity(with challengeId: Int) throws -> ChallengeEntity {
+    private func fetchEntity(with challengeId: Int, onwer userId: String) throws -> ChallengeEntity {
         
         // parameter setting
         let fetchReq: NSFetchRequest<ChallengeEntity> = ChallengeEntity.fetchRequest()
         
         // Request Query
-        fetchReq.predicate = NSPredicate(format: "chlg_id == %@", challengeId)
+        fetchReq.predicate = NSPredicate(format: "chlg_id == %d AND chlg_user_id == %@", challengeId, userId)
         fetchReq.fetchLimit = 1
         
         // Search Data
@@ -141,13 +140,20 @@ final class ChallengeServicesCoredata{
     }
     
     // Array Entity
-    private func fetchEntities() throws -> [ChallengeEntity] {
+    private func fetchEntities(owner userId: String) throws -> [ChallengeEntity] {
         
         // parameter setting
         let fetchReq: NSFetchRequest<ChallengeEntity> = ChallengeEntity.fetchRequest()
         
+        // Request Query
+        fetchReq.predicate = NSPredicate(format: "chlg_user_id == %@", userId)
+        fetchReq.fetchLimit = challengeCount
+        
         // Search Data
         let entities = try self.context.fetch(fetchReq)
+        if entities.count != challengeCount {
+            throw ChallengeErrorCD.ChallengeRetrievalByIdentifierFailed
+        }
         return entities
     }
 }

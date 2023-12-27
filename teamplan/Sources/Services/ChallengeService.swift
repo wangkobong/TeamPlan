@@ -37,7 +37,7 @@ final class ChallengeService {
         // Step1. get Statistics
         try readyStatistics()
         // Step2. get Challenges
-        challengeArray = try challengeCD.getChallenges()
+        challengeArray = try challengeCD.getChallenges(onwer: userId)
         // Step3. get MyChallenge
         try readyMyChallenge()
     }
