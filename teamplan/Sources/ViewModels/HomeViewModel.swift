@@ -71,7 +71,17 @@ final class HomeViewModel: ObservableObject {
     func tryChallenge(with challengeId: Int) {
         do {
             try homeService.challenge.setMyChallenges(with: challengeId)
-            try homeService.getMyChallenge()
+            try homeService.readyService()
+        } catch let error {
+            // Handle the error here
+            print("Error: \(error)")
+        }
+    }
+    
+    func quitChallenge(with challengeId: Int) {
+        do {
+            try homeService.challenge.disableMyChallenge(with: challengeId)
+            try homeService.readyService()
         } catch let error {
             // Handle the error here
             print("Error: \(error)")

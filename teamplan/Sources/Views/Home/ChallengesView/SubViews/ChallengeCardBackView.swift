@@ -10,6 +10,7 @@ import SwiftUI
 
 struct ChallengeCardBackView: View {
     
+    @ObservedObject var homeViewModel: HomeViewModel
     let challenge: MyChallengeDTO
     let parentsWidth: CGFloat
     
@@ -53,6 +54,7 @@ struct ChallengeCardBackView: View {
                 .padding(.trailing, 10)
                 .onTapGesture {
                     print("포기하기")
+                    homeViewModel.quitChallenge(with: challenge.cahllengeID)
                 }
         }
         .frame(width: setCardWidth(screenWidth: parentsWidth),height: 144)

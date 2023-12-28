@@ -131,7 +131,7 @@ extension ChallengesView {
                     let screenWidth = UIScreen.main.bounds.size.width
                     ZStack {
                         if self.selectedCardIndex == index {
-                            ChallengeCardBackView(challenge: challenge, parentsWidth: screenWidth)
+                            ChallengeCardBackView(homeViewModel: homeViewModel, challenge: challenge, parentsWidth: screenWidth)
                                 .background(.white)
                                 .cornerRadius(4)
                                 .rotation3DEffect(.degrees(180), axis: (x: 0.0, y: 1.0, z: 0.0))
