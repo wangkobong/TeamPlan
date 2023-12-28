@@ -363,7 +363,7 @@ extension HomeView {
             
             HStack {
                 NavigationLink(destination: ChallengesView(
-                                                    allChallenge: $homeViewModel.challengeArray,
+                    homeViewModel: homeViewModel, allChallenge: $homeViewModel.challengeArray,
                                                     myChallenges: $homeViewModel.myChallenges),
                                isActive: $isChallengesViewActive) {
                     Text("전체보기")

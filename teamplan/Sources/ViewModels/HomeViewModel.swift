@@ -16,7 +16,7 @@ final class HomeViewModel: ObservableObject {
     @Published var challengeArray: [ChallengeObject] = []
     @Published var statistics: StatChallengeDTO?
     let identifier: String
-    lazy var homeService = HomeService(with: self.identifier ?? "")
+    lazy var homeService = HomeService(with: self.identifier)
     let challengeManager = ChallengeManager()
     private var cancellables = Set<AnyCancellable>()
     
@@ -65,6 +65,16 @@ final class HomeViewModel: ObservableObject {
             try homeService.readyService()
         } catch let error {
             print(error.localizedDescription)
+        }
+    }
+    
+    func tryChallenge(with challengeId: Int) {
+        do {
+            try homeService.challenge.setMyChallenges(with: challengeId)
+            try homeService.getMyChallenge()
+        } catch let error {
+            // Handle the error here
+            print("Error: \(error)")
         }
     }
     

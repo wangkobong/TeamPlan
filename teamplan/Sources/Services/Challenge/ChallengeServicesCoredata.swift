@@ -125,12 +125,12 @@ final class ChallengeServicesCoredata{
     //================================
     // Signle Entity
     private func fetchEntity(with challengeId: Int) throws -> ChallengeEntity {
-        
+        print("challengeId: \(challengeId)")
         // parameter setting
         let fetchReq: NSFetchRequest<ChallengeEntity> = ChallengeEntity.fetchRequest()
         
         // Request Query
-        fetchReq.predicate = NSPredicate(format: "chlg_id == %@", challengeId)
+        fetchReq.predicate = NSPredicate(format: "chlg_id == %ld", challengeId)
         fetchReq.fetchLimit = 1
         
         // Search Data

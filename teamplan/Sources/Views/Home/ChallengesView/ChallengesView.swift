@@ -10,6 +10,7 @@ import SwiftUI
 
 struct ChallengesView: View {
     
+    @ObservedObject var homeViewModel: HomeViewModel
     @Environment(\.dismiss) var dismiss
     @Binding var allChallenge: [ChallengeObject]
     @Binding var myChallenges: [MyChallengeDTO]
@@ -61,13 +62,17 @@ struct ChallengesView: View {
             }
             .challengeAlert(isPresented: $isPresented) {
                 ChallengeAlertView(isPresented: $isPresented, allChallenge: $allChallenge, type: self.type, index: self.indexForAlert) {
-                    print("클릭")
+                    let challenge = allChallenge[indexForAlert]
+                    print("id: \(challenge.chlg_id)")
+                    homeViewModel.tryChallenge(with: challenge.chlg_id)
+                    
                 }
             }
             .onAppear {
                 allChallenge.forEach {
                     print("-------")
                     print("desc: \($0.chlg_desc)")
+                    print("id: \($0.chlg_id)")
                     print("desc2: \($0.chlg_title)")
                     print("isSelected: \($0.chlg_selected)")
                     print("lock: \($0.chlg_lock)")
