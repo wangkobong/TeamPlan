@@ -5,6 +5,81 @@
 //  Created by 주찬혁 on 2023/10/10.
 //  Copyright © 2023 team1os. All rights reserved.
 //
+// -------------------------------
+// ChallengeService Code Instructions
+// -------------------------------
+// #Notice
+//  * After initialization (init()), it is essential to call 'readyService()'.
+//  * There is no need to recall 'readyService()' after the initial call.
+//  * ChallengeService does not maintain '[ChallengeDTO]' persistently.
+//  * To update '[ChallengeDTO]', please invoke 'getChallenges()' again.
+
+// -------------------------------
+// 1. Initialize ChallengeService
+// -------------------------------
+// #Example:
+// let chlgService = ChallengeService(with: Identifier)
+// chlgService.readyService()
+
+
+// -------------------------------
+// 2. MyChallenge Functionality
+// -------------------------------
+// < Get My Challenges >
+// #Example:
+// let myChallenge = chlgService.getMyChallenges()
+// #Returns: [MyChallengeDTO]
+
+
+// < Set My Challenges >
+// #Example:
+// chlgService.setMyChallenges(with: ChallengeID)
+
+// #Includes updates for:
+//  * myChallenges: [MyChallengeDTO]
+//  * statDTO: StatChallengeDTO.stat_mychlg
+//  * ChallengeDTO: MyChallenge Related Status
+
+
+// < Disable My Challenge >
+// #Example:
+// chlgService.disableMyChallenge(with: ChallengeID)
+
+// #Includes updates for:
+//  * myChallenges: [MyChallengeDTO]
+//  * statDTO: StatChallengeDTO.stat_mychlg
+//  * ChallengeDTO: MyChallenge Related Status
+
+
+// < Reward My Challenge >
+// #Example:
+// let rewardInfo = chlgService.rewardMyChallenge(with: ChallengeID)
+// #Returns: ChallengeRewardDTO
+
+// #Notice:
+//  * This function does not include the capability to identify eligible challenges for rewards.
+//  * It focuses solely on updating the challenge status and generating reward information.
+
+// #Includes updates for:
+//  * myChallenges: [MyChallengeDTO]
+//  * statDTO: StatChallengeDTO.stat_mychlg
+//  * ChallengeDTO: MyChallenge Related Status
+
+
+// -------------------------------
+// 3. Challenge Functionality
+// -------------------------------
+// < Get Challenges >
+// #Example
+// let challegnes = chlgService.getChallenges()
+// #Returns: [ChallengeDTO]
+
+
+// < Get Challenge >
+// let challenge = chlgService.getChallenge(with: challengeId)
+// #Returns: ChallengeDTO
+
+
 
 import Foundation
 
@@ -54,12 +129,12 @@ final class ChallengeService {
     // Init MyChallenge
     private func readyMyChallenge() throws {
         // Step1. Check MyChallenge Empty Case
-        if statDTO.stat_mychlg.isEmpty{
-            return
-        }
-        // Step2. Filled MyChallenge Array with Statistics Data
-        for idx in statDTO.stat_mychlg {
-            try addToMyChallenge(with: idx)
+        if !statDTO.stat_mychlg.isEmpty{
+            
+            // Step2. Filled MyChallenge Array with Statistics Data
+            for idx in statDTO.stat_mychlg {
+                try setMyChallenges(with: idx)
+            }
         }
     }
 }
@@ -72,18 +147,15 @@ extension ChallengeService {
     // Set MyChallenge
     //--------------------
     func setMyChallenges(with challengeId: Int) throws {
-        // Step1. Check MyChallenge Size
-        guard myChallenges.count < 3 else {
-            throw ChallengeError.MyChallengeLimitExceeded
+        // Step1. Check MyChallenge And Add Challenge
+        let isDuplicated = try checkMyChallengeAndAppend(with: challengeId)
+        
+        if !isDuplicated {
+            // Step3.  Apply Challenge Update
+            try updateChallengeStatus(with: challengeId, type: .set)
+            // Step4. Apply Statistics Update
+            try updateStatistics()
         }
-        // Step2. Add to MyChallenge
-        try addToMyChallenge(with: challengeId)
-        
-        // Step3.  Apply Challenge Update
-        try updateChallengeStatus(with: challengeId, type: .set)
-        
-        // Step4. Apply Statistics Update
-        try updateStatistics()
     }
     
     //--------------------
@@ -231,7 +303,7 @@ extension ChallengeService {
 
     // * Remove challenge from arrays
     private func removeChallengeFromArrays(with challengeId: Int) {
-        myChallenges.removeAll { $0.cahllengeID == challengeId }
+        myChallenges.removeAll { $0.challengeID == challengeId }
         statDTO.stat_mychlg.removeAll { $0 == challengeId }
     }
     
@@ -248,6 +320,21 @@ extension ChallengeService {
             throw ChallengeError.NoMoreNextChallenge
         }
     }
+    
+    // * MyChallenge Duplicate test
+    private func checkMyChallengeAndAppend(with inputId: Int) throws -> Bool {
+        // Step1. MyChallenges Size Check
+        guard myChallenges.count < 3 else {
+            throw ChallengeError.MyChallengeLimitExceeded
+        }
+        // Step2. Duplicated ChallengeID Check
+        if myChallenges.contains(where: { $0.challengeID == inputId }) {
+            return true
+        } else {
+            try addToMyChallenge(with: inputId)
+            return false
+        }
+    }
 }
 
 
@@ -260,6 +347,7 @@ extension ChallengeService {
     // Get Challenges
     //-------------------------------
     func getChallenges() throws -> [ChallengeDTO] {
+        challengeArray = try challengeCD.getChallenges(onwer: userId)
         return challengeArray.map { ChallengeDTO(with: $0) }
     }
      

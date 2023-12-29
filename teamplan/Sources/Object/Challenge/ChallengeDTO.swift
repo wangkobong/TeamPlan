@@ -16,7 +16,7 @@ struct MyChallengeDTO: Hashable {
     //--------------------
     // content
     //--------------------
-    let cahllengeID: Int
+    let challengeID: Int
     let type: ChallengeType
     let title: String
     let desc: String
@@ -27,7 +27,7 @@ struct MyChallengeDTO: Hashable {
     // constructor
     //--------------------
     init(with object: ChallengeObject, and userProgress: Int){
-        self.cahllengeID = object.chlg_id
+        self.challengeID = object.chlg_id
         self.type = object.chlg_type
         self.title = object.chlg_title
         self.desc = object.chlg_desc
