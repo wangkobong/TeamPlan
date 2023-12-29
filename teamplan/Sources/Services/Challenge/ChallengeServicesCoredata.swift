@@ -124,7 +124,7 @@ final class ChallengeServicesCoredata{
     //================================
     // Signle Entity
     private func fetchEntity(with challengeId: Int, onwer userId: String) throws -> ChallengeEntity {
-        
+
         // parameter setting
         let fetchReq: NSFetchRequest<ChallengeEntity> = ChallengeEntity.fetchRequest()
         

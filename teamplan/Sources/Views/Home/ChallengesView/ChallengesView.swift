@@ -10,14 +10,14 @@ import SwiftUI
 
 struct ChallengesView: View {
     
+    @ObservedObject var homeViewModel: HomeViewModel
     @Environment(\.dismiss) var dismiss
     @Binding var allChallenge: [ChallengeObject]
     @Binding var myChallenges: [MyChallengeDTO]
     @State private var isPresented: Bool = false
-    @State private var type: ChallengeAlertType = .notice
-    let pageSize = 12
-
+    @State private var type: ChallengeAlertType = .lock
     @State private var currentPage = 0
+    @State private var indexForAlert = 0
     
     let columns = [
       //추가 하면 할수록 화면에 보여지는 개수가 변함
@@ -61,11 +61,26 @@ struct ChallengesView: View {
                 }
             }
             .challengeAlert(isPresented: $isPresented) {
-                ChallengeAlertView(isPresented: $isPresented, type: setAlertType()) {
-                    print("클릭")
+                ChallengeAlertView(isPresented: $isPresented, allChallenge: $allChallenge, type: self.type, index: self.indexForAlert) {
+                    let challenge = allChallenge[indexForAlert]
+                    print("id: \(challenge.chlg_id)")
+                    homeViewModel.tryChallenge(with: challenge.chlg_id)
+                    
                 }
             }
-            
+            .onAppear {
+                allChallenge.forEach {
+                    print("-------")
+                    print("desc: \($0.chlg_desc)")
+                    print("id: \($0.chlg_id)")
+                    print("desc2: \($0.chlg_title)")
+                    print("isSelected: \($0.chlg_selected)")
+                    print("lock: \($0.chlg_lock)")
+                    print("isComplete: \($0.chlg_status)")
+                    print("prevGoal: \($0.chlg_goal)")
+                    print("prevTitle: \($0.chlg_title)")
+                }
+            }
         }
     }
 }
@@ -116,7 +131,7 @@ extension ChallengesView {
                     let screenWidth = UIScreen.main.bounds.size.width
                     ZStack {
                         if self.selectedCardIndex == index {
-                            ChallengeCardBackView(challenge: challenge, parentsWidth: screenWidth)
+                            ChallengeCardBackView(homeViewModel: homeViewModel, challenge: challenge, parentsWidth: screenWidth)
                                 .background(.white)
                                 .cornerRadius(4)
                                 .rotation3DEffect(.degrees(180), axis: (x: 0.0, y: 1.0, z: 0.0))
@@ -175,15 +190,22 @@ extension ChallengesView {
                     let pageItems = Array(allChallenge[startIndex..<endIndex])
                     
                     LazyVGrid(columns: columns, spacing: 10) {
-                        ForEach(pageItems, id: \.self) { item in
+                        ForEach(pageItems.indices, id: \.self) { index in
+                            let absoluteIndex = startIndex + index
+                            let item = pageItems[index]
                             ChallengeDetailView(challenge: item)
                                 .frame(width: 62, height: 120)
                                 .onTapGesture {
-                                    if item.chlg_lock {
-                                        self.type = .notice
-                                    } else if item.chlg_selected {
-                                        self.type = .willQuit
-                                    } 
+                                    self.indexForAlert = absoluteIndex
+                                    self.setAlert(challenge: item)
+                                    print("-------")
+                                    print("desc: \(item.chlg_desc)")
+                                    print("desc2: \(item.chlg_title)")
+                                    print("isSelected: \(item.chlg_selected)")
+                                    print("lock: \(item.chlg_lock)")
+                                    print("isComplete: \(item.chlg_status)")
+                                    print("prevGoal: \(item.chlg_goal)")
+                                    print("prevTitle: \(item.chlg_title)")
                                     self.isPresented.toggle()
                                 }
                         }
@@ -217,16 +239,20 @@ extension ChallengesView {
 }
 
 extension ChallengesView {
-    private func setAlertType() -> ChallengeAlertType {
-        switch self.type {
-        case .didComplete:
-            return .didComplete
-        case .willChallenge:
-            return .willChallenge
-        case .willQuit:
-            return .willQuit
-        case .notice:
-            return .notice
+    private func setAlert(challenge: ChallengeObject) {
+        
+        // 완료한 도전과제
+        if challenge.chlg_status == true && challenge.chlg_selected == false && challenge.chlg_lock == false {
+            self.type = .didComplete
+        // 등록된 도전과제
+        } else if challenge.chlg_status == false && challenge.chlg_selected == true && challenge.chlg_lock == false {
+            self.type = .didSelected
+        // 도전하기
+        } else if challenge.chlg_status == false && challenge.chlg_selected == false && challenge.chlg_lock == false {
+            self.type = .willChallenge
+        // 잠금해제 안됨
+        } else if challenge.chlg_status == false && challenge.chlg_selected == false && challenge.chlg_lock == true {
+            self.type = .lock
         }
     }
 }

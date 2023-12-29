@@ -10,23 +10,29 @@ import SwiftUI
 
 public enum ChallengeAlertType {
     case didComplete
-    case willQuit
+    case didSelected
     case willChallenge
-    case notice
+    case lock
 }
 
 public struct ChallengeAlertView: View {
     
     @Binding public var isPresented: Bool
+    @Binding var allChallenge: [ChallengeObject]
+    
     public typealias Action = () -> ()
     
     let type: ChallengeAlertType
+    let index: Int
     public var action: Action
+    lazy var challenge = allChallenge[self.index]
     
-    public init(isPresented: Binding<Bool>, type: ChallengeAlertType, action: @escaping Action) {
+    public init(isPresented: Binding<Bool>, allChallenge: Binding<[ChallengeObject]>,type: ChallengeAlertType, index: Int, action: @escaping Action) {
         self._isPresented = isPresented
+        self._allChallenge = allChallenge
         self.type = type
         self.action = action
+        self.index = index
     }
     
     public var body: some View {
@@ -40,12 +46,12 @@ public struct ChallengeAlertView: View {
                 switch type {
                 case .didComplete:
                     didCompleteAlert
-                case .willQuit:
-                    willQuitAlert
+                case .didSelected:
+                    didSelectedAlert
                 case .willChallenge:
                     willChallengeAlert
-                case .notice:
-                    noticeAlert
+                case .lock:
+                    lockAlert
                 }
             }
             .frame(width: 296, height: 323)
@@ -53,19 +59,23 @@ public struct ChallengeAlertView: View {
             .cornerRadius(4)
             .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 0)
         }
+        .onAppear {
+            print("얼럿타입: \(self.type)")
+            print("인덱스: \(self.index)")
+        }
     }
 }
 
-struct ChallengeAlertView_Previews: PreviewProvider {
-    static var previews: some View {
-        ChallengeAlertView(isPresented: .constant(true), type: .notice, action: {})
-    }
-}
+//struct ChallengeAlertView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        ChallengeAlertView(isPresented: .constant(true), allChallenge: <#Binding<[ChallengeObject]>#>, type: .lock, index: 3, action: {})
+//    }
+//}
 
 extension ChallengeAlertView {
     private var didCompleteAlert: some View {
         VStack {
-            Text("획득일 23-09-19")
+            Text("\(allChallenge[self.index].chlg_finished_at)")
                 .font(.appleSDGothicNeo(.regular, size: 12))
                 .multilineTextAlignment(.center)
                 .foregroundColor(.theme.greyColor)
@@ -73,16 +83,16 @@ extension ChallengeAlertView {
             
             Spacer()
             
-            Image("book_circle_blue")
+            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].chlg_type, isLock: self.allChallenge[index].chlg_lock, isComplete: self.allChallenge[index].chlg_status))
                 .frame(width: 82, height: 82)
             
-            Text("신중한 챌린저")
+            Text("\(allChallenge[self.index].chlg_desc)")
                 .font(.appleSDGothicNeo(.bold, size: 24))
                 .multilineTextAlignment(.center)
                 .foregroundColor(.theme.mainPurpleColor)
     
             
-            Text("프로젝트 5개를 연속 해결하고 \n이 배찌를 획득하였어요.")
+            Text("\(getChallenge(index: self.index).chlg_title)\n이 배찌를 획득하였어요.")
                 .font(.appleSDGothicNeo(.regular, size: 17))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
@@ -106,21 +116,21 @@ extension ChallengeAlertView {
         }
     }
     
-    private var willQuitAlert: some View {
+    private var didSelectedAlert: some View {
         VStack {
 
             Spacer()
             
-            Image("book_circle_grey")
+            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].chlg_type, isLock: self.allChallenge[index].chlg_lock, isComplete: self.allChallenge[index].chlg_status))
                 .frame(width: 82, height: 82)
             
-            Text("신중한 챌린저")
+            Text("\(getChallenge(index: self.index).chlg_title)")
                 .font(.appleSDGothicNeo(.bold, size: 24))
                 .multilineTextAlignment(.center)
                 .foregroundColor(.theme.mainPurpleColor)
     
             
-            Text("프로젝트 5개\n연속 해결하기")
+            Text("\(getChallenge(index: self.index).chlg_title)\n연속 해결하기")
                 .font(.appleSDGothicNeo(.regular, size: 17))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
@@ -128,45 +138,19 @@ extension ChallengeAlertView {
                 .padding(.top, 12)
                 .padding(.horizontal, 40)
             
-            HStack {
-
-                Text("닫기")
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 44)
-                    .font(.appleSDGothicNeo(.bold, size: 14))
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(.theme.mainPurpleColor)
-                    .background(Color.theme.mainPurpleColor.opacity(0.2))
-                    .cornerRadius(8)
-                    .onTapGesture {
-                        self.isPresented = false
-                    }
-                
-                Spacer()
-                    .frame(width: 16)
-                
-                Text("포기하기")
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 44)
-                    .font(.appleSDGothicNeo(.bold, size: 14))
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(.theme.mainPurpleColor)
-                    .cornerRadius(8)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .inset(by: 0.5)
-                            .stroke(Color(red: 0.45, green: 0.28, blue: 0.88), lineWidth: 1)
-                    )
-                    .onTapGesture {
-                        self.isPresented = false
-                        action()
-                    }
-
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 44)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 16)
+            Text("닫기")
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .font(.appleSDGothicNeo(.bold, size: 14))
+                .multilineTextAlignment(.center)
+                .foregroundColor(.theme.mainPurpleColor)
+                .background(Color.theme.mainPurpleColor.opacity(0.2))
+                .cornerRadius(8)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
+                .onTapGesture {
+                    self.isPresented = false
+                }
         }
     }
     
@@ -175,16 +159,16 @@ extension ChallengeAlertView {
 
             Spacer()
             
-            Image("book_circle_grey")
+            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].chlg_type, isLock: self.allChallenge[index].chlg_lock, isComplete: self.allChallenge[index].chlg_status))
                 .frame(width: 82, height: 82)
             
-            Text("꾸준한 챌린저")
+            Text("\(getChallenge(index: self.index).chlg_title)")
                 .font(.appleSDGothicNeo(.bold, size: 24))
                 .multilineTextAlignment(.center)
                 .foregroundColor(.theme.mainPurpleColor)
     
             
-            Text("프로젝트 5개\n연속 해결하기")
+            Text("\(getChallenge(index: self.index).chlg_title)프로젝트 5개\n연속 해결하기")
                 .font(.appleSDGothicNeo(.regular, size: 17))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
@@ -229,21 +213,21 @@ extension ChallengeAlertView {
         }
     }
     
-    private var noticeAlert: some View {
+    private var lockAlert: some View {
         VStack {
 
             Spacer()
             
-            Image("lock_icon")
+            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].chlg_type, isLock: self.allChallenge[index].chlg_lock, isComplete: self.allChallenge[index].chlg_status))
                 .frame(width: 82, height: 82)
             
-            Text("꾸준한 챌린저")
+            Text("\(getChallenge(index: self.index).chlg_title)")
                 .font(.appleSDGothicNeo(.bold, size: 24))
                 .multilineTextAlignment(.center)
                 .foregroundColor(.theme.mainPurpleColor)
     
             
-            Text("'노력파 챌린저 도전과제'\n해결 후 잠금해제")
+            Text("'\(getChallenge(index: self.index).chlg_title)'\n해결 후 잠금해제")
                 .font(.appleSDGothicNeo(.regular, size: 17))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
@@ -251,39 +235,26 @@ extension ChallengeAlertView {
                 .padding(.top, 12)
                 .padding(.horizontal, 40)
             
-            HStack {
-                
-                Text("닫기")
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 44)
-                    .font(.appleSDGothicNeo(.bold, size: 14))
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(.theme.mainPurpleColor)
-                    .background(Color.theme.mainPurpleColor.opacity(0.2))
-                    .cornerRadius(8)
-                    .onTapGesture {
-                        self.isPresented = false
-                    }
-                
-                Spacer()
-                    .frame(width: 16)
-                
-                Text("도전하기")
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 44)
-                    .font(.appleSDGothicNeo(.bold, size: 14))
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(.theme.greyColor)
-                    .background(Color(red: 0.9, green: 0.9, blue: 0.9))
-                    .cornerRadius(8)
-                    .onTapGesture {
-                        
-                    }
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 44)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 16)
+            Text("닫기")
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .font(.appleSDGothicNeo(.bold, size: 14))
+                .multilineTextAlignment(.center)
+                .foregroundColor(.theme.mainPurpleColor)
+                .background(Color.theme.mainPurpleColor.opacity(0.2))
+                .cornerRadius(8)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
+                .onTapGesture {
+                    self.isPresented = false
+                }
         }
+    }
+}
+
+
+extension ChallengeAlertView {
+    private func getChallenge(index: Int) -> ChallengeObject {
+        return self.allChallenge[index]
     }
 }

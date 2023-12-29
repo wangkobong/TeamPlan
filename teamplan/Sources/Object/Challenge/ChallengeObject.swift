@@ -11,7 +11,7 @@ import Foundation
 //============================
 // MARK: Entity
 //============================
-struct ChallengeObject: Hashable {
+public struct ChallengeObject: Hashable {
 
     //--------------------
     // content

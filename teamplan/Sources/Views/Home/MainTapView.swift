@@ -18,7 +18,7 @@ struct MainTapView: View {
                 ProjectView()
                 .tabItem {
                   Image("document")
-                  Text("프로젝트")
+                  Text("프로젝트")                                                                                                                                                                                                                              
                 }
                 .tag(0)
                 
@@ -47,3 +47,5 @@ struct MainTapView_Previews: PreviewProvider {
         MainTapView()
     }
 }
+
+
