@@ -65,7 +65,7 @@ final class SignupLoadingService{
             
         // Set NewUserPackage at Coredata & Firestore
         case (true, true):
-            return UserDTO(with: self.newProfile)
+            return UserDTO(with: newProfile)
         
         default:
             try await rollbackAll()
@@ -150,19 +150,19 @@ final class SignupLoadingService{
     //===============================
     // : Firestore
     func setUserFS() async throws {
-        let docsId = try await userFS.setUser(reqUser: self.newProfile)
+        let docsId = try await userFS.setUser(reqUser: newProfile)
         self.newProfile.user_fb_id = docsId
     }
     private func rollbackSetUserFS() async throws {
-        try await userFS.deleteUser(to: self.newProfile.user_id)
+        try await userFS.deleteUser(to: newProfile.user_id)
     }
     
     // : Coredata
     func setUserCD() throws {
-        try userCD.setUser(reqUser: self.newProfile)
+        try userCD.setUser(reqUser: newProfile)
     }
     private func rollbackSetUserCD() throws {
-        try userCD.deleteUser(identifier: self.newProfile.user_id)
+        try userCD.deleteUser(identifier: newProfile.user_id)
     }
     
     //===============================
@@ -170,18 +170,18 @@ final class SignupLoadingService{
     //===============================
     // : Firestore
     func setStatisticsFS() async throws {
-        try await statFS.setStatistics(with: self.newStat)
+        try await statFS.setStatistics(with: newStat)
     }
     private func rollbackSetStatisticsFS() async throws {
-        try await statFS.deleteStatistics(with: self.newProfile.user_id)
+        try await statFS.deleteStatistics(with: newProfile.user_id)
     }
     
     // : Coredata
     func setStatisticsCD() throws {
-        try statCD.setStatistics(with: self.newStat)
+        try statCD.setStatistics(with: newStat)
     }
     private func rollbackSetStatisticsCD() throws {
-        try statCD.deleteStatistics(with: self.newProfile.user_id)
+        try statCD.deleteStatistics(with: newProfile.user_id)
     }
     
     //===============================
@@ -189,18 +189,18 @@ final class SignupLoadingService{
     //===============================
     // : Firestore
     func setAccessLogFS() async throws {
-        try await aclogFS.setLog(with: self.newAccessLog)
+        try await aclogFS.setLog(with: newAccessLog)
     }
     private func rollbackSetAccessLogFS() async throws {
-        try await aclogFS.deleteLog(with: self.newProfile.user_id)
+        try await aclogFS.deleteLog(with: newProfile.user_id)
     }
     
     // : CoreData
     func setAccessLogCD() throws {
-        try aclogCD.setLog(with: self.newAccessLog)
+        try aclogCD.setLog(with: newAccessLog)
     }
     private func rollbackSetAccessLogCD() throws {
-        try aclogCD.deleteLog(with: self.newProfile.user_id)
+        try aclogCD.deleteLog(with: newProfile.user_id)
     }
     
     //===============================
@@ -208,18 +208,18 @@ final class SignupLoadingService{
     //===============================
     // : Firestore
     func setChallengeLogFS() async throws {
-        try await chlglogFS.setLog(with: self.newChallengeLog)
+        try await chlglogFS.setLog(with: newChallengeLog)
     }
     private func rollbackSetChallengeLogFS() async throws {
-        try await chlglogFS.deleteLog(with: self.newProfile.user_id)
+        try await chlglogFS.deleteLog(with: newProfile.user_id)
     }
     
     // : Coredata
     func setChallengeLogCD() throws {
-        try chlglogCD.setLog(with: self.newChallengeLog)
+        try chlglogCD.setLog(with: newChallengeLog)
     }
     private func rollbackSetChallengeLogCD() throws {
-        try chlglogCD.deleteLog(with: self.newProfile.user_id)
+        try chlglogCD.deleteLog(with: newProfile.user_id)
     }
     
     //===============================
@@ -227,10 +227,12 @@ final class SignupLoadingService{
     //===============================
     // : Firestore to Coredata
     func setChallenge() async throws {
-        try await chlgManager.setChallenge()
+        try await chlgManager.fetchChallenge()
+        chlgManager.configChallenge(with: newProfile.user_id)
+        try chlgManager.setChallenge()
     }
     private func rollbackSetChallenge() throws {
-        try chlgManager.delChallenge()
+        try chlgManager.delChallenge(with: newProfile.user_id)
     }
 }
 

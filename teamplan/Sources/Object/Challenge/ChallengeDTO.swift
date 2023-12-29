@@ -145,6 +145,7 @@ struct ChallengeStatusDTO {
     // content
     //--------------------
     let chlg_id: Int
+    let chlg_user_id: String
     var chlg_selected: Bool
     var chlg_status: Bool
     var chlg_lock: Bool
@@ -157,6 +158,7 @@ struct ChallengeStatusDTO {
     //--------------------
     init(with object: ChallengeObject){
         self.chlg_id = object.chlg_id
+        self.chlg_user_id = object.chlg_user_id
         self.chlg_selected = object.chlg_selected
         self.chlg_status = object.chlg_status
         self.chlg_lock = object.chlg_lock
