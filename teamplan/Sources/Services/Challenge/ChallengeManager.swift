@@ -8,11 +8,14 @@
 
 import Foundation
 
+let challengeCount: Int = 36
+
 final class ChallengeManager{
     
     //===============================
     // MARK: - Global Parameter
     //===============================
+    
     let challengeCD = ChallengeServicesCoredata()
     let challengeFS = ChallengeServicesFirestore()
     
@@ -21,24 +24,40 @@ final class ChallengeManager{
     //===============================
     // MARK: - Fetch Challenges
     //===============================
-    func setChallenge() async throws {
-        
-        // Get Challenges from firestore
-        self.challengeArray = try await challengeFS.getChallenges()
-        
-        // Reset Unlock Status
-        for idx in self.challengeArray.indices {
-            if self.challengeArray[idx].chlg_step == 1{
-                self.challengeArray[idx].updateLock(with: false)
-            }
-        }
-        // Set Challenges to Coredata
-        try challengeCD.setChallenges(with: self.challengeArray)
+    func fetchChallenge() async throws {
+        challengeArray = try await challengeFS.getChallenges()
     }
+    
+    func getChallenge() throws -> [ChallengeObject]{
+        if challengeArray == [] {
+            throw ChallengeErrorFS.InternalError
+        } else {
+            return challengeArray
+        }
+    }
+    
+    func setChallenge() throws {
+        try challengeCD.setChallenges(with: challengeArray)
+    }
+    
     //===============================
     // MARK: - Delete Challenges
     //===============================
-    func delChallenge() throws {
-        try challengeCD.deleteChallenges()
+    func delChallenge(with userId: String) throws {
+        try challengeCD.deleteChallenges(with: userId)
+    }
+    
+    //===============================
+    // MARK: - Challenges Configure
+    //===============================
+    func configChallenge(with userId: String) {
+        
+        // Unlock Step1 Challenge & assign UserId
+        for idx in challengeArray.indices {
+            if challengeArray[idx].chlg_step == 1 {
+                challengeArray[idx].updateLock(with: false)
+            }
+            challengeArray[idx].addUserId(with: userId)
+        }
     }
 }

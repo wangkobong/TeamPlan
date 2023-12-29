@@ -26,7 +26,7 @@ struct ChallengeLog{
     // SignupService
     init(identifier: String, signupDate: Date){
         self.log_user_id = identifier
-        self.log_complete = [0 : signupDate]
+        self.log_complete = [100 : signupDate]
         self.log_update_at = signupDate
     }
     

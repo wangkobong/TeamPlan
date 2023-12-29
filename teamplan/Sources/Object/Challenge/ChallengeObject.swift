@@ -17,7 +17,7 @@ public struct ChallengeObject: Hashable {
     // content
     //--------------------
     let chlg_id: Int
-    let chlg_user_id: String
+    var chlg_user_id: String
     
     let chlg_type: ChallengeType
     let chlg_title: String
@@ -98,6 +98,9 @@ public struct ChallengeObject: Hashable {
     //--------------------
     mutating func updateLock(with newVal: Bool){
         self.chlg_lock = newVal
+    }
+    mutating func addUserId(with userId: String){
+        self.chlg_user_id = userId
     }
 }
 
