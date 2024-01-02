@@ -169,6 +169,16 @@ struct StatProjectDTO {
     //--------------------
     // constructor
     //--------------------
+    init(){
+        self.stat_user_id = ""
+        self.stat_drop = 0
+        self.stat_proj_reg = 0
+        self.stat_proj_fin = 0
+        self.stat_proj_alert = 0
+        self.stat_proj_ext = 0
+        self.stat_todo_reg = 0
+    }
+    
     init(with userId: String, entity: StatisticsEntity){
         self.stat_user_id = userId
         self.stat_drop = Int(entity.stat_drop)

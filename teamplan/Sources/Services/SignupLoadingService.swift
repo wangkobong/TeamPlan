@@ -227,7 +227,7 @@ final class SignupLoadingService{
     //===============================
     // : Firestore to Coredata
     func setChallenge() async throws {
-        try await chlgManager.fetchChallenge()
+        try await chlgManager.getChallenges()
         chlgManager.configChallenge(with: newProfile.user_id)
         try chlgManager.setChallenge()
     }
