@@ -72,8 +72,8 @@ struct ProjectSetDTO{
 //============================
 struct ProjectUpdateDTO{
     // id
-    var userId: String?
-    var projectId: Int?
+    let userId: String
+    let projectId: Int
     var todoId: Int?
     
     // content
@@ -84,12 +84,14 @@ struct ProjectUpdateDTO{
     var todo: TodoObject?
     var todoStatus: Bool?
     
-    init(to newDeadLine: Date){
+    //--------------------
+    // constructor
+    //--------------------
+    // ProjectIndex
+    init(with userId: String, and projectId: Int, to newDeadLine: Date){
+        self.userId = userId
+        self.projectId = projectId
         self.newDeadline = newDeadLine
-    }
-    
-    init(to newTitle: String){
-        self.newTitle = newTitle
     }
 }
 
