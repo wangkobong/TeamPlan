@@ -64,17 +64,17 @@ struct ChallengesView: View {
                 }
             }
             .onAppear {
-//                $homeViewModel.challengeArray.forEach {
-//                    print("-------")
-//                    print("desc: \($0.chlg_desc)")
-//                    print("id: \($0.chlg_id)")
-//                    print("desc2: \($0.chlg_title)")
-//                    print("isSelected: \($0.chlg_selected)")
-//                    print("lock: \($0.chlg_lock)")
-//                    print("isComplete: \($0.chlg_status)")
-//                    print("prevGoal: \($0.chlg_goal)")
-//                    print("prevTitle: \($0.chlg_title)")
-//                }
+                homeViewModel.challengeArray.forEach {
+                    print("-------")
+                    print("desc: \($0.chlg_desc)")
+                    print("id: \($0.chlg_id)")
+                    print("desc2: \($0.chlg_title)")
+                    print("isSelected: \($0.chlg_selected)")
+                    print("lock: \($0.chlg_lock)")
+                    print("isComplete: \($0.chlg_status)")
+                    print("prevGoal: \($0.chlg_goal)")
+                    print("prevTitle: \($0.chlg_title)")
+                }
             }
         }
     }
@@ -122,7 +122,6 @@ extension ChallengesView {
             HStack(spacing: 17) {
                 
                 ForEach(0..<$homeViewModel.myChallenges.count, id: \.self) { index in
-                    let test = index
                     let challenge = self.$homeViewModel.myChallenges[index]
                     let screenWidth = UIScreen.main.bounds.size.width
                     ZStack {
@@ -191,13 +190,13 @@ extension ChallengesView {
                                     self.indexForAlert = absoluteIndex
                                     self.setAlert(challenge: item.wrappedValue)
                                     print("-------")
-//                                    print("desc: \(item.chlg_desc)")
-//                                    print("desc2: \(item.chlg_title)")
-//                                    print("isSelected: \(item.chlg_selected)")
-//                                    print("lock: \(item.chlg_lock)")
-//                                    print("isComplete: \(item.chlg_status)")
-//                                    print("prevGoal: \(item.chlg_goal)")
-//                                    print("prevTitle: \(item.chlg_title)")
+                                    print("desc: \(item.wrappedValue.chlg_desc)")
+                                    print("desc2: \(item.wrappedValue.chlg_title)")
+                                    print("isSelected: \(item.wrappedValue.chlg_selected)")
+                                    print("lock: \(item.wrappedValue.chlg_lock)")
+                                    print("isComplete: \(item.wrappedValue.chlg_status)")
+                                    print("prevGoal: \(item.wrappedValue.chlg_goal)")
+                                    print("prevTitle: \(item.wrappedValue.chlg_title)")
                                     self.isPresented.toggle()
                                 }
                         }

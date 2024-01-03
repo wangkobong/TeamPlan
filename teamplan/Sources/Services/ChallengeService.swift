@@ -155,6 +155,7 @@ extension ChallengeService {
             try updateChallengeStatus(with: challengeId, type: .set)
             // Step4. Apply Statistics Update
             try updateStatistics()
+            challengeArray = try challengeCD.getChallenges(onwer: userId)
         }
     }
     
@@ -177,6 +178,7 @@ extension ChallengeService {
 
         // Step3. Apply Statistics Update
         try updateStatistics()
+        challengeArray = try challengeCD.getChallenges(onwer: userId)
     }
     
     //-------------------------------
