@@ -57,6 +57,16 @@ extension ProjectIndexService{
     //--------------------
     // Get
     //--------------------
+    // User Statistics
+    func getStatistics() throws -> userStatProject {
+        // Ready for struct DTO
+        let projectCount = try getProjects().count
+        
+        // Struct DTO & Return
+        return userStatProject(with: statDTO, and: projectCount)
+    }
+    
+    // Project Index
     func getProjects() throws -> [ProjectCardDTO] {
         // Get ProjectCard Data
         let array = try projectCD.getProjectCards(by: userId)

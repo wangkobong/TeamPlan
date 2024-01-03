@@ -151,6 +151,8 @@ struct StatCenterDTO {
 //================================
 // MARK: - Project
 //================================
+/// * PageService <=> StorageService
+/// * Struct for Page & Storage Service DTO
 struct StatProjectDTO {
     
     //--------------------
@@ -206,6 +208,27 @@ struct StatProjectDTO {
     }
     mutating func updateTodoRegist(to todoRegist: Int){
         self.stat_todo_reg = todoRegist
+    }
+}
+
+/// * ViewModel <=> PageService
+/// * Struct for Project Index Page, User Statistics Info
+struct userStatProject{
+    
+    //--------------------
+    // content
+    //--------------------
+    let registProject: Int
+    let completeProject: Int
+    let waterDrop: Int
+    
+    //--------------------
+    // constructor
+    //--------------------
+    init(with dto: StatProjectDTO, and count: Int){
+        self.registProject = count
+        self.completeProject = dto.stat_proj_fin
+        self.waterDrop = dto.stat_drop
     }
 }
 
