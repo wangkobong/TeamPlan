@@ -11,11 +11,12 @@ import Foundation
 //============================
 // MARK: MyChallenge
 //============================
-struct MyChallengeDTO: Hashable {
+struct MyChallengeDTO: Hashable, Identifiable {
 
     //--------------------
     // content
     //--------------------
+    let id = UUID().uuidString
     let challengeID: Int
     let type: ChallengeType
     let title: String

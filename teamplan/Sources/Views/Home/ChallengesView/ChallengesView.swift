@@ -12,8 +12,6 @@ struct ChallengesView: View {
     
     @ObservedObject var homeViewModel: HomeViewModel
     @Environment(\.dismiss) var dismiss
-    @Binding var allChallenge: [ChallengeObject]
-    @Binding var myChallenges: [MyChallengeDTO]
     @State private var isPresented: Bool = false
     @State private var type: ChallengeAlertType = .lock
     @State private var currentPage = 0
@@ -29,7 +27,7 @@ struct ChallengesView: View {
     
     private let itemsPerPage = 12
     private var numberOfPages: Int {
-        return (allChallenge.count + itemsPerPage - 1) / itemsPerPage
+        return ($homeViewModel.challengeArray.count + itemsPerPage - 1) / itemsPerPage
     }
 
     @State private var selectedCardIndex: Int? = nil
@@ -61,25 +59,22 @@ struct ChallengesView: View {
                 }
             }
             .challengeAlert(isPresented: $isPresented) {
-                ChallengeAlertView(isPresented: $isPresented, allChallenge: $allChallenge, type: self.type, index: self.indexForAlert) {
-                    let challenge = allChallenge[indexForAlert]
-                    print("id: \(challenge.chlg_id)")
-                    homeViewModel.tryChallenge(with: challenge.chlg_id)
-                    
+                ChallengeAlertView(isPresented: $isPresented, allChallenge: $homeViewModel.challengeArray, challenge: $homeViewModel.challengeArray[self.indexForAlert], type: self.type, index: self.indexForAlert) {
+                    homeViewModel.tryChallenge(with: $homeViewModel.challengeArray[self.indexForAlert].chlg_id.wrappedValue)
                 }
             }
             .onAppear {
-                allChallenge.forEach {
-                    print("-------")
-                    print("desc: \($0.chlg_desc)")
-                    print("id: \($0.chlg_id)")
-                    print("desc2: \($0.chlg_title)")
-                    print("isSelected: \($0.chlg_selected)")
-                    print("lock: \($0.chlg_lock)")
-                    print("isComplete: \($0.chlg_status)")
-                    print("prevGoal: \($0.chlg_goal)")
-                    print("prevTitle: \($0.chlg_title)")
-                }
+//                $homeViewModel.challengeArray.forEach {
+//                    print("-------")
+//                    print("desc: \($0.chlg_desc)")
+//                    print("id: \($0.chlg_id)")
+//                    print("desc2: \($0.chlg_title)")
+//                    print("isSelected: \($0.chlg_selected)")
+//                    print("lock: \($0.chlg_lock)")
+//                    print("isComplete: \($0.chlg_status)")
+//                    print("prevGoal: \($0.chlg_goal)")
+//                    print("prevTitle: \($0.chlg_title)")
+//                }
             }
         }
     }
@@ -126,17 +121,18 @@ extension ChallengesView {
             
             HStack(spacing: 17) {
                 
-                ForEach(0..<min(3, myChallenges.count)) { index in
-                    let challenge = self.myChallenges[index]
+                ForEach(0..<$homeViewModel.myChallenges.count, id: \.self) { index in
+                    let test = index
+                    let challenge = self.$homeViewModel.myChallenges[index]
                     let screenWidth = UIScreen.main.bounds.size.width
                     ZStack {
                         if self.selectedCardIndex == index {
-                            ChallengeCardBackView(homeViewModel: homeViewModel, challenge: challenge, parentsWidth: screenWidth)
+                            ChallengeCardBackView(homeViewModel: homeViewModel, challenge: challenge.wrappedValue, parentsWidth: screenWidth)
                                 .background(.white)
                                 .cornerRadius(4)
                                 .rotation3DEffect(.degrees(180), axis: (x: 0.0, y: 1.0, z: 0.0))
                         } else {
-                            ChallengeCardFrontView(challenge: challenge, parentsWidth: screenWidth)
+                            ChallengeCardFrontView(challenge: challenge.wrappedValue, parentsWidth: screenWidth)
                                 .background(.white)
                                 .cornerRadius(4)
                         }
@@ -152,17 +148,13 @@ extension ChallengesView {
                     }
                 }
                 
-                if myChallenges.count < 3 {
+                if $homeViewModel.myChallenges.count < 3 {
                     // 나머지 뷰를 채우는 코드
-                    ForEach(myChallenges.count..<3) { index in
+                    ForEach($homeViewModel.myChallenges.count..<3, id: \.self) { index in
                         // 다른 뷰 표시 (여기서는 기본 Text를 사용하겠습니다.)
                         ChallengeEmptyView()
                             .background(.white)
                             .cornerRadius(4)
-                            .onTapGesture {
-                                self.type = .willChallenge
-                                self.isPresented.toggle()
-                            }
                     }
                 }
             }
@@ -184,28 +176,28 @@ extension ChallengesView {
             }
             
             TabView(selection: $currentPage) {
-                ForEach(0..<(allChallenge.count / 12), id: \.self) { pageIndex in
+                ForEach(0..<($homeViewModel.challengeArray.count / 12), id: \.self) { pageIndex in
                     let startIndex = pageIndex * 12
-                    let endIndex = min(startIndex + 12, allChallenge.count)
-                    let pageItems = Array(allChallenge[startIndex..<endIndex])
+                    let endIndex = min(startIndex + 12, $homeViewModel.challengeArray.count)
+                    let pageItems = Array($homeViewModel.challengeArray[startIndex..<endIndex])
                     
                     LazyVGrid(columns: columns, spacing: 10) {
                         ForEach(pageItems.indices, id: \.self) { index in
                             let absoluteIndex = startIndex + index
                             let item = pageItems[index]
-                            ChallengeDetailView(challenge: item)
+                            ChallengeDetailView(challenge: item.wrappedValue)
                                 .frame(width: 62, height: 120)
                                 .onTapGesture {
                                     self.indexForAlert = absoluteIndex
-                                    self.setAlert(challenge: item)
+                                    self.setAlert(challenge: item.wrappedValue)
                                     print("-------")
-                                    print("desc: \(item.chlg_desc)")
-                                    print("desc2: \(item.chlg_title)")
-                                    print("isSelected: \(item.chlg_selected)")
-                                    print("lock: \(item.chlg_lock)")
-                                    print("isComplete: \(item.chlg_status)")
-                                    print("prevGoal: \(item.chlg_goal)")
-                                    print("prevTitle: \(item.chlg_title)")
+//                                    print("desc: \(item.chlg_desc)")
+//                                    print("desc2: \(item.chlg_title)")
+//                                    print("isSelected: \(item.chlg_selected)")
+//                                    print("lock: \(item.chlg_lock)")
+//                                    print("isComplete: \(item.chlg_status)")
+//                                    print("prevGoal: \(item.chlg_goal)")
+//                                    print("prevTitle: \(item.chlg_title)")
                                     self.isPresented.toggle()
                                 }
                         }
@@ -222,7 +214,7 @@ extension ChallengesView {
     
     private var pageControl: some View {
         HStack(spacing: 10) {
-            ForEach(0..<(allChallenge.count / 12), id: \.self) { index in
+            ForEach(0..<($homeViewModel.challengeArray.count / 12), id: \.self) { index in
                 if index == currentPage {
                     Circle()
                         .frame(width: 9, height: 9)

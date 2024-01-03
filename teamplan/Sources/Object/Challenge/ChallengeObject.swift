@@ -16,7 +16,7 @@ public struct ChallengeObject: Hashable {
     //--------------------
     // content
     //--------------------
-    let chlg_id: Int
+    var chlg_id: Int
     var chlg_user_id: String
     
     let chlg_type: ChallengeType
