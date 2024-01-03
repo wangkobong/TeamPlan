@@ -40,6 +40,16 @@ struct ChallengesView: View {
                     .padding(.bottom, 24)
                 topCardSection
                     .padding(.bottom, 21)
+                    .onChange(of: homeViewModel.challengeArray) { _ in
+                        withAnimation(.linear) {
+                            selectedCardIndex = nil
+                        }
+                    }
+                    .onChange(of: homeViewModel.myChallenges) { _ in
+                        withAnimation(.linear) {
+                            selectedCardIndex = nil
+                        }
+                    }
                 
                 gridSection
                 Spacer()
