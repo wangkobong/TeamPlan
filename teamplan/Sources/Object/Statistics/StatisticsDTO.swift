@@ -151,6 +151,8 @@ struct StatCenterDTO {
 //================================
 // MARK: - Project
 //================================
+/// * PageService <=> StorageService
+/// * Struct for Page & Storage Service DTO
 struct StatProjectDTO {
     
     //--------------------
@@ -169,6 +171,16 @@ struct StatProjectDTO {
     //--------------------
     // constructor
     //--------------------
+    init(){
+        self.stat_user_id = ""
+        self.stat_drop = 0
+        self.stat_proj_reg = 0
+        self.stat_proj_fin = 0
+        self.stat_proj_alert = 0
+        self.stat_proj_ext = 0
+        self.stat_todo_reg = 0
+    }
+    
     init(with userId: String, entity: StatisticsEntity){
         self.stat_user_id = userId
         self.stat_drop = Int(entity.stat_drop)
@@ -196,6 +208,27 @@ struct StatProjectDTO {
     }
     mutating func updateTodoRegist(to todoRegist: Int){
         self.stat_todo_reg = todoRegist
+    }
+}
+
+/// * ViewModel <=> PageService
+/// * Struct for Project Index Page, User Statistics Info
+struct userStatProject{
+    
+    //--------------------
+    // content
+    //--------------------
+    let registProject: Int
+    let completeProject: Int
+    let waterDrop: Int
+    
+    //--------------------
+    // constructor
+    //--------------------
+    init(with dto: StatProjectDTO, and count: Int){
+        self.registProject = count
+        self.completeProject = dto.stat_proj_fin
+        self.waterDrop = dto.stat_drop
     }
 }
 

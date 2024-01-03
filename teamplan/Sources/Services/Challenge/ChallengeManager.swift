@@ -8,26 +8,37 @@
 
 import Foundation
 
+//===============================
+// MARK: - Global Parameter
+//===============================
 let challengeCount: Int = 36
+let conversionRate: Int = 1
 
+//===============================
+// MARK: - Local Parameter
+//===============================
 final class ChallengeManager{
-    
-    //===============================
-    // MARK: - Global Parameter
-    //===============================
-    
     let challengeCD = ChallengeServicesCoredata()
     let challengeFS = ChallengeServicesFirestore()
     
     var challengeArray: [ChallengeObject] = []
     
-    //===============================
-    // MARK: - Fetch Challenges
-    //===============================
-    func fetchChallenge() async throws {
+}
+//===============================
+// MARK: Main Function
+//===============================
+extension ChallengeManager{
+    
+    //--------------------
+    // Get Array: FS
+    //--------------------
+    func getChallenges() async throws {
         challengeArray = try await challengeFS.getChallenges()
     }
     
+    //--------------------
+    // Get Object
+    //--------------------
     func getChallenge() throws -> [ChallengeObject]{
         if challengeArray == [] {
             throw ChallengeErrorFS.InternalError
@@ -36,20 +47,23 @@ final class ChallengeManager{
         }
     }
     
+    //--------------------
+    // Set: CD
+    //--------------------
     func setChallenge() throws {
         try challengeCD.setChallenges(with: challengeArray)
     }
     
-    //===============================
-    // MARK: - Delete Challenges
-    //===============================
+    //--------------------
+    // Delete: CD
+    //--------------------
     func delChallenge(with userId: String) throws {
         try challengeCD.deleteChallenges(with: userId)
     }
     
-    //===============================
-    // MARK: - Challenges Configure
-    //===============================
+    //--------------------
+    // Config Object
+    //--------------------
     func configChallenge(with userId: String) {
         
         // Unlock Step1 Challenge & assign UserId

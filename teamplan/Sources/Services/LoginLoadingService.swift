@@ -297,7 +297,7 @@ extension LoginLoadingService{
     // -----------------------------
     // Challenge
     private func getChlgFS() async throws -> [ChallengeObject] {
-        try await chlgManager.fetchChallenge()
+        try await chlgManager.getChallenges()
         chlgManager.configChallenge(with: userId)
         return try chlgManager.getChallenge()
     }
