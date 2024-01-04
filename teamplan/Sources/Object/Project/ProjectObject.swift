@@ -8,9 +8,6 @@
 
 import Foundation
 
-//============================
-// MARK: Project Entity
-//============================
 struct ProjectObject{
     
     //--------------------
@@ -41,6 +38,7 @@ struct ProjectObject{
     //--------------------
     // Constructor
     //--------------------
+    // Set
     init(from dto: ProjectSetDTO, id: Int, userId: String) {
         let setDate = Date()
         self.proj_id = id
@@ -55,7 +53,7 @@ struct ProjectObject{
         self.proj_registed_at = setDate
         self.proj_changed_at = setDate
     }
-    
+    // Get
     init?(entity: ProjectEntity){
         guard let userId = entity.proj_user_id,
               let title = entity.proj_title,
@@ -64,10 +62,12 @@ struct ProjectObject{
               let registedAt = entity.proj_registed_at,
               let updatedAt = entity.proj_changed_at,
               let finishedAt = entity.proj_finished_at,
-              let todo = entity.todo_relationship as? Set<TodoEntity>
+              let todoEntities = entity.todo_relationship as? Set<TodoEntity>
         else {
             return nil
         }
+        let todoList = todoEntities.compactMap { TodoObject(with: $0) }
+
         // Assigning values
         self.proj_id = Int(entity.proj_id)
         self.proj_user_id = userId
@@ -80,43 +80,6 @@ struct ProjectObject{
         self.proj_registed_at = registedAt
         self.proj_changed_at = updatedAt
         self.proj_finished_at = finishedAt
-        self.proj_todo = todo.map{ TodoObject(todoEntity: $0) }
-    }
-}
-
-//============================
-// MARK: Todo Entity
-//============================
-struct TodoObject{
-    
-    //--------------------
-    // Content
-    //--------------------
-    // id
-    let todo_id: Int
-    
-    // content
-    var todo_desc: String
-    
-    // status
-    var todo_pinned: Bool
-    var todo_status: Bool
-    
-    // maintenance
-    let todo_registed_at: Date
-    var todo_changed_at: Date
-    let todo_updated_at: Date
-    
-    //--------------------
-    // Constructor
-    //--------------------
-    init(todoEntity: TodoEntity){
-        self.todo_id = Int(todoEntity.todo_id)
-        self.todo_desc = todoEntity.todo_desc ?? "Unknown"
-        self.todo_pinned = todoEntity.todo_pinned
-        self.todo_status = todoEntity.todo_status
-        self.todo_registed_at = todoEntity.todo_registed_at ?? Date()
-        self.todo_changed_at = todoEntity.todo_changed_at ?? Date()
-        self.todo_updated_at = todoEntity.todo_updated_at ?? Date()
+        self.proj_todo = todoList
     }
 }
