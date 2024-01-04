@@ -20,6 +20,7 @@ struct StatLoginDTO {
     let stat_user_id: String
     
     var stat_term: Int
+    var stat_todo_limit: Int
     
     //--------------------
     // constructor
@@ -28,16 +29,13 @@ struct StatLoginDTO {
     init(){
         self.stat_user_id = ""
         self.stat_term = 0
+        self.stat_todo_limit = 0
     }
-    // Coredata
+    // CoredataService
     init(with userId: String, entity: StatisticsEntity){
         self.stat_user_id = userId
         self.stat_term = Int(entity.stat_term)
-    }
-    // Firestore
-    init(with object: StatisticsObject){
-        self.stat_user_id = object.stat_user_id
-        self.stat_term = object.stat_term
+        self.stat_todo_limit = Int(entity.stat_todo_limit)
     }
     
     //--------------------
@@ -45,6 +43,36 @@ struct StatLoginDTO {
     //--------------------
     mutating func updateServiceTerm(with newTerm: Int){
         self.stat_term = newTerm
+    }
+    mutating func updateTodoLimit(with newVal: Int){
+        self.stat_todo_limit = newVal
+    }
+}
+
+//================================
+// MARK: - Home
+//================================
+struct StatHomeDTO{
+    
+    //--------------------
+    // content
+    //--------------------
+    let type: DTOType = .home
+    let userId: String
+    let waterDrop: Int
+    
+    //--------------------
+    // constructor
+    //--------------------
+    // Default
+    init() {
+        self.userId = ""
+        self.waterDrop = 0
+    }
+    // Coredata
+    init(with userId: String, entity: StatisticsEntity){
+        self.userId = userId
+        self.waterDrop = Int(entity.stat_drop)
     }
 }
 
@@ -73,7 +101,7 @@ struct StatChallengeDTO {
         self.stat_chlg_step = [ : ]
         self.stat_mychlg = []
     }
-    // Coredata Entity
+    // CoredataService
     init(with userId: String, entity: StatisticsEntity, chlgStep: [Int : Int], mychlg: [Int]){
         self.stat_user_id = userId
         self.stat_drop = Int(entity.stat_drop)
@@ -133,7 +161,7 @@ struct StatCenterDTO {
         self.stat_chlg_step = [:]
         self.stat_mychlg = []
     }
-    // Coredata Entity
+    // CoredataService
     init(with userId: String, entity: StatisticsEntity, chlgStep: [Int : Int], mychlg: [Int]){
         self.stat_user_id = userId
         self.stat_term = Int(entity.stat_term)
@@ -151,8 +179,7 @@ struct StatCenterDTO {
 //================================
 // MARK: - Project
 //================================
-/// * PageService <=> StorageService
-/// * Struct for Page & Storage Service DTO
+/// PageService <=> StorageService DTO
 struct StatProjectDTO {
     
     //--------------------
@@ -171,6 +198,7 @@ struct StatProjectDTO {
     //--------------------
     // constructor
     //--------------------
+    // Default
     init(){
         self.stat_user_id = ""
         self.stat_drop = 0
@@ -180,7 +208,7 @@ struct StatProjectDTO {
         self.stat_proj_ext = 0
         self.stat_todo_reg = 0
     }
-    
+    // CoredataService
     init(with userId: String, entity: StatisticsEntity){
         self.stat_user_id = userId
         self.stat_drop = Int(entity.stat_drop)
@@ -211,9 +239,9 @@ struct StatProjectDTO {
     }
 }
 
-/// * ViewModel <=> PageService
+/// * ViewModel <=> PageService DTO
 /// * Struct for Project Index Page, User Statistics Info
-struct userStatProject{
+struct userStatProjectDTO{
     
     //--------------------
     // content
@@ -225,6 +253,7 @@ struct userStatProject{
     //--------------------
     // constructor
     //--------------------
+    // ProjectIndexService
     init(with dto: StatProjectDTO, and count: Int){
         self.registProject = count
         self.completeProject = dto.stat_proj_fin
@@ -233,7 +262,47 @@ struct userStatProject{
 }
 
 //================================
-// MARK: - Update
+// MARK: - Todo
+//================================
+/// PageService <=> StorageService DTO
+struct StatTodoDTO {
+    
+    //--------------------
+    // content
+    //--------------------
+    let userId: String
+    var todoRegist: Int
+    var todoLimit: Int
+    
+    //--------------------
+    // constructor
+    //--------------------
+    // Default
+    init(){
+        self.userId = ""
+        self.todoRegist = 0
+        self.todoLimit = 0
+    }
+    // ProjectDetailService
+    init(with userId: String, entity: StatisticsEntity) {
+        self.userId = userId
+        self.todoRegist = Int(entity.stat_todo_reg)
+        self.todoLimit = Int(entity.stat_todo_limit)
+    }
+    
+    //--------------------
+    // function
+    //--------------------
+    mutating func updateTodoRegist(with newVal: Int){
+        self.todoRegist = newVal
+    }
+    mutating func updateTodoLimit(with newVal: Int){
+        self.todoLimit = newVal
+    }
+}
+
+//================================
+// MARK: - Update Only
 //================================
 struct StatUpdateDTO {
     
@@ -254,6 +323,7 @@ struct StatUpdateDTO {
     var stat_proj_alert: Int?
     var stat_proj_ext: Int?
     var stat_todo_reg: Int?
+    var stat_todo_limit: Int?
     
     //--------------------
     // constructor
@@ -262,6 +332,7 @@ struct StatUpdateDTO {
     init(loginDTO: StatLoginDTO) {
         self.stat_user_id = loginDTO.stat_user_id
         self.stat_term = loginDTO.stat_term
+        self.stat_todo_limit = loginDTO.stat_todo_limit
     }
     // Challenge
     init(challengeDTO: StatChallengeDTO) {
@@ -279,6 +350,12 @@ struct StatUpdateDTO {
         self.stat_proj_alert = projectDTO.stat_proj_alert
         self.stat_proj_ext = projectDTO.stat_proj_ext
         self.stat_todo_reg = projectDTO.stat_todo_reg
+    }
+    // Todo
+    init(todoDTO: StatTodoDTO) {
+        self.stat_user_id = todoDTO.userId
+        self.stat_todo_reg = todoDTO.todoRegist
+        self.stat_todo_limit = todoDTO.todoLimit
     }
     
     //--------------------
@@ -316,6 +393,9 @@ struct StatUpdateDTO {
         if let statTodoReg = stat_todo_reg {
             dict["stat_todo_reg"] = statTodoReg
         }
+        if let statTodoLimit = stat_todo_limit {
+            dict["stat_todo_limit"] = statTodoLimit
+        }
         return dict
     }
 }
@@ -325,91 +405,9 @@ struct StatUpdateDTO {
 //================================
 enum DTOType {
     case login
+    case home
     case challenge
     case project
     case center
-}
-
-
-//================================
-// MARK: - Legacy
-//================================
-struct StatisticsDTO{
-    // id
-    let stat_user_id: String
-    
-    //content: Etc
-    var stat_term: Int
-    var stat_drop: Int
-    
-    //content: Project & Todo
-    var stat_proj_reg: Int
-    var stat_proj_fin: Int
-    var stat_proj_alert: Int
-    var stat_proj_ext: Int
-    var stat_todo_reg: Int
-    
-    //content: Challenge
-    var stat_chlg_step: [Int : Int]
-    var stat_mychlg: [Int]
-    
-    // maintenance
-    var stat_upload_at: Date
-    
-    // Constructor
-    init(statObject: StatisticsObject) {
-        self.stat_user_id = statObject.stat_user_id
-        self.stat_term = statObject.stat_term
-        self.stat_drop = statObject.stat_drop
-        self.stat_proj_reg = statObject.stat_proj_reg
-        self.stat_proj_fin = statObject.stat_proj_fin
-        self.stat_proj_alert = statObject.stat_proj_alert
-        self.stat_proj_ext = statObject.stat_proj_ext
-        self.stat_todo_reg = statObject.stat_todo_reg
-        self.stat_chlg_step = statObject.stat_chlg_step
-        self.stat_mychlg = statObject.stat_mychlg
-        self.stat_upload_at = statObject.stat_upload_at
-    }
-    init() {
-        self.stat_user_id = "unknown"
-        self.stat_term = 0
-        self.stat_drop = 0
-        self.stat_proj_reg = 0
-        self.stat_proj_fin = 0
-        self.stat_proj_alert = 0
-        self.stat_proj_ext = 0
-        self.stat_todo_reg = 0
-        self.stat_chlg_step = [:]
-        self.stat_mychlg = []
-        self.stat_upload_at = Date()
-    }
-
-    // ===== Update
-    mutating func updateServiceTerm(to term: Int){
-        self.stat_term = term
-    }
-    
-    mutating func updateWaterDrop(to drop: Int){
-        self.stat_drop = drop
-    }
-    
-    mutating func updateProjectRegist(to projectRegist: Int){
-        self.stat_proj_reg = projectRegist
-    }
-    
-    mutating func updateProjectFinish(to projectFinish: Int){
-        self.stat_proj_fin = projectFinish
-    }
-    
-    mutating func updateProjectAlert(to projectAlert: Int){
-        self.stat_proj_alert = projectAlert
-    }
-    
-    mutating func updateProjectExtend(to projectExtend: Int){
-        self.stat_proj_ext = projectExtend
-    }
-    
-    mutating func updateTodoRegist(to todoRegist: Int){
-        self.stat_todo_reg = todoRegist
-    }
+    case todo
 }
