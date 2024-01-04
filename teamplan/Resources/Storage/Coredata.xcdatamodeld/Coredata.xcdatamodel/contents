@@ -50,6 +50,7 @@
         <attribute name="stat_proj_fin" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="stat_proj_reg" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="stat_term" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="stat_todo_limit" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="stat_todo_reg" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="stat_upload_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="stat_user_id" optional="YES" attributeType="String"/>

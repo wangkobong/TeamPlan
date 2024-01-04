@@ -58,12 +58,12 @@ extension ProjectIndexService{
     // Get
     //--------------------
     // User Statistics
-    func getStatistics() throws -> userStatProject {
+    func getStatistics() throws -> userStatProjectDTO {
         // Ready for struct DTO
         let projectCount = try getProjects().count
         
         // Struct DTO & Return
-        return userStatProject(with: statDTO, and: projectCount)
+        return userStatProjectDTO(with: statDTO, and: projectCount)
     }
     
     // Project Index

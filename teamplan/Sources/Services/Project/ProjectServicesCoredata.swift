@@ -15,9 +15,9 @@ final class ProjectServicesCoredata{
     // MARK: - Parameter
     //===============================
     let util = Utilities()
-    let cd = CoreDataManager.shared
+    let cm = CoreDataManager.shared
     var context: NSManagedObjectContext {
-        return cd.context
+        return cm.context
     }
 }
 

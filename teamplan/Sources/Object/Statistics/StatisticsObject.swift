@@ -14,16 +14,17 @@ struct StatisticsObject{
     // content
     //--------------------
     let stat_user_id: String
-    var stat_term: Int
-    var stat_drop: Int
-    var stat_proj_reg: Int
-    var stat_proj_fin: Int
-    var stat_proj_alert: Int
-    var stat_proj_ext: Int
-    var stat_todo_reg: Int
-    var stat_chlg_step: [Int : Int]
-    var stat_mychlg: [Int]
-    var stat_upload_at: Date
+    let stat_term: Int
+    let stat_drop: Int
+    let stat_proj_reg: Int
+    let stat_proj_fin: Int
+    let stat_proj_alert: Int
+    let stat_proj_ext: Int
+    let stat_todo_reg: Int
+    let stat_todo_limit: Int
+    let stat_chlg_step: [Int : Int]
+    let stat_mychlg: [Int]
+    let stat_upload_at: Date
     
     //--------------------
     // constructor
@@ -38,6 +39,7 @@ struct StatisticsObject{
         self.stat_proj_alert = 0
         self.stat_proj_ext = 0
         self.stat_todo_reg = 0
+        self.stat_todo_limit = 10
         self.stat_chlg_step = [
             ChallengeType.serviceTerm.rawValue : 1,
             ChallengeType.totalTodo.rawValue : 1,
@@ -53,42 +55,26 @@ struct StatisticsObject{
     // constructor
     //--------------------
     // Coredata
-    init?(statEntity: StatisticsEntity, chlgStep: [Int : Int], mychlg: [Int]){
-        guard let stat_user_id = statEntity.stat_user_id,
-              let stat_upload_at = statEntity.stat_upload_at
+    init?(entity: StatisticsEntity, chlgStep: [Int : Int], mychlg: [Int]){
+        guard let stat_user_id = entity.stat_user_id,
+              let stat_upload_at = entity.stat_upload_at
         else {
             return nil
         }
-        
         // Assigning values
         self.stat_user_id = stat_user_id
-        self.stat_term = Int(statEntity.stat_term)
-        self.stat_drop = Int(statEntity.stat_drop)
-        self.stat_proj_reg = Int(statEntity.stat_proj_reg)
-        self.stat_proj_fin = Int(statEntity.stat_proj_fin)
-        self.stat_proj_alert = Int(statEntity.stat_proj_alert)
-        self.stat_proj_ext = Int(statEntity.stat_proj_ext)
-        self.stat_todo_reg = Int(statEntity.stat_todo_reg)
+        self.stat_term = Int(entity.stat_term)
+        self.stat_drop = Int(entity.stat_drop)
+        self.stat_proj_reg = Int(entity.stat_proj_reg)
+        self.stat_proj_fin = Int(entity.stat_proj_fin)
+        self.stat_proj_alert = Int(entity.stat_proj_alert)
+        self.stat_proj_ext = Int(entity.stat_proj_ext)
+        self.stat_todo_reg = Int(entity.stat_todo_reg)
+        self.stat_todo_limit = Int(entity.stat_todo_limit)
         self.stat_chlg_step = chlgStep
         self.stat_mychlg = mychlg
         self.stat_upload_at = stat_upload_at
     }
-    
-    // Update
-    init(updatedStat: StatisticsDTO){
-        self.stat_user_id = updatedStat.stat_user_id
-        self.stat_term = updatedStat.stat_term
-        self.stat_drop = updatedStat.stat_drop
-        self.stat_proj_reg = updatedStat.stat_proj_reg
-        self.stat_proj_fin = updatedStat.stat_proj_fin
-        self.stat_proj_alert = updatedStat.stat_proj_alert
-        self.stat_proj_ext = updatedStat.stat_proj_ext
-        self.stat_todo_reg = updatedStat.stat_todo_reg
-        self.stat_chlg_step = updatedStat.stat_chlg_step
-        self.stat_mychlg = updatedStat.stat_mychlg
-        self.stat_upload_at = updatedStat.stat_upload_at
-    }
-
     // Firestore
     init?(statData: [String : Any]){
         // Pharsing Normal Data
@@ -100,6 +86,7 @@ struct StatisticsObject{
               let stat_proj_alert = statData["stat_proj_alert"] as? Int,
               let stat_proj_ext = statData["stat_proj_ext"] as? Int,
               let stat_todo_reg = statData["stat_todo_reg"] as? Int,
+              let stat_todo_limit = statData["stat_todo_limit"] as? Int,
               let stat_chlg_step_firestore = statData["stat_chlg_step"] as? [String : Int],
               let stat_upload_at_string = statData["stat_upload_at"] as? String,
               let stat_upload_at = DateFormatter.standardFormatter.date(from: stat_upload_at_string)
@@ -115,6 +102,7 @@ struct StatisticsObject{
         self.stat_proj_alert = stat_proj_alert
         self.stat_proj_ext = stat_proj_ext
         self.stat_todo_reg = stat_todo_reg
+        self.stat_todo_limit = stat_todo_limit
         self.stat_upload_at = stat_upload_at
         self.stat_mychlg = statData["stat_mychlg"] as? [Int] ?? []
         self.stat_chlg_step = stat_chlg_step_firestore.compactMapKeys { Int($0) }
@@ -135,6 +123,7 @@ struct StatisticsObject{
             "stat_proj_alert": self.stat_proj_alert,
             "stat_proj_ext": self.stat_proj_ext,
             "stat_todo_reg": self.stat_todo_reg,
+            "stat_todo_limit" : self.stat_todo_limit,
             "stat_mychlg": self.stat_mychlg,
             "stat_chlg_step": stat_chlg_step_firestore,
             "stat_upload_at": DateFormatter.standardFormatter.string(from: self.stat_upload_at)

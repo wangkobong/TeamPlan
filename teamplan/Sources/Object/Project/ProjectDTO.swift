@@ -9,57 +9,74 @@
 import Foundation
 
 //============================
-// MARK: Card - Home/Project
+// MARK: Info
 //============================
-/// Service -> View/ViewModel
-struct ProjectCardDTO{
+// ProjectDetailService
+struct ProjectDetailDTO{
+    
+    //--------------------
     // content
+    //--------------------
+    let userId: String
+    let projectId: Int
     let title: String
-    
-    // status
-    let startedAt: Date
+    let startAt: Date
     let deadline: Date
-    let finished: Bool
+    let period: Int
+    let todoLimit: Int
+    var todoRegisted: Int
+    var todoList: [TodoInfo] = []
     
-    // todo
-    let registedTodo: Int
-    let finishedTodo: Int
-    
-    
-    // Constructor
-    // Coredata
-    init(from projectEntity: ProjectEntity){
-        self.title = projectEntity.proj_title ?? ""
-        self.startedAt = projectEntity.proj_started_at ?? Date()
-        self.deadline = projectEntity.proj_deadline ?? Date()
-        self.finished = projectEntity.proj_finished
-        self.registedTodo = Int(projectEntity.proj_todo_registed)
-        self.finishedTodo = Int(projectEntity.proj_todo_finished)
+    //--------------------
+    // constructor
+    //--------------------
+    // Default
+    init(){
+        self.userId = ""
+        self.projectId = 0
+        self.title = ""
+        self.startAt = Date()
+        self.deadline = Date()
+        self.period = 0
+        self.todoRegisted = 0
+        self.todoLimit = 0
+    }
+    // Ready Service
+    init(with object: ProjectObject, period: Int, limit: Int){
+        self.userId = object.proj_user_id
+        self.projectId = object.proj_id
+        self.title = object.proj_title
+        self.startAt = object.proj_started_at
+        self.deadline = object.proj_deadline
+        self.period = period
+        self.todoRegisted = object.proj_todo_registed
+        self.todoLimit = limit
     }
     
-    // dummyTest
-    init(from projectObject: ProjectObject){
-        self.title = projectObject.proj_title
-        self.startedAt = projectObject.proj_started_at
-        self.deadline = projectObject.proj_deadline
-        self.finished = projectObject.proj_finished
-        self.registedTodo = Int(projectObject.proj_todo_registed)
-        self.finishedTodo = Int(projectObject.proj_todo_finished)
+    //--------------------
+    // function
+    //--------------------
+    mutating func updateTodoRegist(with newVal: Int){
+        self.todoRegisted = newVal
     }
 }
 
 //============================
-// MARK: Set - Project
+// MARK: Set
 //============================
+// ProjectIndexService
 struct ProjectSetDTO{
-    // content
-    let title: String
     
-    // status
+    //--------------------
+    // content
+    //--------------------
+    let title: String
     let startedAt: Date
     let deadline: Date
     
-    // Constructor
+    //--------------------
+    // constructor
+    //--------------------
     init(title: String, startedAt: Date, deadline: Date) {
         self.title = title
         self.startedAt = startedAt
@@ -68,21 +85,19 @@ struct ProjectSetDTO{
 }
 
 //============================
-// MARK: Update - Project
+// MARK: Update
 //============================
+// ProjectCoredataService
 struct ProjectUpdateDTO{
-    // id
+    
+    //--------------------
+    // content
+    //--------------------
     let userId: String
     let projectId: Int
-    var todoId: Int?
-    
-    // content
     var newTitle: String?
     var newDeadline: Date?
-    
-    // Todo
-    var todo: TodoObject?
-    var todoStatus: Bool?
+    var newTodoRegist: Int?
     
     //--------------------
     // constructor
@@ -93,5 +108,41 @@ struct ProjectUpdateDTO{
         self.projectId = projectId
         self.newDeadline = newDeadLine
     }
+    // ProjectDetail
+    init(with data: ProjectDetailDTO){
+        self.userId = data.userId
+        self.projectId = data.projectId
+        self.newTodoRegist = data.todoRegisted
+    }
 }
 
+//============================
+// MARK: toViewModel
+//============================
+/// * Page Service => ViewModel
+/// * Struct for Home / ProjectIndex Page, Project Card Info
+struct ProjectCardDTO{
+    
+    //--------------------
+    // content
+    //--------------------
+    let title: String
+    let startedAt: Date
+    let deadline: Date
+    let finished: Bool
+    let registedTodo: Int
+    let finishedTodo: Int
+    
+    //--------------------
+    // constructor
+    //--------------------
+    // Coredata
+    init(from projectEntity: ProjectEntity){
+        self.title = projectEntity.proj_title ?? ""
+        self.startedAt = projectEntity.proj_started_at ?? Date()
+        self.deadline = projectEntity.proj_deadline ?? Date()
+        self.finished = projectEntity.proj_finished
+        self.registedTodo = Int(projectEntity.proj_todo_registed)
+        self.finishedTodo = Int(projectEntity.proj_todo_finished)
+    }
+}

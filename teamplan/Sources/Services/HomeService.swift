@@ -19,7 +19,6 @@ final class HomeService {
     let phrase = UserPhrase()
     
     let userId: String
-    var statistics: StatisticsDTO?
     
     //===============================
     // MARK: - Initializer
