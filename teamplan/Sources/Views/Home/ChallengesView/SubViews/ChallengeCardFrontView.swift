@@ -12,21 +12,11 @@ struct ChallengeCardFrontView: View {
     
     let challenge: MyChallengeDTO
     let parentsWidth: CGFloat
-//    @State private var rotation: Double = 0.0
-    
+
     var body: some View {
         front
         .frame(width: setCardWidth(screenWidth: parentsWidth),height: 144)
-//        .rotation3DEffect(
-//            .degrees(rotation),
-//            axis: (x: 0.0, y: 1.0, z: 0.0)
-//        )
-//        .onTapGesture {
-//            withAnimation(.linear) {
-//                rotation += (rotation == 0) ? 180.0 : -180.0
-//            }
-//        }
-        
+
     }
 }
 
@@ -61,49 +51,6 @@ extension ChallengeCardFrontView {
         
         }
         
-    }
-    
-    private var back: some View {
-        VStack {
-            Text(challenge.title)
-                .font(.appleSDGothicNeo(.bold, size: 12))
-                .foregroundColor(.theme.blackColor)
-                .multilineTextAlignment(.center)
-            Text(challenge.desc)
-                .font(.appleSDGothicNeo(.regular, size: 12))
-                .foregroundColor(.theme.greyColor)
-
-            
-            ZStack(alignment: .leading) {
-                
-                ZStack(alignment: .trailing) {
-                    Capsule()
-                        .fill(.black.opacity(0.08))
-                        .frame(height: 3)
-                }
-                Capsule()
-                    .fill(
-                        Color.theme.mainBlueColor
-                    )
-                    .frame(width: 30, height: 5)
-            }
-            .padding(.leading, 17)
-            .padding(.trailing, 17)
-            
-            Text("포기하기")
-                .frame(height: 25)
-                .frame(maxWidth: .infinity)
-                .background(Color.theme.mainPurpleColor)
-                .foregroundColor(.theme.whiteColor)
-                .cornerRadius(8)
-                .font(.appleSDGothicNeo(.regular, size: 12))
-                .padding(.top, 12)
-                .padding(.leading, 10)
-                .padding(.trailing, 10)
-                .onTapGesture {
-                    print("기하기포")
-                }
-        }
     }
 }
 

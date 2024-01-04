@@ -19,17 +19,18 @@ public struct ChallengeAlertView: View {
     
     @Binding public var isPresented: Bool
     @Binding var allChallenge: [ChallengeObject]
+    @Binding var challenge: ChallengeObject
     
     public typealias Action = () -> ()
     
     let type: ChallengeAlertType
     let index: Int
     public var action: Action
-    lazy var challenge = allChallenge[self.index]
-    
-    public init(isPresented: Binding<Bool>, allChallenge: Binding<[ChallengeObject]>,type: ChallengeAlertType, index: Int, action: @escaping Action) {
+
+    public init(isPresented: Binding<Bool>, allChallenge: Binding<[ChallengeObject]>, challenge: Binding<ChallengeObject>, type: ChallengeAlertType, index: Int, action: @escaping Action) {
         self._isPresented = isPresented
         self._allChallenge = allChallenge
+        self._challenge = challenge
         self.type = type
         self.action = action
         self.index = index

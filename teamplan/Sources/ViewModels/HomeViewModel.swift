@@ -34,6 +34,7 @@ final class HomeViewModel: ObservableObject {
     private func addSubscribers() {
         
         homeService.challenge.$myChallenges
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] myChallenges in
                 print("myChallenges: \(myChallenges)")
                 self?.myChallenges = myChallenges
@@ -71,7 +72,6 @@ final class HomeViewModel: ObservableObject {
     func tryChallenge(with challengeId: Int) {
         do {
             try homeService.challenge.setMyChallenges(with: challengeId)
-            try homeService.readyService()
         } catch let error {
             // Handle the error here
             print("Error: \(error)")
@@ -81,7 +81,6 @@ final class HomeViewModel: ObservableObject {
     func quitChallenge(with challengeId: Int) {
         do {
             try homeService.challenge.disableMyChallenge(with: challengeId)
-            try homeService.readyService()
         } catch let error {
             // Handle the error here
             print("Error: \(error)")
