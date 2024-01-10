@@ -17,7 +17,7 @@ struct MyChallengeDTO: Hashable, Identifiable {
     // content
     //--------------------
     let id = UUID().uuidString
-    let challengeID: Int
+    var challengeID: Int
     let type: ChallengeType
     let title: String
     let desc: String

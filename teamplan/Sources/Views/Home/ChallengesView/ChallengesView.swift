@@ -16,6 +16,7 @@ struct ChallengesView: View {
     @State private var type: ChallengeAlertType = .lock
     @State private var currentPage = 0
     @State private var indexForAlert = 0
+    @State private var selectedCardIndex: Int? = nil
     
     let columns = [
       //추가 하면 할수록 화면에 보여지는 개수가 변함
@@ -29,8 +30,6 @@ struct ChallengesView: View {
     private var numberOfPages: Int {
         return ($homeViewModel.challengeArray.count + itemsPerPage - 1) / itemsPerPage
     }
-
-    @State private var selectedCardIndex: Int? = nil
     
     var body: some View {
         ScrollView {
@@ -70,7 +69,18 @@ struct ChallengesView: View {
             }
             .challengeAlert(isPresented: $isPresented) {
                 ChallengeAlertView(isPresented: $isPresented, allChallenge: $homeViewModel.challengeArray, challenge: $homeViewModel.challengeArray[self.indexForAlert], type: self.type, index: self.indexForAlert) {
-                    homeViewModel.tryChallenge(with: $homeViewModel.challengeArray[self.indexForAlert].chlg_id.wrappedValue)
+                    switch type {
+                    case .didComplete:
+                        break
+                    case .didSelected:
+                        break
+                    case .willChallenge:
+                        homeViewModel.tryChallenge(with: $homeViewModel.challengeArray[self.indexForAlert].chlg_id.wrappedValue)
+                    case .lock:
+                        break
+                    case .quit:
+                        homeViewModel.quitChallenge(with: $homeViewModel.myChallenges[selectedCardIndex ?? 0].challengeID.wrappedValue)
+                    }
                 }
             }
             .onAppear {
@@ -84,6 +94,7 @@ struct ChallengesView: View {
                     print("isComplete: \($0.chlg_status)")
                     print("prevGoal: \($0.chlg_goal)")
                     print("prevTitle: \($0.chlg_title)")
+                    
                 }
             }
         }
@@ -120,7 +131,10 @@ extension ChallengesView {
     }
     
     private var topCardSection: some View {
+        
+        
         VStack {
+           let _ = Self._printChanges()
             HStack {
                 Text("나의 도전과제")
                     .font(.appleSDGothicNeo(.semiBold, size: 20))
@@ -136,7 +150,7 @@ extension ChallengesView {
                     let screenWidth = UIScreen.main.bounds.size.width
                     ZStack {
                         if self.selectedCardIndex == index {
-                            ChallengeCardBackView(homeViewModel: homeViewModel, challenge: challenge.wrappedValue, parentsWidth: screenWidth)
+                            ChallengeCardBackView(homeViewModel: homeViewModel, challenge: challenge.wrappedValue, parentsWidth: screenWidth, isPresented: $isPresented, type: $type)
                                 .background(.white)
                                 .cornerRadius(4)
                                 .rotation3DEffect(.degrees(180), axis: (x: 0.0, y: 1.0, z: 0.0))
@@ -153,6 +167,14 @@ extension ChallengesView {
                     .onTapGesture {
                         withAnimation(.linear) {
                             self.selectedCardIndex = (self.selectedCardIndex == index) ? nil : index
+                            if let index = homeViewModel.challengeArray.firstIndex(where: { $0.chlg_id == self.homeViewModel.myChallenges[index].challengeID }) {
+                                // index를 사용하여 작업 수행
+                                print("해당 요소의 인덱스: \(index)")
+                                self.indexForAlert = index
+                            } else {
+                                // 배열에서 조건을 만족하는 요소를 찾지 못한 경우에 대한 처리
+                                print("해당하는 요소가 없습니다.")
+                            }
                         }
                     }
                 }
