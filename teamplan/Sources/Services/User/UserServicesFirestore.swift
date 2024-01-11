@@ -10,92 +10,87 @@ import Foundation
 import FirebaseFirestore
 import FirebaseFirestoreSwift
 
+//================================
+// MARK: - Main Function
+//================================
 final class UserServicesFirestore{
 
-    //================================
-    // MARK: - Parameter Setting
-    //================================
+    //--------------------
+    // Parameter
+    //--------------------
     let util = Utilities()
     let fs = Firestore.firestore()
     
-    //================================
-    // MARK: - Set User
-    //================================
-    func setUser(reqUser : UserObject) async throws -> String {
-        
+    //--------------------
+    // Set
+    //--------------------
+    func setUser(with user: UserObject) async throws {
         // Search & Set Data
-        let collectionRef = fs.collection("User")
-        let docsRef = try await collectionRef.addDocument(data: reqUser.toDictionary())
-        return docsRef.documentID
+        let collection = fetchCollection()
+        try await collection.addDocument(data: user.toDictionary())
     }
     
-    //================================
-    // MARK: - Get User
-    //================================
+    //--------------------
+    // Get
+    //--------------------
     func getUser(from userId: String) async throws -> UserObject {
-        
-        // Search Data
-        let collectionRef = fs.collection("User")
-        let docsRef = try await collectionRef.whereField("user_id", isEqualTo: userId).getDocuments()
-        
-        // Exception Handling : Search Error
-        guard docsRef.documents.count == 1 else {
-            if docsRef.documents.count > 1 {
-                throw UserErrorFS.MultipleUserFound
-            } else {
-                throw UserErrorFS.InternalError
-            }
-        }
-        // Convert to Object & Get
-        let docs = docsRef.documents.first!
-        guard let reqUser = UserObject(userData: docs.data(), docsId: docs.documentID) else {
-            throw UserErrorFS.UnexpectedConvertError
-        }
-        return reqUser
+        // Fetch Document
+        let docs = try await fetchDocument(with: userId)
+        // Convert & Return
+        return try convertToUser(with: docs.data())
     }
     
-    //================================
-    // MARK: - Update User
-    //================================
-    func updateUser(to updatedData: UserObject) async throws {
-        
-        // Search Data
-        let collectionRef = fs.collection("User")
-        let docsRef = try await collectionRef.whereField("user_id", isEqualTo: updatedData.user_id).getDocuments()
-        
-        // Exception Handling : Search Error
-        guard docsRef.documents.count == 1 else {
-            if docsRef.documents.count > 1 {
-                throw UserErrorFS.MultipleUserFound
-            } else {
-                throw UserErrorFS.InternalError
-            }
-        }
-        // Update Documents
-        let docs = docsRef.documents.first!
-        try await docs.reference.updateData(updatedData.toDictionary())
+    //--------------------
+    // Update
+    //--------------------
+    func updateUser(with updatedUser: UserObject) async throws {
+        // Fetch Document
+        let docs = try await fetchDocument(with: updatedUser.user_id)
+        // Update Document
+        try await docs.reference.updateData(updatedUser.toDictionary())
     }
     
-    //================================
-    // MARK: - Delete User
-    //================================
-    func deleteUser(to userId: String) async throws {
-        
-        // Search Data
-        let collectionRef = fs.collection("User")
-        let docsRef = try await collectionRef.whereField("user_id", isEqualTo: userId).getDocuments()
-        
-        // Exception Handling : Search Error
-        guard docsRef.documents.count == 1 else {
-            if docsRef.documents.count > 1 {
-                throw UserErrorFS.MultipleUserFound
-            } else {
-                throw UserErrorFS.InternalError
-            }
-        }
-        // Delete Documents
-        let docs = docsRef.documents.first!
+    //--------------------
+    // Delete
+    //--------------------
+    func deleteUser(with userId: String) async throws {
+        // Fetch Document
+        let docs = try await fetchDocument(with: userId)
+        // Delete Document
         try await docs.reference.delete()
+    }
+}
+
+//================================
+// MARK: - Support Function
+//================================
+extension UserServicesFirestore{
+    
+    // Fetch: Collection
+    private func fetchCollection() -> CollectionReference {
+        return fs.collection("User")
+    }
+    
+    // Fetch: Document
+    private func fetchDocument(with userId: String) async throws -> QueryDocumentSnapshot {
+        // fetch reference
+        let docsRef = try await fetchCollection()
+            .whereField("user_id", isEqualTo: userId)
+            .getDocuments()
+        
+        // convert & return
+        guard let docs = docsRef.documents.first else {
+            throw UserErrorFS.UnexpectedConvertDocsError
+        }
+        return docs
+    }
+    
+    // Convert: to Object
+    private func convertToUser(with data: [String:Any]) throws -> UserObject {
+        guard let user = UserObject(userData: data) else {
+            throw UserErrorFS.UnexpectedConvertObjectError
+        }
+        return user
     }
 }
 
@@ -103,21 +98,15 @@ final class UserServicesFirestore{
 // MARK: - Exception
 //================================
 enum UserErrorFS: LocalizedError {
-    case UserRetrievalByIdentifierFailed
-    case UnexpectedConvertError
-    case MultipleUserFound
-    case InternalError
+    case UnexpectedConvertDocsError
+    case UnexpectedConvertObjectError
     
     var errorDescription: String?{
         switch self {
-        case .UserRetrievalByIdentifierFailed:
-            return "Firestore: Unable to retrieve 'User' data using the provided identifier."
-        case .UnexpectedConvertError:
-            return "Firestore: There was an unexpected error while Convert 'User' details"
-        case .MultipleUserFound:
-            return "Firestore: Multiple 'User' found. Expected only one."
-        case .InternalError:
-            return "Firestore: Internal Error Occurred while process 'User' details"
+        case .UnexpectedConvertDocsError:
+            return "Firestore: There was an unexpected error while Convert Reference to  'User' Document"
+        case .UnexpectedConvertObjectError:
+            return "Firestore: There was an unexpected error while Convert Document to  'User' Object"
         }
     }
 }

@@ -12,112 +12,116 @@ import CoreData
 final class UserServicesCoredata{
     
     //================================
-    // MARK: - Parameter Setting
+    // MARK: - Parameter
     //================================
     let util = Utilities()
-    let cd = CoreDataManager.shared
+    let cm = CoreDataManager.shared
     var context: NSManagedObjectContext {
-        return cd.context
+        return cm.context
     }
+}
+
+//================================
+// MARK: - Main Function
+//================================
+extension UserServicesCoredata{
     
-    //================================
-    // MARK: - Set User
-    //================================
-    func setUser(reqUser: UserObject) throws {
-        
-        // Create Entity & Set Data
-        setUserEntity(from: reqUser)
+    //--------------------
+    // Set
+    //--------------------
+    func setUser(with newUser: UserObject, and setDate: Date) throws {
+        // Create Entity
+        createEntity(with: newUser, and: setDate)
+        // Set Entity
         try context.save()
     }
-    // Support Function
-    private func setUserEntity(from userObject: UserObject){
-        let user = UserEntity(context: context)
-
-        user.user_id = userObject.user_id
-        user.user_fb_id = userObject.user_fb_id
-        user.user_email = userObject.user_email
-        user.user_name = userObject.user_name
-        user.user_social_type = userObject.user_social_type
-        user.user_status = userObject.user_status
-        user.user_created_at = userObject.user_created_at
-        user.user_login_at = userObject.user_login_at
-        user.user_updated_at = userObject.user_updated_at
+    
+    //--------------------
+    // Get
+    //--------------------
+    func getUser(with userId: String) throws -> UserObject {
+        // Fetch ENtity
+        let entity = try fetchEntity(with: userId)
+        // Convert & Return
+        return try convertToUser(with: entity)
     }
     
-    //================================
-    // MARK: - Get User
-    //================================
-    func getUser(from userId: String) throws -> UserObject {
-        
+    //--------------------
+    // Update
+    //--------------------
+    func updateUser(with dto: UserUpdateDTO) throws {
+        // Fetch Entity
+        let entity = try fetchEntity(with: dto.userId)
+        // Update Check
+        if checkUpdate(from: entity, to: dto) {
+            try context.save()
+        }
+    }
+    
+    //--------------------
+    // Delete
+    //--------------------
+    func deleteUser(with userId: String) throws {
+        // Fetch Entity
+        let entity = try fetchEntity(with: userId)
+        // Delete Data
+        context.delete(entity)
+        try context.save()
+    }
+}
+
+//===============================
+// MARK: - Support Function
+//===============================
+extension UserServicesCoredata{
+    
+    // Fetch User Entity
+    private func fetchEntity(with userId: String) throws -> UserEntity {
         // parameter setting
         let fetchReq: NSFetchRequest<UserEntity> = UserEntity.fetchRequest()
-        
         // Request Query
         fetchReq.predicate = NSPredicate(format: "user_id == %@", userId)
         fetchReq.fetchLimit = 1
         
-        // Search Data
-        guard let reqUser = try context.fetch(fetchReq).first else {
-            throw UserErrorCD.UserRetrievalByIdentifierFailed
+        guard let entity = try context.fetch(fetchReq).first else {
+            throw UserErrorCD.UnexpectedFetchError
         }
-        // Convert to Object & Get
-        guard let userData = UserObject(userEntity: reqUser) else {
+        return entity
+    }
+    
+    // Set Entity
+    private func createEntity(with object: UserObject, and setDate: Date) {
+        let entity = UserEntity(context: context)
+        
+        entity.user_id = object.user_id
+        entity.user_email = object.user_email
+        entity.user_name = object.user_name
+        entity.user_social_type = object.user_social_type
+        entity.user_status = object.user_status
+        entity.user_created_at = setDate
+        entity.user_login_at = setDate
+        entity.user_updated_at = setDate
+    }
+    
+    // Convert: to Object
+    private func convertToUser(with entity: UserEntity) throws -> UserObject {
+        guard let data = UserObject(userEntity: entity) else {
             throw UserErrorCD.UnexpectedConvertError
         }
-        return userData
+        return data
     }
     
-    //================================
-    // MARK: - Update User
-    //================================
-    func updateUser(updatedUser: UserObject) throws {
-        
-        // parameter setting
-        let fetchReq: NSFetchRequest<UserEntity> = UserEntity.fetchRequest()
-        
-        // Request Query
-        fetchReq.predicate = NSPredicate(format: "user_id == %@", updatedUser.user_id)
-        fetchReq.fetchLimit = 1
-        
-        // Search Data
-        guard let reqUser = try context.fetch(fetchReq).first else {
-            throw UserErrorCD.UserRetrievalByIdentifierFailed
-        }
-        // Update Data
-        if checkUpdate(from: reqUser, to: updatedUser) {
-            try context.save()
-        }
-    }
-    // Support Function
-    private func checkUpdate(from origin: UserEntity, to updated: UserObject) -> Bool {
+    // Update
+    private func checkUpdate(from origin: UserEntity, to updated: UserUpdateDTO) -> Bool {
         var isUpdated = false
-        isUpdated = util.updateFieldIfNeeded(&origin.user_fb_id, newValue: updated.user_fb_id) || isUpdated
-        isUpdated = util.updateFieldIfNeeded(&origin.user_name, newValue: updated.user_name) || isUpdated
-        isUpdated = util.updateFieldIfNeeded(&origin.user_status, newValue: updated.user_status) || isUpdated
-        isUpdated = util.updateFieldIfNeeded(&origin.user_login_at, newValue: updated.user_login_at) || isUpdated
-        isUpdated = util.updateFieldIfNeeded(&origin.user_updated_at, newValue: updated.user_updated_at) || isUpdated
-        return isUpdated
-    }
-    
-    //================================
-    // MARK: - Delete User
-    //================================
-    func deleteUser(identifier: String) throws {
         
-        // parameter setting
-        let fetchReq: NSFetchRequest<UserEntity> = UserEntity.fetchRequest()
-        
-        // Request Query
-        fetchReq.predicate = NSPredicate(format: "user_id == %@", identifier)
-        fetchReq.fetchLimit = 1
-        
-        // Search Data
-        guard let userEntity = try context.fetch(fetchReq).first else {
-            throw UserErrorCD.UserRetrievalByIdentifierFailed
+        if let newEmail = updated.newEmail {
+            isUpdated = util.updateFieldIfNeeded(&origin.user_email, newValue: newEmail) || isUpdated
         }
-        // Delete Data
-        context.delete(userEntity)
-        try context.save()
+        if let newNickName = updated.newNickName {
+            isUpdated = util.updateFieldIfNeeded(&origin.user_name, newValue: newNickName) || isUpdated
+        }
+        return isUpdated
     }
 }
 
@@ -125,26 +129,18 @@ final class UserServicesCoredata{
 // MARK: - Exception
 //===============================
 enum UserErrorCD: LocalizedError {
+    case UnexpectedFetchError
     case UnexpectedConvertError
     case UserRetrievalByIdentifierFailed
-    // Legacy Only
-    case UnexpectedSetError
-    case UnexpectedGetError
-    case UnexpectedFetchError
     
     var errorDescription: String?{
         switch self {
+        case .UnexpectedFetchError:
+            return "Coredata: There was an unexpected error while Fetch 'User' details"
         case .UnexpectedConvertError:
             return "Coredata: There was an unexpected error while Convert 'User' details"
         case .UserRetrievalByIdentifierFailed:
             return "CoreData: Unable to retrieve 'User' data using the provided identifier."
-        // Legacy Only
-        case .UnexpectedSetError:
-            return "Coredata: There was an unexpected error while Set 'User' details"
-        case .UnexpectedGetError:
-            return "Coredata: There was an unexpected error while Get 'User' details"
-        case .UnexpectedFetchError:
-            return "Coredata: There was an unexpected error while Fetch 'User' details"
         }
     }
 }
