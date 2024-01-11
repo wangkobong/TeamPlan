@@ -69,7 +69,6 @@
     <entity name="UserEntity" representedClassName="UserEntity" syncable="YES" codeGenerationType="class">
         <attribute name="user_created_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="user_email" optional="YES" attributeType="String"/>
-        <attribute name="user_fb_id" optional="YES" attributeType="String"/>
         <attribute name="user_id" optional="YES" attributeType="String"/>
         <attribute name="user_login_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="user_name" optional="YES" attributeType="String"/>

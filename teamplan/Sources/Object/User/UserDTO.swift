@@ -11,50 +11,50 @@ import Foundation
 //============================
 // MARK: After Auth
 //============================
-struct UserDTO{
+struct UserInfoDTO{
     
     //--------------------
     // content
     //--------------------
-    let user_id: String
-    let user_email: String
-    let user_name: String
-    let user_social_type: Providers
-    let user_status: UserStatus
-    let user_updated_at: Date
+    let userId: String
+    let email: String
+    let nickNname: String
+    let socialType: Providers
+    let status: UserStatus
+    let updatedAt: Date
     
     //--------------------
     // constructor
     //--------------------
-    // Signup
-    init(with userObject: UserObject){
-        self.user_id = userObject.user_id
-        self.user_email = userObject.user_email
-        self.user_name = userObject.user_name
-        self.user_social_type = Providers(rawValue: userObject.user_social_type) ?? .unknown
-        self.user_status = UserStatus(rawValue: userObject.user_status) ?? .unknown
-        self.user_updated_at = userObject.user_updated_at
-    }
     // Default
     init(){
-        self.user_id = "Unknown"
-        self.user_email = "Unknown"
-        self.user_name = "Unknown"
-        self.user_social_type = .unknown
-        self.user_status = .unknown
-        self.user_updated_at = Date()
+        self.userId = "Unknown"
+        self.email = "Unknown"
+        self.nickNname = "Unknown"
+        self.socialType = .unknown
+        self.status = .unknown
+        self.updatedAt = Date()
+    }
+    // Signup
+    init(with userObject: UserObject){
+        self.userId = userObject.user_id
+        self.email = userObject.user_email
+        self.nickNname = userObject.user_name
+        self.socialType = Providers(rawValue: userObject.user_social_type) ?? .unknown
+        self.status = UserStatus(rawValue: userObject.user_status) ?? .unknown
+        self.updatedAt = userObject.user_updated_at
     }
 }
 
 //============================
-// MARK: Signup/SignupLoading
+// MARK: Signup
 //============================
 struct UserSignupDTO{
     
     //--------------------
     // content
     //--------------------
-    let identifier: String
+    let userId: String
     let email: String
     let provider: Providers
     var nickName: String
@@ -63,7 +63,7 @@ struct UserSignupDTO{
     // constructor
     //--------------------
     init(with userId: String, and dto: AuthSocialLoginResDTO) {
-        self.identifier = userId
+        self.userId = userId
         self.email = dto.email
         self.provider = dto.provider
         self.nickName = ""
@@ -73,5 +73,30 @@ struct UserSignupDTO{
     //--------------------
     mutating func updateNickName(with newVal: String){
         self.nickName = newVal
+    }
+}
+
+//============================
+// MARK: Update
+//============================
+struct UserUpdateDTO{
+    
+    //--------------------
+    // content
+    //--------------------
+    let userId: String
+    var newEmail: String?
+    var newNickName: String?
+    
+    //--------------------
+    // constructor
+    //--------------------
+    init(userId: String,
+         newEmail: String? = nil,
+         newNickName: String? = nil)
+    {
+        self.userId = userId
+        self.newEmail = newEmail
+        self.newNickName = newNickName
     }
 }
