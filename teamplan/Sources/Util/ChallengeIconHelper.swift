@@ -31,4 +31,24 @@ struct ChallengeIconHelper {
             }
         }
     }
+    
+    static func setIcon(type: ChallengeType) -> String {
+        switch type {
+        case .onboarding: // 온보딩
+            return "book_circle_blue"
+        case .serviceTerm: // 서비스 사용 기간
+            return "calendar_circle_blue"
+        case .totalTodo: // 등록 개수
+            return "pencil_circle_blue"
+        case .projectAlert: // 프로젝트 등록
+            return  "folder_circle_plus_blue"
+        case .projectFinish: // 프로젝트 해결
+            return "folder_circle_check_blue"
+        case .waterDrop: // 물방울 개수
+            return "drop_circle_blue"
+        case .unknownType:
+            return "book_circle_blue"
+        }
+    }
 }
+    

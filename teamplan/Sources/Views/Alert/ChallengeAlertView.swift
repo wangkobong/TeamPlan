@@ -14,6 +14,7 @@ public enum ChallengeAlertType {
     case willChallenge
     case lock
     case quit
+    case didChallenge
 }
 
 public struct ChallengeAlertView: View {
@@ -56,6 +57,8 @@ public struct ChallengeAlertView: View {
                     lockAlert
                 case .quit:
                     quitAlert
+                case .didChallenge:
+                    didChallengeAlert
                 }
             }
             .frame(width: 296, height: 323)
@@ -317,6 +320,73 @@ extension ChallengeAlertView {
             .frame(height: 44)
             .padding(.horizontal, 16)
             .padding(.vertical, 16)
+        }
+    }
+    
+    private var didChallengeAlert: some View {
+        ZStack {
+            
+            VStack {
+                Spacer()
+                    .frame(height: 30)
+                HStack {
+                    Image("alert_didChallenge_red")
+                        .offset(y: -10)
+                        .offset(x: -40)
+                    Image("alert_didChallenge_x")
+                        .offset(y: 5)
+                    Image("alert_didChallenge_yellow1")
+                        .offset(y: 35)
+                        .offset(x: -80)
+                    Image("alert_didChallenge_rectangle_blue")
+                        .offset(y: -5)
+                        .offset(x: 110)
+                    Image("alert_didChallenge_yellow2")
+                        .offset(y: 5)
+                        .offset(x: 35)
+                    Image("alert_didChallenge_rectangle_grey")
+                        .offset(y: 65)
+                        .offset(x: -120)
+                    Image("alert_didChallenge_rectangle_plus")
+                        .offset(y: 35)
+                        .offset(x: 40)
+                }
+                Spacer()
+            }
+            
+            VStack {
+
+                Spacer()
+                    .frame(height: 50)
+                
+                Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].chlg_type))
+                    .frame(width: 82, height: 82)
+                
+                Spacer()
+                    .frame(height: 9)
+                
+                Text("나의 도전과제로\n등록되었습니다.")
+                    .font(.appleSDGothicNeo(.semiBold, size: 20))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .foregroundColor(.theme.darkGreyColor)
+                    .padding(.top, 12)
+                    .padding(.horizontal, 40)
+                
+                Text("닫기")
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .font(.appleSDGothicNeo(.bold, size: 14))
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.theme.mainPurpleColor)
+                    .background(Color.theme.mainPurpleColor.opacity(0.2))
+                    .cornerRadius(8)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 16)
+                    .onTapGesture {
+                        self.isPresented = false
+                    }
+            }
         }
     }
 }

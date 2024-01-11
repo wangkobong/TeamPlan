@@ -75,11 +75,15 @@ struct ChallengesView: View {
                     case .didSelected:
                         break
                     case .willChallenge:
+                        self.type = .didChallenge
+                        self.isPresented = true
                         homeViewModel.tryChallenge(with: $homeViewModel.challengeArray[self.indexForAlert].chlg_id.wrappedValue)
                     case .lock:
                         break
                     case .quit:
                         homeViewModel.quitChallenge(with: $homeViewModel.myChallenges[selectedCardIndex ?? 0].challengeID.wrappedValue)
+                    case .didChallenge:
+                        break
                     }
                 }
             }
