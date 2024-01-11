@@ -227,29 +227,28 @@ extension ChallengeService {
     //-------------------------------
     // * Update Challenge Status
     private func updateChallengeStatus(with challengeId: Int, type: functionType) throws {
-        // Step1. Search Additional Challenge Data
-        let challenge = try fetchChallenge(with: challengeId)
-        // Step2. Struct UpdateDTO
-        var updatedStatus = ChallengeStatusDTO(with: challenge)
         let updatedDate = Date()
         
-        // Step3. Update by Type
+        // update & apply
         switch type{
         case .set:
-            updatedStatus.updateSelected(with: true)
-            updatedStatus.updateSelectedAt(with: updatedDate)
+            let updated = ChallengeUpdateDTO(challengeId: challengeId, userId: userId,
+                                             newSelected: true, newSelectedAt: updatedDate)
+            try challengeCD.updateChallenge(with: updated)
         case .disable:
-            updatedStatus.updateSelected(with: false)
-            updatedStatus.updateUnselectedAt(with: updatedDate)
+            let updated = ChallengeUpdateDTO(challengeId: challengeId, userId: userId,
+                                             newSelected: false, newUnSelectedAt: updatedDate)
+            try challengeCD.updateChallenge(with: updated)
         case .reward:
-            updatedStatus.updateStatus(with: true)
-            updatedStatus.updateFinishedAt(with: updatedDate)
-            updatedStatus.updateSelected(with: false)
+            let updated = ChallengeUpdateDTO(challengeId: challengeId, userId: userId,
+                                             newSelected: false, newStatus: true,
+                                             newUnSelectedAt: updatedDate ,newFinishedAt: updatedDate)
+            try challengeCD.updateChallenge(with: updated)
         case .next:
-            updatedStatus.updateLock(with: false)
+            let updated = ChallengeUpdateDTO(challengeId: challengeId, userId: userId,
+                                             newLock: false)
+            try challengeCD.updateChallenge(with: updated)
         }
-        // Step4. Update with DTO
-        try challengeCD.updateChallenge(with: updatedStatus)
     }
     
     // * Statistics Update

@@ -140,53 +140,39 @@ struct ChallengeRewardDTO {
 //============================
 // MARK: Update
 //============================
-struct ChallengeStatusDTO {
+struct ChallengeUpdateDTO {
     
     //--------------------
     // content
     //--------------------
-    let chlg_id: Int
-    let chlg_user_id: String
-    var chlg_selected: Bool
-    var chlg_status: Bool
-    var chlg_lock: Bool
-    var chlg_selected_at: Date
-    var chlg_unselected_at: Date
-    var chlg_finished_at: Date
+    let challengeId: Int
+    let userId: String
+    
+    var newSelected: Bool?
+    var newStatus: Bool?
+    var newLock: Bool?
+    var newSelectedAt: Date?
+    var newUnSelectedAt: Date?
+    var newFinishedAt: Date?
     
     //--------------------
     // constructor
     //--------------------
-    init(with object: ChallengeObject){
-        self.chlg_id = object.chlg_id
-        self.chlg_user_id = object.chlg_user_id
-        self.chlg_selected = object.chlg_selected
-        self.chlg_status = object.chlg_status
-        self.chlg_lock = object.chlg_lock
-        self.chlg_selected_at = object.chlg_selected_at
-        self.chlg_unselected_at = object.chlg_unselected_at
-        self.chlg_finished_at = object.chlg_finished_at
-    }
-    
-    //--------------------
-    // func
-    //--------------------
-    mutating func updateSelected(with newVal: Bool){
-        self.chlg_selected = newVal
-    }
-    mutating func updateStatus(with newVal: Bool){
-        self.chlg_status = newVal
-    }
-    mutating func updateLock(with newVal: Bool){
-        self.chlg_lock = newVal
-    }
-    mutating func updateSelectedAt(with newVal: Date){
-        self.chlg_selected_at = newVal
-    }
-    mutating func updateUnselectedAt(with newVal: Date){
-        self.chlg_unselected_at = newVal
-    }
-    mutating func updateFinishedAt(with newVal: Date){
-        self.chlg_finished_at = newVal
+    init(challengeId: Int, userId: String,
+         newSelected: Bool? = nil,
+         newStatus: Bool? = nil,
+         newLock: Bool? = nil,
+         newSelectedAt: Date? = nil,
+         newUnSelectedAt: Date? = nil,
+         newFinishedAt: Date? = nil)
+    {
+        self.challengeId = challengeId
+        self.userId = userId
+        self.newSelected = newSelected
+        self.newStatus = newStatus
+        self.newLock = newLock
+        self.newSelectedAt = newSelectedAt
+        self.newUnSelectedAt = newUnSelectedAt
+        self.newFinishedAt = newFinishedAt
     }
 }

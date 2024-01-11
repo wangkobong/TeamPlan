@@ -381,12 +381,11 @@ extension LoginLoadingService{
             guard let challenge = ary.first(where: { $0.chlg_id == key }) else {
                 throw LoginLoadingServiceError.UnexpectedChallengeFetchFailed
             }
-            var updated = ChallengeStatusDTO(with: challenge)
-            updated.updateLock(with: false)
-            updated.updateStatus(with: true)
-            updated.updateFinishedAt(with: date)
+            let updated = ChallengeUpdateDTO(challengeId: challenge.chlg_id, userId: userId,
+                                             newSelected: false, newStatus: true, newLock: false,
+                                             newFinishedAt: date
+            )
             try chlgCD.updateChallenge(with: updated)
-            print(updated)
         }
     }
 }
