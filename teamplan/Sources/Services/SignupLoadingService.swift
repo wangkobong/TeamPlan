@@ -10,82 +10,86 @@ import Foundation
 
 final class SignupLoadingService{
     
+    //================================
+    // MARK: - Parameter
+    //================================
     let userFS = UserServicesFirestore()
     let userCD = UserServicesCoredata()
     let statFS = StatisticsServicesFirestore()
     let statCD = StatisticsServicesCoredata()
-    let aclogFS = AccessLogServicesFirestore()
-    let aclogCD = AccessLogServicesCoredata()
-    let chlglogFS = ChallengeLogServicesFirestore()
-    let chlglogCD = ChallengeLogServicesCoredata()
-    let chlgManager = ChallengeManager()
-    let logManager = LogManager()
     
     let userId: String
     let signupDate: Date
     var newProfile: UserObject
     var newStat: StatisticsObject
+    let logManager: LogManager
+    let challengeManager = ChallengeManager()
     
     let onboardingChallenge: Int = 100
     
     private var rollbackStack: [() async throws -> Void ] = []
     
     //===============================
-    // MARK: - Constructor
+    // MARK: - Initialize
     //===============================
     init(newUser: UserSignupDTO){
-        self.signupDate = Date()
         self.userId = newUser.userId
-        self.newProfile = UserObject(newUser: newUser, signupDate: signupDate)
-        self.newStat = StatisticsObject(userId: userId, setDate: signupDate)
+        self.signupDate = Date()
+        
+        self.newProfile = UserObject(
+            newUser: newUser, signupDate: signupDate)
+        self.newStat = StatisticsObject(
+            userId: userId, setDate: signupDate)
+        self.logManager = LogManager()
         self.logManager.readyParameter(userId: self.userId)
     }
+}
+
+//===============================
+// MARK: - Main Executor
+//===============================
+extension SignupLoadingService{
     
-    //===============================
-    // MARK: - Executor
-    //===============================
-    // Main Executor
     func executor() async throws -> UserInfoDTO {
-        let coredataResult: Bool
-        let firestoreResult: Bool
+        // Ready Parameter
+        try logManager.readyManager()
+        let localSetResult: Bool
+        let serverSetResult: Bool
+    
+        // Local Execute Result
+        localSetResult = try localExecutor()
         
-        // Execute Coredata
-        do {
-            coredataResult = try CoredataExecutor()
-        } catch {
-            print(error)
-            coredataResult = false
-        }
-        // Execute Firestore
-        do{
-            firestoreResult = try await FirestoreExecutor()
-        } catch {
-            print(error)
-            firestoreResult = false
-        }
+        // Server Execute Result
+        serverSetResult = try await serverExecutor()
         
-        switch (coredataResult, firestoreResult) {
+        // Apply Execute
+        switch (localSetResult, serverSetResult) {
             
-        // Set NewUserPackage at Coredata & Firestore
         case (true, true):
             return UserInfoDTO(with: newProfile)
-        
+            
         default:
             try await rollbackAll()
-            throw SignupError.UnexpectedSignupError
+            throw SignupLoadingError.UnexpectedSignupError
         }
     }
+}
+
+//===============================
+// MARK: - Support Executor
+//===============================
+extension SignupLoadingService{
     
-    // Coredata Executor
-    func CoredataExecutor() throws -> Bool {
+    // Local
+    private func localExecutor() throws -> Bool {
         do {
             // 1. User
-            try setUserCD()
-            rollbackStack.append(rollbackSetUserCD)
+            try setNewUserProfileAtLocal()
+            rollbackStack.append(rollbackSetNewUserProfileAtLocal)
             
             // 2. Statistics
-            try setStatisticsCD()
-            rollbackStack.append(rollbackSetStatisticsCD)
+            try setNewStatAtLocal()
+            rollbackStack.append(rollbackSetNewStatAtLocal)
             
             // 3. AccessLog
             try setNewAccessLogAtLocal()
@@ -99,21 +103,20 @@ final class SignupLoadingService{
             return true
             
         } catch {
-            print("(Service) There was an unexpected error while Execute Set Coredata in 'SignupLoading' : \(error)")
-            throw error
+            throw SignupLoadingError.UnexpectedLocalSignupError
         }
     }
     
-    // Firestore Executor
-    func FirestoreExecutor() async throws -> Bool {
+    // Server
+    private func serverExecutor() async throws -> Bool {
         do {
             // 1. User
-            try await setUserFS()
-            rollbackStack.append(rollbackSetUserFS)
+            try await setNewUserProfileAtServer()
+            rollbackStack.append(rollbackSetNewUserProfileAtServer)
             
             // 2. Statistics
-            try await setStatisticsFS()
-            rollbackStack.append(rollbackSetStatisticsFS)
+            try await setNewStatAtServer()
+            rollbackStack.append(rollbackSetNewStatAtServer)
             
             // 3. AccessLog
             try await setNewAccessLogAtServer()
@@ -124,15 +127,14 @@ final class SignupLoadingService{
             rollbackStack.append(rollbackSetNewChallengeLogAtServer)
             
             // 5. Challenge
-            try await setChallenge()
-            rollbackStack.append(rollbackSetChallenge)
+            try await setNewChallengeAtLocal()
+            rollbackStack.append(rollbackSetNewChallengeAtLocal)
             
             rollbackStack.removeAll()
             return true
             
         } catch {
-            print("(Service) There was an unexpected error while Execute Set Firestore in 'SignupLoading' : \(error)")
-            throw error
+            throw SignupLoadingError.UnexpectedServerSignupError
         }
     }
     
@@ -147,48 +149,57 @@ final class SignupLoadingService{
             throw error
         }
     }
+}
+
+//===============================
+// MARK: - User
+//===============================
+extension SignupLoadingService{
     
-    //===============================
-    // MARK: - Set User
-    //===============================
+    // : Coredata
+    private func setNewUserProfileAtLocal() throws {
+        try userCD.setUser(with: newProfile, and: signupDate)
+    }
+    private func rollbackSetNewUserProfileAtLocal() throws {
+        try userCD.deleteUser(with: userId)
+    }
+    
     // : Firestore
-    func setUserFS() async throws {
+    private func setNewUserProfileAtServer() async throws {
         try await userFS.setUser(with: newProfile)
     }
-    private func rollbackSetUserFS() async throws {
-        try await userFS.deleteUser(with: newProfile.user_id)
+    private func rollbackSetNewUserProfileAtServer() async throws {
+        try await userFS.deleteUser(with: userId)
     }
+}
+
+//===============================
+// MARK: - Statisticcs
+//===============================
+extension SignupLoadingService{
     
     // : Coredata
-    func setUserCD() throws {
-        try userCD.setUser(with: newProfile, and: Date())
-    }
-    private func rollbackSetUserCD() throws {
-        try userCD.deleteUser(with: newProfile.user_id)
-    }
-    
-    //===============================
-    // MARK: - Set Statistics
-    //===============================
-    // : Firestore
-    func setStatisticsFS() async throws {
-        try await statFS.setStatistics(with: newStat)
-    }
-    private func rollbackSetStatisticsFS() async throws {
-        try await statFS.deleteStatistics(with: newProfile.user_id)
-    }
-    
-    // : Coredata
-    func setStatisticsCD() throws {
+    private func setNewStatAtLocal() throws {
         try statCD.setStatistics(with: newStat)
     }
-    private func rollbackSetStatisticsCD() throws {
-        try statCD.deleteStatistics(with: newProfile.user_id)
+    private func rollbackSetNewStatAtLocal() throws {
+        try statCD.deleteStatistics(with: userId)
     }
     
-    //===============================
-    // MARK: - Set AccessLog
-    //===============================
+    // : Firestore
+    private func setNewStatAtServer() async throws {
+        try await statFS.setStatistics(with: newStat)
+    }
+    private func rollbackSetNewStatAtServer() async throws {
+        try await statFS.deleteStatistics(with: userId)
+    }
+}
+
+//===============================
+// MARK: - AccessLog
+//===============================
+extension SignupLoadingService{
+    
     // : CoreData
     private func setNewAccessLogAtLocal() throws {
         try logManager.setNewAccessLogAtLocal(with: signupDate)
@@ -204,10 +215,13 @@ final class SignupLoadingService{
     private func rollbackSetNewAccessLogAtServer() async throws {
         try await logManager.deleteAllAccessLogAtServer()
     }
+}
+
+//===============================
+// MARK: - ChallengeLog
+//===============================
+extension SignupLoadingService{
     
-    //===============================
-    // MARK: - Set ChallengeLog
-    //===============================
     // : Coredata
     private func setNewChallengeLogAtLocal() throws {
         try logManager.setNewChallengeLogAtLocal(with: onboardingChallenge, and: signupDate)
@@ -223,31 +237,40 @@ final class SignupLoadingService{
     private func rollbackSetNewChallengeLogAtServer() async throws {
         try await logManager.deleteAllChallengeLogAtServer()
     }
-    
-    //===============================
-    // MARK: - Set Challenge
-    //===============================
-    // : Firestore to Coredata
-    func setChallenge() async throws {
-        try await chlgManager.getChallenges()
-        chlgManager.configChallenge(with: newProfile.user_id)
-        try chlgManager.setChallenge()
+}
+
+//===============================
+// MARK: - Challenge
+//===============================
+extension SignupLoadingService{
+
+    // Sync: Server to Local
+    private func setNewChallengeAtLocal() async throws {
+        try await challengeManager.getChallengesFromServer()
+        challengeManager.configChallenge(with: newProfile.user_id)
+        try challengeManager.setChallenge()
     }
-    private func rollbackSetChallenge() throws {
-        try chlgManager.delChallenge(with: newProfile.user_id)
+    private func rollbackSetNewChallengeAtLocal() throws {
+        try challengeManager.delChallenge(with: newProfile.user_id)
     }
 }
 
 //===============================
 // MARK: - Exception
 //===============================
-enum SignupError: LocalizedError {
+enum SignupLoadingError: LocalizedError {
+    case UnexpectedLocalSignupError
+    case UnexpectedServerSignupError
     case UnexpectedSignupError
     
     var errorDescription: String?{
         switch self {
+        case .UnexpectedLocalSignupError:
+            return "Service: There was an unexpected error while Set New UserData at Local in 'SignupLoadingService'"
+        case .UnexpectedServerSignupError:
+            return "Service: There was an unexpected error while Set New UserData at Server in 'SignupLoadingService'"
         case .UnexpectedSignupError:
-            return "Service: There was an unexpected error while Signup"
+            return "Service: There was an unexpected error while Processing Set NewUser at 'SignupLoadingService'"
         }
     }
 }
