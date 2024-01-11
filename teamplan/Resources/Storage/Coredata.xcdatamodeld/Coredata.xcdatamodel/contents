@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22225" systemVersion="23B81" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22522" systemVersion="23C71" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
     <entity name="AccessLogEntity" representedClassName="AccessLogEntity" syncable="YES" codeGenerationType="class">
         <attribute name="log_access" optional="YES" attributeType="String"/>
         <attribute name="log_user_id" optional="YES" attributeType="String"/>
@@ -44,6 +44,7 @@
         <attribute name="stat_chlg_fin" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="stat_chlg_step" optional="YES" attributeType="String"/>
         <attribute name="stat_drop" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="stat_log_head" optional="YES" attributeType="String"/>
         <attribute name="stat_mychlg" optional="YES" attributeType="String"/>
         <attribute name="stat_proj_alert" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="stat_proj_ext" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
