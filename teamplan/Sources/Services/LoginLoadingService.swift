@@ -29,7 +29,7 @@ final class LoginLoadingService{
     // Component Parameter
     var userId: String
     var loginDate : Date
-    var userData: UserDTO
+    var userData: UserInfoDTO
     var userStat: StatLoginDTO
     var userLog: AccessLog
     
@@ -39,7 +39,7 @@ final class LoginLoadingService{
     init(){
         self.loginDate = Date()
         self.userId = ""
-        self.userData = UserDTO()
+        self.userData = UserInfoDTO()
         self.userStat = StatLoginDTO()
         self.userLog = AccessLog()
     }
@@ -47,7 +47,7 @@ final class LoginLoadingService{
     //===============================
     // MARK: - Executor
     //===============================
-    func executor(with dto: AuthSocialLoginResDTO) async throws -> UserDTO {
+    func executor(with dto: AuthSocialLoginResDTO) async throws -> UserInfoDTO {
         // Extract Identifier
         self.userId = try await getIdentifier(from: dto)
         
@@ -112,7 +112,7 @@ final class LoginLoadingService{
     
     // Test Function
     private func resetLocal() throws {
-        try userCD.deleteUser(identifier: userId)
+        try userCD.deleteUser(with: userId)
         try statCD.deleteStatistics(with: userId)
         try chlgManager.delChallenge(with: userId)
         try acclogCD.deleteLog(with: userId)
@@ -171,17 +171,17 @@ extension LoginLoadingService{
         return try util.getIdentifier(from: authResult)
     }
     
-    func fetchUser(with userId: String) throws -> UserDTO {
+    func fetchUser(with userId: String) throws -> UserInfoDTO {
         
         // Check Coredata
         guard let user = try fetchUserFromCoredata(with: userId) else {
             throw LoginLoadingServiceError.UnexpectedUserFetchFailed
         }
-        return UserDTO(with: user)
+        return UserInfoDTO(with: user)
     }
     
     private func fetchUserFromCoredata(with userId: String) throws -> UserObject? {
-        return try? userCD.getUser(from: userId)
+        return try? userCD.getUser(with: userId)
     }
 }
 
@@ -315,11 +315,11 @@ extension LoginLoadingService{
     // -----------------------------
     // User
     private func setUserCD(with object: UserObject) throws {
-        try userCD.setUser(reqUser: object)
+        try userCD.setUser(with: object, and: Date())
     }
     
     private func rollbackSetUserCD() throws {
-        try userCD.deleteUser(identifier: userId)
+        try userCD.deleteUser(with: userId)
     }
     
     // -----------------------------

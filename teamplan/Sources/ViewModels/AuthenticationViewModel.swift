@@ -77,8 +77,8 @@ final class AuthenticationViewModel: ObservableObject{
             do {
                 let user = try await self.loginLoadingService.executor(with: loginUser)
                 let userDefaultManager = UserDefaultManager.loadWith(key: "user")
-                userDefaultManager?.userName = user.user_name
-                userDefaultManager?.identifier = user.user_id
+                userDefaultManager?.userName = user.nickNname
+                userDefaultManager?.identifier = user.userId
                 return true
             } catch {
                 print("Login error: \(error.localizedDescription)")
@@ -89,7 +89,7 @@ final class AuthenticationViewModel: ObservableObject{
         return false
     }
     
-    func trySignup(userName: String) async throws -> UserDTO {
+    func trySignup(userName: String) async throws -> UserInfoDTO {
         
         /*
         // 혼란을 드려 죄송합니다ㅠ
@@ -111,8 +111,8 @@ final class AuthenticationViewModel: ObservableObject{
         let signupService = SignupLoadingService(newUser: finalUserInfo)
         let signedUser = try await signupService.executor()
         let userDefaultManager = UserDefaultManager.loadWith(key: "user")
-        userDefaultManager?.userName = signedUser.user_name
-        userDefaultManager?.identifier = signedUser.user_id
+        userDefaultManager?.userName = signedUser.nickNname
+        userDefaultManager?.identifier = signedUser.userId
         return signedUser
     }
     

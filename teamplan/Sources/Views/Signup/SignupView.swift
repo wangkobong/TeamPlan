@@ -523,7 +523,7 @@ extension SignupView {
         }
     }
     
-    private func trySignup() async throws -> UserDTO {
+    private func trySignup() async throws -> UserInfoDTO {
         
         do {
             let user = try await authViewModel.trySignup(userName: self.userName)

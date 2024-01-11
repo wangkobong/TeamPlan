@@ -20,6 +20,7 @@ final class SignupLoadingService{
     let chlglogCD = ChallengeLogServicesCoredata()
     let chlgManager = ChallengeManager()
     
+    let userId: String
     var newProfile: UserObject
     var newStat: StatisticsObject
     var newAccessLog: AccessLog
@@ -32,17 +33,18 @@ final class SignupLoadingService{
     //===============================
     init(newUser: UserSignupDTO){
         let signupDate = Date()
+        self.userId = newUser.userId
         self.newProfile = UserObject(newUser: newUser, signupDate: signupDate)
-        self.newStat = StatisticsObject(userId: newUser.identifier, setDate: signupDate)
-        self.newAccessLog = AccessLog(identifier: newUser.identifier, signupDate: signupDate)
-        self.newChallengeLog = ChallengeLog(identifier: newUser.identifier, signupDate: signupDate)
+        self.newStat = StatisticsObject(userId: userId, setDate: signupDate)
+        self.newAccessLog = AccessLog(identifier: userId, signupDate: signupDate)
+        self.newChallengeLog = ChallengeLog(identifier: userId, signupDate: signupDate)
     }
     
     //===============================
     // MARK: - Executor
     //===============================
     // Main Executor
-    func executor() async throws -> UserDTO {
+    func executor() async throws -> UserInfoDTO {
         let coredataResult: Bool
         let firestoreResult: Bool
         
@@ -65,7 +67,7 @@ final class SignupLoadingService{
             
         // Set NewUserPackage at Coredata & Firestore
         case (true, true):
-            return UserDTO(with: newProfile)
+            return UserInfoDTO(with: newProfile)
         
         default:
             try await rollbackAll()
@@ -150,19 +152,18 @@ final class SignupLoadingService{
     //===============================
     // : Firestore
     func setUserFS() async throws {
-        let docsId = try await userFS.setUser(reqUser: newProfile)
-        self.newProfile.user_fb_id = docsId
+        try await userFS.setUser(with: newProfile)
     }
     private func rollbackSetUserFS() async throws {
-        try await userFS.deleteUser(to: newProfile.user_id)
+        try await userFS.deleteUser(with: newProfile.user_id)
     }
     
     // : Coredata
     func setUserCD() throws {
-        try userCD.setUser(reqUser: newProfile)
+        try userCD.setUser(with: newProfile, and: Date())
     }
     private func rollbackSetUserCD() throws {
-        try userCD.deleteUser(identifier: newProfile.user_id)
+        try userCD.deleteUser(with: newProfile.user_id)
     }
     
     //===============================
