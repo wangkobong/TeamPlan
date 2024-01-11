@@ -10,88 +10,87 @@ import Foundation
 import FirebaseFirestore
 import FirebaseFirestoreSwift
 
+//================================
+// MARK: - Main Function
+//================================
 final class StatisticsServicesFirestore{
     
-    //================================
-    // MARK: - Parameter Setting
-    //================================
+    //--------------------
+    // Parameter
+    //--------------------
     let util = Utilities()
     let fs = Firestore.firestore()
     
-    //================================
-    // MARK: - Set Statistics
-    //================================
-    func setStatistics(with object: StatisticsObject) async throws {
-        
+    //--------------------
+    // Set
+    //--------------------
+    func setStatistics(with stat: StatisticsObject) async throws {
         // Search & Set Data
-        let collectionRef = fs.collection("Stat")
-        try await collectionRef.addDocument(data: object.toDictionary())
+        let collection = fetchCollection()
+        try await collection.addDocument(data: stat.toDictionary())
     }
     
-    //================================
-    // MARK: - Get Statistics
-    //================================
+    //--------------------
+    // Get
+    //--------------------
     func getStatistics(from userId: String) async throws -> StatisticsObject {
-        
         // Fetch Data
         let docs = try await fetchDocs(with: userId)
-        // Convert to Object
-        guard let object = StatisticsObject(statData: docs.data()) else {
-            throw StatErrorFS.UnexpectedConvertError
-        }
-        return object
-    }
-
-    //================================
-    // MARK: - Update Statistics
-    //================================
-    // Object
-    func updateStatistics(with object: StatisticsObject) async throws {
-        
-        // Fetch Data
-        let docs = try await fetchDocs(with: object.stat_user_id)
-        // Update Data
-        try await docs.reference.updateData(object.toDictionary())
+        // Convert & Return
+        return try convertToStat(with: docs.data())
     }
     
-    // DTO
-    func updateStatistics(with dto: StatUpdateDTO) async throws {
-        
+    //--------------------
+    // Update
+    //--------------------
+    func updateStatistics(with updatedStat: StatisticsObject) async throws {
         // Fetch Data
-        let docs = try await fetchDocs(with: dto.stat_user_id)
+        let docs = try await fetchDocs(with: updatedStat.stat_user_id)
         //Update Data
-        try await docs.reference.updateData(dto.toDictionary())
+        try await docs.reference.updateData(updatedStat.toDictionary())
     }
     
-    //================================
-    // MARK: - Delete Statistics
-    //================================
+    //--------------------
+    // Delete
+    //--------------------
     func deleteStatistics(with userId: String) async throws {
-        
         // Fetch Data
         let docs = try await fetchDocs(with: userId)
         // Delete Data
         try await docs.reference.delete()
     }
+}
+
+//================================
+// MARK: - Support Function
+//================================
+extension StatisticsServicesFirestore{
     
-    //================================
-    // MARK: - Support Function
-    //================================
+    // Fetch: Collection
+    private func fetchCollection() -> CollectionReference {
+        return fs.collection("Stat")
+    }
+    
+    // Fetch: Document
     private func fetchDocs(with userId: String) async throws -> QueryDocumentSnapshot {
+        // fetch reference
+        let docsRef = try await fetchCollection()
+            .whereField("stat_user_id", isEqualTo: userId)
+            .getDocuments()
         
-        // Search Data
-        let collectionRef = fs.collection("Stat")
-        let docsRef = try await collectionRef.whereField("stat_user_id", isEqualTo: userId).getDocuments()
-        
-        // Exception Handling : Search Error
-        guard docsRef.documents.count == 1 else {
-            if docsRef.documents.count > 1 {
-                throw StatErrorFS.MultipleStatFound
-            } else {
-                throw StatErrorFS.InternalError
-            }
+        // convert & return
+        guard let docs = docsRef.documents.first else {
+            throw StatErrorFS.UnexpectedSearchError
         }
-        return docsRef.documents.first!
+        return docs
+    }
+    
+    // Convert: to Object
+    private func convertToStat(with data: [String:Any]) throws -> StatisticsObject {
+        guard let stat = StatisticsObject(with: data) else {
+            throw StatErrorFS.UnexpectedConvertError
+        }
+        return stat
     }
 }
 
@@ -100,20 +99,14 @@ final class StatisticsServicesFirestore{
 //================================
 enum StatErrorFS: LocalizedError {
     case UnexpectedConvertError
-    case StatRetrievalByIdentifierFailed
-    case MultipleStatFound
-    case InternalError
+    case UnexpectedSearchError
     
     var errorDescription: String? {
         switch self {
+        case .UnexpectedSearchError:
+            return "Firestore: There was an unexpected error while Search 'Statistics' details"
         case .UnexpectedConvertError:
             return "Firestore: There was an unexpected error while Convert 'Statistics' details"
-        case .StatRetrievalByIdentifierFailed:
-            return "Firestore: Unable to retrieve 'Statistics' data using the provided identifier."
-        case .MultipleStatFound:
-            return "Firestore: Multiple 'Statistics' found. Expected only one."
-        case .InternalError:
-            return "Firestore: Internal Error Occurred while process 'Statistics' details"
         }
     }
 }
