@@ -48,7 +48,7 @@ extension ProjectIndexService{
         statDTO.updateProjectRegist(to: statDTO.projectRegisted + 1)
         
         // Set New ProjectData to Coredata
-        try projectCD.setProject(from: inputData, at: statDTO.projectRegisted, by: userId)
+        //try projectCD.setProject(from: inputData, at: statDTO.projectRegisted, by: userId)
         
         // Adjust Update
         try updateStatProjectRegist()
@@ -133,7 +133,7 @@ extension ProjectIndexService{
     }
     
     private func updateProjectDeadLine(with projectId: Int, to newDate: Date) throws {
-        let updated = ProjectUpdateDTO(with: userId, and: projectId, to: newDate)
+        let updated = ProjectUpdateDTO(userId: userId, projectId: projectId, newDeadLine: newDate)
         try projectCD.updateProject(to: updated)
         try updateStatExtend()
     }

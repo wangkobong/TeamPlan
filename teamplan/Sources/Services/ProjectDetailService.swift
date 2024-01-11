@@ -75,7 +75,7 @@ extension ProjectDetailService{
         
         // Update TodoRegist Value
         projectDetail.updateTodoRegist(
-            with: projectDetail.todoRegisted + 1)
+            with: projectDetail.todoRegist + 1)
         try updateProjectDetail()
         statDTO.updateTodoRegist(
             with: statDTO.todoRegist + 1)
@@ -85,12 +85,12 @@ extension ProjectDetailService{
     //--------------------
     // Get
     //--------------------
-    func getTodoList() throws -> [TodoInfo] {
+    func getTodoList() throws -> [TodoListDTO] {
         // Check & Sort Array
         sortTodoList()
         
         // Convert to TodoInfo
-        return todoList.map{ TodoInfo(with: $0) }
+        return todoList.map{ TodoListDTO(with: $0) }
     }
     
     //--------------------
@@ -172,7 +172,7 @@ extension ProjectDetailService{
     
     // ProjectDetail Update
     private func updateProjectDetail() throws {
-        let updated = ProjectUpdateDTO(with: projectDetail)
+        let updated = ProjectUpdateDTO(userId: userId, projectId: projectId)
         try projectCD.updateProject(to: updated)
     }
     

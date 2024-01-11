@@ -9,36 +9,26 @@
 import Foundation
 
 //============================
-// MARK: Update - Project
+// MARK: Set
 //============================
-struct TodoUpdateDTO{
+struct TodoSetDTO{
     
     //--------------------
     // content
     //--------------------
-    let projectId: Int
     let todoId: Int
+    let projectId: Int
     let userId: String
-    
-    var newDesc: String?
-    var newStatus: Bool?
-    var newPinned: Bool?
+    let todoDesc: String
     
     //--------------------
     // constructor
     //--------------------
-    // ProjectDetail: Update Desc
-    init(projectId: Int, todoId: Int, userId: String,
-         newDesc: String? = nil,
-         newStatus: Bool? = nil,
-         newPinned: Bool? = nil)
-    {
+    init(projectId: Int, todoId: Int, userId: String, desc: String){
         self.projectId = projectId
         self.todoId = todoId
         self.userId = userId
-        self.newDesc = newDesc
-        self.newStatus = newStatus
-        self.newPinned = newPinned
+        self.todoDesc = desc
     }
 }
 
@@ -68,33 +58,56 @@ struct TodoRequestDTO{
 }
 
 //============================
-// MARK: Set
+// MARK: Update - Project
 //============================
-struct TodoSetDTO{
+struct TodoUpdateDTO{
     
     //--------------------
     // content
     //--------------------
-    let todoId: Int
     let projectId: Int
+    let todoId: Int
     let userId: String
-    let todoDesc: String
+    
+    var newDesc: String?
+    var newStatus: Bool?
+    var newPinned: Bool?
+    
+    var registedAt: Date?
+    var changedAt: Date?
+    var updatedAt: Date?
     
     //--------------------
     // constructor
     //--------------------
-    init(projectId: Int, todoId: Int, userId: String, desc: String){
+    // ProjectDetail: Update Desc
+    init(projectId: Int, todoId: Int, userId: String,
+         newDesc: String? = nil,
+         newStatus: Bool? = nil,
+         newPinned: Bool? = nil,
+         registedAt: Date? = nil,
+         changedAt: Date? = nil,
+         updatedAt: Date? = nil )
+    {
         self.projectId = projectId
         self.todoId = todoId
         self.userId = userId
-        self.todoDesc = desc
+        self.newDesc = newDesc
+        self.newStatus = newStatus
+        self.newPinned = newPinned
+        self.registedAt = registedAt
+        self.changedAt = changedAt
+        self.updatedAt = updatedAt
     }
 }
+
+
+
 
 //============================
 // MARK: toViewModel
 //============================
-struct TodoInfo{
+struct TodoListDTO{
     
     //--------------------
     // Content

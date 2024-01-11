@@ -20,12 +20,16 @@ struct ProjectDetailDTO{
     let userId: String
     let projectId: Int
     let title: String
+    let period: Int
     let startAt: Date
     let deadline: Date
-    let period: Int
+    var alert: Int
+    var complete: Bool
+    var todoRegist: Int
+    var todoFinish: Int
+    var todoRemain: Int
     let todoLimit: Int
-    var todoRegisted: Int
-    var todoList: [TodoInfo] = []
+    var todoList: [TodoListDTO] = []
     
     //--------------------
     // constructor
@@ -35,29 +39,56 @@ struct ProjectDetailDTO{
         self.userId = ""
         self.projectId = 0
         self.title = ""
+        self.period = 0
         self.startAt = Date()
         self.deadline = Date()
-        self.period = 0
-        self.todoRegisted = 0
+        self.alert = 0
+        self.complete = false
+        self.todoRegist = 0
+        self.todoFinish = 0
         self.todoLimit = 0
+        self.todoRemain = 0
     }
     // Ready Service
-    init(with object: ProjectObject, period: Int, limit: Int){
+    init(with object: ProjectObject,
+         period: Int, limit: Int){
         self.userId = object.proj_user_id
         self.projectId = object.proj_id
         self.title = object.proj_title
+        self.period = period
         self.startAt = object.proj_started_at
         self.deadline = object.proj_deadline
-        self.period = period
-        self.todoRegisted = object.proj_todo_registed
+        self.alert = object.proj_alerted
+        self.complete = object.proj_finished
+        self.todoRegist = object.proj_todo_registed
+        self.todoFinish = object.proj_todo_finished
+        self.todoRemain = self.todoRegist - self.todoFinish
         self.todoLimit = limit
     }
     
     //--------------------
     // function
     //--------------------
+    mutating func updateProjectComplete(with newStatus: Bool){
+        self.complete = newStatus
+    }
+    
     mutating func updateTodoRegist(with newVal: Int){
-        self.todoRegisted = newVal
+        self.todoRegist = newVal
+        updateTodoRemain()
+    }
+    
+    mutating func updateTodoFinish(with newVal: Int){
+        self.todoFinish = newVal
+        updateTodoRemain()
+    }
+    
+    mutating func updateTodoRemain() {
+        self.todoRemain = self.todoRegist - self.todoFinish
+    }
+    
+    mutating func updateAlert(with newVal: Int) {
+        self.alert = newVal
     }
 }
 
@@ -95,32 +126,39 @@ struct ProjectUpdateDTO{
     //--------------------
     let userId: String
     let projectId: Int
-    var newTitle: String?
-    var newDeadline: Date?
-    var newTodoRegist: Int?
+    let newTitle: String?
+    let newDeadline: Date?
+    let newAlerted: Int?
+    let newStatus: Bool?
+    let newTodoRegist: Int?
+    let newTodoFinish: Int?
     
     //--------------------
     // constructor
     //--------------------
     // ProjectIndex
-    init(with userId: String, and projectId: Int, to newDeadLine: Date){
+    init(userId: String, projectId: Int,
+         newTitle: String? = nil,
+         newStatus: Bool? = nil,
+         newDeadLine: Date? = nil,
+         newAlerted: Int? = nil,
+         newTodoRegist: Int? = nil,
+         newTodoFinish: Int? = nil
+    ){
         self.userId = userId
         self.projectId = projectId
+        self.newTitle = newTitle
+        self.newStatus = newStatus
         self.newDeadline = newDeadLine
-    }
-    // ProjectDetail
-    init(with data: ProjectDetailDTO){
-        self.userId = data.userId
-        self.projectId = data.projectId
-        self.newTodoRegist = data.todoRegisted
+        self.newAlerted = newAlerted
+        self.newTodoRegist = newTodoRegist
+        self.newTodoFinish = newTodoFinish
     }
 }
 
 //============================
-// MARK: toViewModel
+// MARK: Card for ViewModel
 //============================
-/// * Page Service => ViewModel
-/// * Struct for Home / ProjectIndex Page, Project Card Info
 struct ProjectCardDTO{
     
     //--------------------
@@ -137,12 +175,19 @@ struct ProjectCardDTO{
     // constructor
     //--------------------
     // Coredata
-    init(from projectEntity: ProjectEntity){
-        self.title = projectEntity.proj_title ?? ""
-        self.startedAt = projectEntity.proj_started_at ?? Date()
-        self.deadline = projectEntity.proj_deadline ?? Date()
-        self.finished = projectEntity.proj_finished
-        self.registedTodo = Int(projectEntity.proj_todo_registed)
-        self.finishedTodo = Int(projectEntity.proj_todo_finished)
+    init?(entity: ProjectEntity){
+        guard let title = entity.proj_title,
+              let startedAt = entity.proj_started_at,
+              let deadline = entity.proj_deadline
+        else {
+            return nil
+        }
+        // Assign Value
+        self.title = title
+        self.startedAt = startedAt
+        self.deadline = deadline
+        self.finished = entity.proj_finished
+        self.registedTodo = Int(entity.proj_todo_registed)
+        self.finishedTodo = Int(entity.proj_todo_finished)
     }
 }

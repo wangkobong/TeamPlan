@@ -29,14 +29,15 @@ extension TodoServiceCoredata{
     //--------------------
     // Set
     //--------------------
-    func setTodo(with dto: TodoSetDTO) throws {
+    func setTodo(with dto: TodoSetDTO) throws -> TodoObject {
         // Create Entity
         let newTodoEntity = createEntity(with: dto.todoDesc, and: dto.todoId)
         let projectEntity = try fetchProjectEntity(with: dto.projectId, and: dto.userId)
-        
         // Set & Apply Change
         projectEntity.addToTodo_relationship(newTodoEntity)
         try context.save()
+        // Return Object
+        return try convertToObject(with: newTodoEntity)
     }
     
     //--------------------
@@ -46,26 +47,16 @@ extension TodoServiceCoredata{
     func getTodoList(with dto: TodoRequestDTO) throws -> [TodoObject] {
         // Fetch Entity
         let entities = try fetchTodoEntities(with: dto.projectId, and: dto.userId)
-        
         // Convert & Return
-        return try entities.map { entity in
-            guard let todo = TodoObject(with: entity) else {
-                throw TodoErrorCD.UnexpectedConvertError
-            }
-            return todo
-        }
+        return try entities.map { try convertToObject(with: $0) }
     }
     
     // Single Todo
     func getTodo(with dto: TodoRequestDTO) throws -> TodoObject {
         // Fetch Entity
         let entity = try fetchTodoEntity(with: dto)
-        
         // Convert & Return
-        guard let todo = TodoObject(with: entity) else {
-            throw TodoErrorCD.UnexpectedConvertError
-        }
-        return todo
+        return try convertToObject(with: entity)
     }
     
     //--------------------
@@ -92,7 +83,6 @@ extension TodoServiceCoredata{
     func deleteTodo(with dto: TodoRequestDTO) throws {
         // Fetch Entity
         let todoEntity = try fetchTodoEntity(with: dto)
-        
         // Delete & Apply
         context.delete(todoEntity)
         try context.save()
@@ -104,7 +94,7 @@ extension TodoServiceCoredata{
 //===============================
 extension TodoServiceCoredata{
     
-    // Fetch Project Entity
+    // Fetch: Project Entity
     private func fetchProjectEntity(with projectId: Int, and userId: String) throws -> ProjectEntity {
         // parameter setting
         let fetchReq: NSFetchRequest<ProjectEntity> = ProjectEntity.fetchRequest()
@@ -119,31 +109,32 @@ extension TodoServiceCoredata{
         return entity
     }
     
-    // Fetch Todo Entities
+    // Fetch: Todo Entities
     private func fetchTodoEntities(with projectId: Int, and userId: String) throws -> Set<TodoEntity> {
+        // fetch project entity
         let projectEntity = try fetchProjectEntity(with: projectId, and: userId)
-        
+        // fetch todo entities
         guard let todoEntities = projectEntity.todo_relationship as? Set<TodoEntity> else {
             throw TodoErrorCD.UnexpectedFetchError
         }
         return todoEntities
     }
     
-    // Fetch Single Todo
+    // Fetch: Single Todo
     private func fetchTodoEntity(with dto: TodoRequestDTO) throws -> TodoEntity {
-        
+        // nil check
         guard let todoId = dto.todoId else {
             throw TodoErrorCD.UnexpectedNilError
         }
         let todoEntities = try fetchTodoEntities(with: dto.projectId, and: dto.userId)
-        
+        // fetch todo
         guard let todo = todoEntities.first(where: { $0.todo_id == todoId }) else {
             throw TodoErrorCD.UnexpectedSearchError
         }
         return todo
     }
     
-    // Set Entity
+    // Set: Entity
     private func createEntity(with desc: String, and todoId: Int) -> TodoEntity {
         let entity = TodoEntity(context: context)
         let setDate = Date()
@@ -158,6 +149,14 @@ extension TodoServiceCoredata{
         return entity
     }
     
+    // Convert: to Object
+    private func convertToObject(with entity: TodoEntity) throws -> TodoObject {
+        guard let data = TodoObject(with: entity) else {
+            throw TodoErrorCD.UnexpectedConvertError
+        }
+        return data
+    }
+    
     // Update Check
     private func checkupdate(from origin: TodoEntity, to updated: TodoUpdateDTO) -> Bool {
         var isUpdated = false
@@ -170,6 +169,15 @@ extension TodoServiceCoredata{
         }
         if let newPinned = updated.newPinned {
             isUpdated = util.updateFieldIfNeeded(&origin.todo_pinned, newValue: newPinned) || isUpdated
+        }
+        if let registedAt = updated.registedAt {
+            isUpdated = util.updateFieldIfNeeded(&origin.todo_registed_at, newValue: registedAt) || isUpdated
+        }
+        if let changedAt = updated.changedAt {
+            isUpdated = util.updateFieldIfNeeded(&origin.todo_changed_at, newValue: changedAt) || isUpdated
+        }
+        if let updatedAt = updated.updatedAt {
+            isUpdated = util.updateFieldIfNeeded(&origin.todo_updated_at, newValue: updatedAt) || isUpdated
         }
         return isUpdated
     }

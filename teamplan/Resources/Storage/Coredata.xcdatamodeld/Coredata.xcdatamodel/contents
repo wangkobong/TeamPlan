@@ -30,6 +30,7 @@
         <attribute name="log_user_id" optional="YES" attributeType="String"/>
     </entity>
     <entity name="ProjectEntity" representedClassName="ProjectEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="proj_alerted" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="proj_changed_at" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="proj_deadline" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="proj_finished" attributeType="Boolean" usesScalarValueType="YES"/>
