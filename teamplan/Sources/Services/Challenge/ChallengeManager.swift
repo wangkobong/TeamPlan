@@ -32,14 +32,14 @@ extension ChallengeManager{
     //--------------------
     // Get Array: FS
     //--------------------
-    func getChallenges() async throws {
+    func getChallengesFromServer() async throws {
         challengeArray = try await challengeFS.getChallenges()
     }
     
     //--------------------
     // Get Object
     //--------------------
-    func getChallenge() throws -> [ChallengeObject]{
+    func getChallenges() throws -> [ChallengeObject]{
         if challengeArray == [] {
             throw ChallengeErrorFS.InternalError
         } else {

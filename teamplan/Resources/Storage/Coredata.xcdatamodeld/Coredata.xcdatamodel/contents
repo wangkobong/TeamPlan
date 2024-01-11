@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22225" systemVersion="23B81" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22522" systemVersion="23C71" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
     <entity name="AccessLogEntity" representedClassName="AccessLogEntity" syncable="YES" codeGenerationType="class">
         <attribute name="log_access" optional="YES" attributeType="String"/>
+        <attribute name="log_id" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="log_upload_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="log_user_id" optional="YES" attributeType="String"/>
     </entity>
     <entity name="ChallengeEntity" representedClassName="ChallengeEntity" syncable="YES" codeGenerationType="class">
@@ -23,10 +25,12 @@
     </entity>
     <entity name="ChallengeLogEntity" representedClassName="ChallengeLogEntity" syncable="YES" codeGenerationType="class">
         <attribute name="log_complete" optional="YES" attributeType="String"/>
-        <attribute name="log_update_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="log_id" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="log_upload_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="log_user_id" optional="YES" attributeType="String"/>
     </entity>
     <entity name="ProjectEntity" representedClassName="ProjectEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="proj_alerted" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="proj_changed_at" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="proj_deadline" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="proj_finished" attributeType="Boolean" usesScalarValueType="YES"/>
@@ -40,10 +44,24 @@
         <attribute name="proj_user_id" optional="YES" attributeType="String"/>
         <relationship name="todo_relationship" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="TodoEntity" inverseName="project_relationship" inverseEntity="TodoEntity"/>
     </entity>
+    <entity name="ProjectLogEntity" representedClassName="ProjectLogEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="log_alert_count" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="log_deadline" optional="YES" attributeType="String"/>
+        <attribute name="log_extend_info" optional="YES" attributeType="String"/>
+        <attribute name="log_finish_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="log_project_id" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="log_regist_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="log_start_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="log_status" optional="YES" attributeType="String"/>
+        <attribute name="log_title" optional="YES" attributeType="String"/>
+        <attribute name="log_todo_count" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="log_user_id" optional="YES" attributeType="String"/>
+    </entity>
     <entity name="StatisticsEntity" representedClassName="StatisticsEntity" syncable="YES" codeGenerationType="class">
         <attribute name="stat_chlg_fin" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="stat_chlg_step" optional="YES" attributeType="String"/>
         <attribute name="stat_drop" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="stat_log_head" optional="YES" attributeType="String"/>
         <attribute name="stat_mychlg" optional="YES" attributeType="String"/>
         <attribute name="stat_proj_alert" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="stat_proj_ext" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
@@ -68,7 +86,6 @@
     <entity name="UserEntity" representedClassName="UserEntity" syncable="YES" codeGenerationType="class">
         <attribute name="user_created_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="user_email" optional="YES" attributeType="String"/>
-        <attribute name="user_fb_id" optional="YES" attributeType="String"/>
         <attribute name="user_id" optional="YES" attributeType="String"/>
         <attribute name="user_login_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="user_name" optional="YES" attributeType="String"/>

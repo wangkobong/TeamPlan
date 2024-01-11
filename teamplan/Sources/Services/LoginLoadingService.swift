@@ -11,7 +11,7 @@ import Foundation
 final class LoginLoadingService{
     
     //================================
-    // MARK: - Parameter Setting
+    // MARK: - Parameter
     //================================
     // Service Parameter
     let util = Utilities()
@@ -20,375 +20,228 @@ final class LoginLoadingService{
     let statCD = StatisticsServicesCoredata()
     let statFS = StatisticsServicesFirestore()
     let chlgCD = ChallengeServicesCoredata()
-    let chlgManager = ChallengeManager()
-    let acclogCD = AccessLogServicesCoredata()
-    let acclogFS = AccessLogServicesFirestore()
-    let chlglogCD = ChallengeLogServicesCoredata()
-    let chlglogFS = ChallengeLogServicesFirestore()
+    let challengeManager = ChallengeManager()
+    let syncLocal = SynchronizeLocal()
+    let syncServer = SynchronizeServer()
+    let logManager = LogManager()
     
     // Component Parameter
     var userId: String
     var loginDate : Date
-    var userData: UserDTO
+    var userData: UserInfoDTO
     var userStat: StatLoginDTO
-    var userLog: AccessLog
-    
-    // Update Parameter
-    var userStatUpdate: StatUpdateDTO?
     
     // Restore UserData Parameter
     private var rollbackStack: [() throws -> Void ] = []
     
+    private let maxSyncAttemps = 3
+    
+    //===============================
+    // MARK: - Initialize
+    //===============================
     init(){
         self.loginDate = Date()
-        self.userId = ""
-        self.userData = UserDTO()
+        self.userId = "Unknown"
+        self.userData = UserInfoDTO()
         self.userStat = StatLoginDTO()
-        self.userLog = AccessLog()
     }
+}
+
+//===============================
+// MARK: - Main Function
+//===============================
+extension LoginLoadingService{
     
-    //===============================
-    // MARK: - Executor
-    //===============================
-    func executor(with dto: AuthSocialLoginResDTO) async throws -> UserDTO {
-        // Extract Identifier
-        self.userId = try await getIdentifier(from: dto)
+    func executor(with dto: AuthSocialLoginResDTO) async throws -> UserInfoDTO {
+        // ready parameter
+        self.loginDate = Date()
+        self.userId = try extractUserId(from: dto)
+        self.logManager.readyParameter(userId: userId)
         
-        // Local Data Check
-        try await checkUserDataFromLocal()
+        // check & sync local if need
+        try await checkAndSyncData(at: loginDate)
         
-        // Get Data from Local
-        try localExecutor(from: self.userId)
-        
-        // ReLogin User Filter
-        if try reLoginCheck() {
+        // filiter
+        if try userFiliter() {
+            // re-login user
             return userData
         }
-        // (Optional) First Use of Day Only
-        updateServiceTerm()
-        // Local Update : Daily
-        try updateLocalStatistics()
-        // Server Update : Weakly
-        if isWeeklyUpdateDue() {
-            try await updateServerStatistics()
-        }
+        // update & sync server if need
+        try await updateAndSyncData(with: loginDate)
         return userData
     }
-    // -----------------------------
-    // Step 0. Cehck Local Data
-    // -----------------------------
-    private func checkUserDataFromLocal() async throws {
-        do {
-            // For Test: Reset Local Data
-            try resetLocal()
-            
-            // Get Data From Local
-            try localExecutor(from: userId)
-        } catch {
-            // Get Data From Server
-            print(error)
-            try await serverExecutor()
-        }
-    }
-    
-    // Get Data from Server
-    private func serverExecutor() async throws {
-        do {
-            try await restoreExecutor()
-        } catch {
-            //TODO: Only Have Access Record at FirebaseAuth User
-            throw error
-        }
-    }
-    
-    // Get Data from Local
-    private func localExecutor(from userId: String) throws {
+}
 
-        let userData = try fetchUser(with: userId)
-        let userStat = try fetchStatistics(with: userId)
-        let userLog = try fetchLog(with: userId)
-
-        self.userData = userData
-        self.userStat = userStat
-        self.userLog = userLog
-        self.userStatUpdate = StatUpdateDTO(loginDTO: self.userStat)
+//===============================
+// MARK: - Main Element
+//===============================
+extension LoginLoadingService{
+    
+    // Check & Local Sync
+    private func checkAndSyncData(at loginDate: Date) async throws {
+        if !checkLocalData() {
+            syncLocal.readySync(with: userId)
+            try await syncProcess(attemptCount: 0, at: loginDate)
+        }
+        try getLocalData()
+        try self.logManager.readyManager()
     }
     
-    // Test Function
-    private func resetLocal() throws {
-        try userCD.deleteUser(identifier: userId)
-        try statCD.deleteStatistics(with: userId)
-        try chlgManager.delChallenge(with: userId)
-        try acclogCD.deleteLog(with: userId)
-        try chlglogCD.deleteLog(with: userId)
-    }
-    
-    // -----------------------------
-    // Step 1. Revisit User Check
-    // -----------------------------
-    private func reLoginCheck() throws -> Bool {
-        guard let lastLogin = userLog.log_access.last else {
+    // Filiter
+    private func userFiliter() throws -> Bool {
+        let log = try logManager.getAccessLogAtLocal()
+        guard let lastLogin = log.log_access.last else {
             throw LoginLoadingServiceError.EmptyAccessLog
         }
         return util.compareTime(currentTime: loginDate, lastTime: lastLogin)
     }
-    // -----------------------------
-    // Step 1-1. Update Servcie Term
-    // -----------------------------
-    private func updateServiceTerm() {
-        userStat.updateServiceTerm(with: userStat.stat_term + 1)
-    }
-    // -----------------------------
-    // Step 2. Update Local Statistics Data (Daily)
-    // -----------------------------
-    private func updateLocalStatistics() throws {
-        // (Local) Update Statistics
-        try statCD.updateStatistics(with: StatUpdateDTO(loginDTO: userStat))
-        // (Local) Update AccessLog
-        try acclogCD.updateLog(with: userId, when: loginDate)
-    }
-    // -----------------------------
-    // Step 3. Update Local Statistics Data (Weekly)
-    // -----------------------------
-    private func updateServerStatistics() async throws {
-        guard let updateStat = userStatUpdate else {
-            throw LoginLoadingServiceError.EmptyStatistics
+    
+    // Update & Server Sync
+    private func updateAndSyncData(with loginDate: Date) async throws {
+        // Daily
+        try await dailyUpdateProcess(with: loginDate)
+        // Weekly
+        if isWeeklyUpdateDue() {
+            try updateLocalStatUploadAt(with: loginDate)
+            try await weeklyUpdateProcess(at: loginDate)
         }
-        // (Server) Update Statistics
-        try await statFS.updateStatistics(with: updateStat)
-        // (Server) Update AccessLog
-        try await acclogFS.updateLog(to: try acclogCD.getLog(with: userId))
-    }
-    // -----------------------------
-    // Support Function
-    // -----------------------------
-    private func isWeeklyUpdateDue() -> Bool {
-        return userStat.stat_term % 7 == 0
     }
 }
 
-//================================
-// MARK: - Get User
-//================================
+
+//===============================
+// MARK: - Support Function
+//===============================
 extension LoginLoadingService{
     
-    func getIdentifier(from authResult: AuthSocialLoginResDTO) async throws -> String {
-        return try util.getIdentifier(from: authResult)
-    }
-    
-    func fetchUser(with userId: String) throws -> UserDTO {
+    //--------------------
+    // Check: Local Data
+    //--------------------
+    // Signal
+    private func checkLocalData() -> Bool {
+        let hasUserData = doesUserExistInLocal(with: userId)
+        let hasStatData = doesStatExistInLocal(with: userId)
+        let hasAccessLogData = doesAccessLogExistInLocal(with: userId)
+        let hasChallengeLogData = doesChallengeLogExistInLocal(with: userId)
         
-        // Check Coredata
-        guard let user = try fetchUserFromCoredata(with: userId) else {
-            throw LoginLoadingServiceError.UnexpectedUserFetchFailed
-        }
-        return UserDTO(with: user)
+        return hasUserData && hasStatData && hasAccessLogData && hasChallengeLogData
     }
-    
-    private func fetchUserFromCoredata(with userId: String) throws -> UserObject? {
-        return try? userCD.getUser(from: userId)
-    }
-}
-
-//================================
-// MARK: - Get Statistics
-//================================
-extension LoginLoadingService{
-    
-    func fetchStatistics(with userId: String) throws -> StatLoginDTO {
-        
-        // Check Coredata
-        guard let stat = try fetchStatFromCoredata(with: userId) else {
-            throw LoginLoadingServiceError.UnexpectedStatFetchFailed
-        }
-        return stat
-    }
-    
-    private func fetchStatFromCoredata(with userId: String) throws -> StatLoginDTO? {
-        return try statCD.getStatisticsForDTO(with: userId, type: .login) as? StatLoginDTO
-    }
-}
-
-//================================
-// MARK: - Get AccessLog
-//================================
-extension LoginLoadingService{
-    
-    func fetchLog(with userId: String) throws -> AccessLog {
-        
-        // Check Coredata
-        guard let log = try fetchLogFromCoredata(with: userId) else {
-            throw LoginLoadingServiceError.UnexpectedLogFetchFailed
-        }
-        return log
-    }
-    
-    private func fetchLogFromCoredata(with userId: String) throws -> AccessLog? {
-        return try? acclogCD.getLog(with: userId)
-    }
-}
-
-//================================
-// MARK: - Restore UserData
-//================================
-extension LoginLoadingService{
-    
-    private func restoreExecutor() async throws {
+    // User
+    private func doesUserExistInLocal(with userId: String) -> Bool {
         do {
-            // User
-            let user = try await getUserFS()
-            try setUserCD(with: user)
-            rollbackStack.append(rollbackSetUserCD)
-            
-            // Statistics
-            let stat = try await getStatFS()
-            try setStatCD(with: stat)
-            rollbackStack.append(rollbackSetStatCD)
-            
-            // Access Log
-            let accLog = try await getAccLogFS()
-            try setAccLogCD(with: accLog)
-            rollbackStack.append(rollbackSetAccLogCD)
-            
-            // Challenge Log
-            let chlgLog = try await getChlgLogFS()
-            try setChlgLogCD(with: chlgLog)
-            rollbackStack.append(rollbackSetChlgLogCD)
-            
-            // Challenge
-            let chlgArray = try await getChlgFS()
-            try setChlgCD()
-            try restoreUserProgress(stat: stat, ary: chlgArray, log: chlgLog.log_complete)
-            
-            rollbackStack.removeAll()
-            
+            let _ = try userCD.getUser(with: userId)
+            return true
         } catch {
-            try rollbackAll()
-            print("(Service) There was an unexpected error while Fetch UserData at 'LoginLoading' : \(error)")
-            throw error
+            print("Coredata: User Data Not Exist:", error)
+            return false
+        }
+    }
+    // Statistics
+    func doesStatExistInLocal(with userId: String) -> Bool {
+        do {
+            let _ = try statCD.getStatisticsForDTO(with: userId, type: .login) as? StatLoginDTO
+            return true
+        } catch {
+            print("Coredata: Statistics Data Not Exist:", error)
+            return false
+        }
+    }
+    // AccessLog
+    func doesAccessLogExistInLocal(with userId: String) -> Bool {
+        do {
+            let _ = try logManager.getAccessLogAtLocal()
+            return true
+        } catch {
+            print("Coredata: AccessLog Not Exist:", error)
+            return false
+        }
+    }
+    // ChallengeLog
+    func doesChallengeLogExistInLocal(with userId: String) -> Bool {
+        do {
+            let _ = try logManager.getChallengeLogAtLocal()
+            return true
+        } catch {
+            print("Coredata: ChalengeLog Not Exist:", error)
+            return false
         }
     }
     
-    private func rollbackAll() throws {
+    //--------------------
+    // Sync: Local with Server
+    //--------------------
+    private func syncProcess(attemptCount: Int, at loginDate: Date) async throws {
         do {
-            for rollback in rollbackStack.reversed() {
-                try rollback()
+            try await syncLocal.syncExecutor(with: loginDate)
+        } catch {
+            if attemptCount >= maxSyncAttemps {
+                throw LoginLoadingServiceError.TooManyLocalSyncAttempt
             }
-            rollbackStack.removeAll()
-        } catch {
-            throw error
+            try await syncProcess(attemptCount: attemptCount + 1, at: loginDate)
         }
     }
-
-    // -----------------------------
-    // Fetch Data from Firestore
-    // -----------------------------
-    // User
-    private func getUserFS() async throws -> UserObject {
-        return try await userFS.getUser(from: userId)
+    
+    //--------------------
+    // Get: Local Data
+    //--------------------
+    private func getLocalData() throws {
+        self.userData = try UserInfoDTO(with: userCD.getUser(with: userId))
+        self.userStat = try statCD.getStatisticsForDTO(with: userId, type: .login) as! StatLoginDTO
     }
     
-    // -----------------------------
-    // Statistics
-    private func getStatFS() async throws -> StatisticsObject {
-        return try await statFS.getStatistics(from: userId)
-    }
-    
-    // -----------------------------
-    // Challenge
-    private func getChlgFS() async throws -> [ChallengeObject] {
-        try await chlgManager.getChallenges()
-        chlgManager.configChallenge(with: userId)
-        return try chlgManager.getChallenge()
-    }
-    
-    // -----------------------------
-    // Access Log
-    private func getAccLogFS() async throws -> AccessLog {
-        return try await acclogFS.getLog(with: userId)
-    }
-    
-    // -----------------------------
-    // Challenge Log
-    private func getChlgLogFS() async throws -> ChallengeLog {
-        return try await chlglogFS.getLog(with: userId)
-    }
-    
-    
-    // -----------------------------
-    // Set Data at Coredata
-    // -----------------------------
-    // User
-    private func setUserCD(with object: UserObject) throws {
-        try userCD.setUser(reqUser: object)
-    }
-    
-    private func rollbackSetUserCD() throws {
-        try userCD.deleteUser(identifier: userId)
-    }
-    
-    // -----------------------------
-    // Statistics
-    private func setStatCD(with object: StatisticsObject) throws {
-        try statCD.setStatistics(with: object)
-    }
-    
-    private func rollbackSetStatCD() throws {
+    // Test: Erase All Local Data
+    private func resetLocal() throws {
+        try userCD.deleteUser(with: userId)
         try statCD.deleteStatistics(with: userId)
+        try logManager.deleteAllAccessLogAtLocal()
+        try logManager.deleteAllChallengeLogAtLocal()
     }
     
-    // -----------------------------
-    // Challenge
-    private func setChlgCD() throws {
-        try chlgManager.setChallenge()
+    //--------------------
+    // Update Process
+    //--------------------
+    // Signal
+    private func isWeeklyUpdateDue() -> Bool {
+        return userStat.term % 7 == 0
     }
-    
-    private func rollbackSetChlgCD() throws {
-        try chlgCD.deleteChallenges(with: userId)
+    // Daily
+    private func dailyUpdateProcess(with loginDate: Date) async throws {
+        // update & apply local statistics
+        try updateLocalStatTerm()
+        // update & apply local access log
+        try await logManager.addAccessLog(with: loginDate)
     }
-
-    // -----------------------------
-    // Access Log
-    private func setAccLogCD(with log: AccessLog) throws {
-        try acclogCD.setLog(with: log)
-    }
-    
-    private func rollbackSetAccLogCD() throws {
-        try acclogCD.deleteLog(with: userId)
-    }
-    
-    // -----------------------------
-    // Challenge Log
-    private func setChlgLogCD(with log: ChallengeLog) throws {
-        try chlglogCD.setLog(with: log)
-    }
-    
-    private func rollbackSetChlgLogCD() throws {
-        try chlglogCD.deleteLog(with: userId)
-    }
-    
-    // -----------------------------
-    // Support Function
-    // -----------------------------
-    private func restoreUserProgress(stat: StatisticsObject, ary: [ChallengeObject], log: [Int : Date]) throws {
-        
-        // Check Log
-        guard !log.isEmpty else {
-            throw LoginLoadingServiceError.UnexpectedLogFetchFailed
-        }
-        
-        // Update Challenge Status with Log
-        for (key, date) in log {
-            guard let challenge = ary.first(where: { $0.chlg_id == key }) else {
-                throw LoginLoadingServiceError.UnexpectedChallengeFetchFailed
+    // Weekly
+    private func weeklyUpdateProcess(attempCount: Int = 0, at syncDate: Date) async throws {
+        do {
+            syncServer.readySync(with: userId, and: logManager)
+            try await syncServer.syncExecutor(with: syncDate)
+        } catch {
+            if attempCount >= maxSyncAttemps{
+                throw LoginLoadingServiceError.TooManyServerSyncAttempt
             }
-            var updated = ChallengeStatusDTO(with: challenge)
-            updated.updateLock(with: false)
-            updated.updateStatus(with: true)
-            updated.updateFinishedAt(with: date)
-            try chlgCD.updateChallenge(with: updated)
-            print(updated)
+            try await weeklyUpdateProcess(attempCount: attempCount + 1, at: syncDate)
         }
+    }
+    // Update Process
+    private func updateLocalStatTerm() throws {
+        let newTerm = userStat.term + 1
+        userStat.updateServiceTerm(with: newTerm)
+        let updated = StatUpdateDTO(userId: userId, newTerm: newTerm)
+        try statCD.updateStatistics(with: updated)
+    }
+    
+    private func updateLocalStatUploadAt(with syncDate: Date) throws {
+        let updated = StatUpdateDTO(userId: userId, newUploadAt: syncDate)
+        try statCD.updateStatistics(with: updated)
+    }
+    
+    //--------------------
+    // Utilities
+    //--------------------
+    // Extract UserId
+    private func extractUserId(from authResult: AuthSocialLoginResDTO) throws -> String {
+        return try util.getIdentifier(from: authResult)
     }
 }
 
@@ -396,27 +249,18 @@ extension LoginLoadingService{
 // MARK: - Exception
 //================================
 enum LoginLoadingServiceError: LocalizedError {
-    case UnexpectedUserFetchFailed
-    case UnexpectedStatFetchFailed
-    case UnexpectedChallengeFetchFailed
-    case UnexpectedLogFetchFailed
+    case TooManyLocalSyncAttempt
+    case TooManyServerSyncAttempt
     case EmptyAccessLog
-    case EmptyStatistics
     
     var errorDescription: String? {
         switch self {
-        case .UnexpectedUserFetchFailed:
-            return "Service: There was an unexpected error while Fetch 'User' details"
-        case .UnexpectedStatFetchFailed:
-            return "Service: There was an unexpected error while Fetch 'Statistics' details"
-        case .UnexpectedLogFetchFailed:
-            return "Service: There was an unexpected error while Fetch 'Challenge' details"
-        case .UnexpectedChallengeFetchFailed:
-            return "Service: There was an unexpected error while Fetch 'Log' details"
+        case .TooManyLocalSyncAttempt:
+            return "Service: There was an Too Many Attempt while Synchronize Local with Server Data"
+        case .TooManyServerSyncAttempt:
+            return "Service: There was an Too Many Attempt while Synchronize Server with Local Data"
         case .EmptyAccessLog:
-            return "AccessLog Not Found"
-        case .EmptyStatistics:
-            return "Statistics Not Found"
+            return "Service: Empty Access Log Detected"
         }
     }
 }

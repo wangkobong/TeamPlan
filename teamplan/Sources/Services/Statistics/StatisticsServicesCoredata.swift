@@ -12,93 +12,71 @@ import CoreData
 final class StatisticsServicesCoredata{
     
     //================================
-    // MARK: - Parameter Setting
+    // MARK: - Parameter
     //================================
     let util = Utilities()
-    let cd = CoreDataManager.shared
+    let cm = CoreDataManager.shared
     var context: NSManagedObjectContext {
-        return cd.context
+        return cm.context
     }
+}
+
+//================================
+// MARK: - Main Function
+//================================
+extension StatisticsServicesCoredata{
     
-    //================================
-    // MARK: - Set
-    //================================
+    //--------------------
+    // Set
+    //--------------------
     func setStatistics(with object: StatisticsObject) throws {
-        
-        // Create Entity & Set Data
-        try setStatEntity(with: object)
+        // Create Entity
+        try createStatEntity(with: object)
+        // Set Entity
         try context.save()
     }
-    // Support Function
     
-    
-    //================================
-    // MARK: - Get
-    //================================
+    //--------------------
+    // Get
+    //--------------------
     // Object
-    //--------------------
     func getStatisticsForObject(with userId: String) throws -> StatisticsObject {
-        
         // Fetch Data
         let entity = try fetchEntity(with: userId)
         let data = try convertToData(with: entity)
-        
-        // Convert To Object & Return
-        guard let stat = StatisticsObject(entity: entity, chlgStep: data.chlgStep, mychlg: data.myChlg)
-        else {
-            throw StaticErrorCD.UnexpectedConvertError
-        }
-        return stat
+        // Convert & Return
+        return try convertToObject(
+            entity: entity, challengeStep: data.chlgStep, myChallenge: data.myChlg, logHead: data.logHead
+        )
     }
     
-    //--------------------
     // DTO
-    //--------------------
     func getStatisticsForDTO(with userId: String, type: DTOType) throws -> Any {
-        
         // Fetch Data
         let entity = try fetchEntity(with: userId)
         let data = try convertToData(with: entity)
-        
-        // Convert Entity to DTO & Return
-        switch type {
-        case .login:
-            return StatLoginDTO(with: userId, entity: entity)
-        case .home:
-            return StatHomeDTO(with: userId, entity: entity)
-        case .project:
-            return StatProjectDTO(with: userId, entity: entity)
-        case .todo:
-            return StatTodoDTO(with: userId, entity: entity)
-        case .challenge:
-            return StatChallengeDTO(with: userId, entity: entity, chlgStep: data.chlgStep, mychlg: data.myChlg)
-        case .center:
-            return StatCenterDTO(with: userId, entity: entity, chlgStep: data.chlgStep, mychlg: data.myChlg)
-        }
+        // Convert & Return
+        return try convertToDTO(entity: entity, userId: userId, challengeStep: data.chlgStep, myChallenge: data.myChlg, type: type)
     }
     
-    //================================
-    // MARK: - Update
-    //================================
+    //--------------------
+    // Update
+    //--------------------
     func updateStatistics(with dto: StatUpdateDTO) throws {
-        
         // Fetch Entity
-        let entity = try fetchEntity(with: dto.stat_user_id)
-        
+        let entity = try fetchEntity(with: dto.userId)
         // Update Data
         if try checkUpdate(with: entity, to: dto) {
             try context.save()
         }
     }
 
-    //================================
-    // MARK: - Delete
-    //================================
+    //--------------------
+    // Delete
+    //--------------------
     func deleteStatistics(with userId: String) throws {
-        
         // Fetch Entity
         let entity = try fetchEntity(with: userId)
-        
         // Delete Data
         context.delete(entity)
         try context.save()
@@ -111,25 +89,28 @@ final class StatisticsServicesCoredata{
 extension StatisticsServicesCoredata{
 
     // Set Entity
-    private func setStatEntity(with reqStat: StatisticsObject) throws {
+    private func createStatEntity(with object: StatisticsObject) throws {
+        // Convert Element
+        let challengeStepString = try util.convertToJSON(data: object.stat_chlg_step)
+        let myChallengeString = try util.convertToJSON(data: object.stat_mychlg)
+        let logHeadString = try util.convertToJSON(data: object.stat_log_head)
         
-        // Prepare Entity Create
-        let json_stat_chlg_step = try util.convertToJSON(data: reqStat.stat_chlg_step)
-        let json_stat_mychlg = try util.convertToJSON(data: reqStat.stat_mychlg)
-        let statEntity = StatisticsEntity(context: context)
-        
-        statEntity.stat_user_id = reqStat.stat_user_id
-        statEntity.stat_term = Int32(reqStat.stat_term)
-        statEntity.stat_drop = Int32(reqStat.stat_drop)
-        statEntity.stat_proj_reg = Int32(reqStat.stat_proj_reg)
-        statEntity.stat_proj_fin = Int32(reqStat.stat_proj_fin)
-        statEntity.stat_proj_alert = Int32(reqStat.stat_proj_alert)
-        statEntity.stat_proj_ext = Int32(reqStat.stat_proj_ext)
-        statEntity.stat_todo_reg = Int32(reqStat.stat_todo_reg)
-        statEntity.stat_chlg_step = json_stat_chlg_step
-        statEntity.stat_mychlg = json_stat_mychlg
-        statEntity.stat_upload_at = reqStat.stat_upload_at
+        // Create Entity
+        let entity = StatisticsEntity(context: context)
+        entity.stat_user_id = object.stat_user_id
+        entity.stat_term = Int32(object.stat_term)
+        entity.stat_drop = Int32(object.stat_drop)
+        entity.stat_proj_reg = Int32(object.stat_proj_reg)
+        entity.stat_proj_fin = Int32(object.stat_proj_fin)
+        entity.stat_proj_alert = Int32(object.stat_proj_alert)
+        entity.stat_proj_ext = Int32(object.stat_proj_ext)
+        entity.stat_todo_reg = Int32(object.stat_todo_reg)
+        entity.stat_chlg_step = challengeStepString
+        entity.stat_mychlg = myChallengeString
+        entity.stat_log_head = logHeadString
+        entity.stat_upload_at = object.stat_upload_at
     }
+    //----------------------------------------------
     
     // Fetch Entity
     private func fetchEntity(with userId: String) throws -> StatisticsEntity {
@@ -142,61 +123,102 @@ extension StatisticsServicesCoredata{
         
         // Search Data
         guard let entity = try context.fetch(fetchReq).first else {
-            throw StaticErrorCD.StatRetrievalByIdentifierFailed
+            throw StatErrorCD.UnexpectedSearchError
         }
         return entity
     }
+    //----------------------------------------------
     
-    // JSON to Data Converter
-    private func convertToData(with entity: StatisticsEntity) throws -> (chlgStep: [Int: Int], myChlg: [Int]) {
+    // Convert: to Data
+    private func convertToData(with entity: StatisticsEntity) throws ->
+        (chlgStep: [Int:Int], myChlg: [Int], logHead: [Int:Int]) {
         // Fetch JSON from Entity
-        guard let stat_chlg_step_json = entity.stat_chlg_step,
-              let stat_mychlg_json = entity.stat_mychlg
+        guard let challengeStepString = entity.stat_chlg_step,
+              let myChallengeString = entity.stat_mychlg,
+              let logHeadString = entity.stat_log_head
         else {
-            throw StaticErrorCD.UnexpectedConvertError
+            throw StatErrorCD.UnexpectedConvertError
         }
         // Convert JSON to Array & return
         return (
-            chlgStep: try util.convertFromJSON(jsonString: stat_chlg_step_json, type: [Int : Int].self),
-            myChlg: try util.convertFromJSON(jsonString: stat_mychlg_json, type: [Int].self)
+            chlgStep: try util.convertFromJSON(jsonString: challengeStepString, type: [Int : Int].self),
+            myChlg: try util.convertFromJSON(jsonString: myChallengeString, type: [Int].self),
+            logHead: try util.convertFromJSON(jsonString: logHeadString, type: [Int:Int].self)
         )
     }
+    // Convert: to Object
+    private func convertToObject(entity: StatisticsEntity,
+                                 challengeStep: [Int:Int], myChallenge: [Int], logHead: [Int:Int]) throws -> StatisticsObject {
+        guard let object = StatisticsObject(entity: entity, challengeStep: challengeStep, myChallenge: myChallenge, logHead: logHead)
+        else {
+            throw StatErrorCD.UnexpectedConvertError
+        }
+        return object
+    }
+    // Convert: to DTO
+    private func convertToDTO(
+        entity: StatisticsEntity, userId: String, challengeStep: [Int:Int], myChallenge: [Int], type: DTOType) throws -> Any {
+        switch type {
+        case .login:
+            return StatLoginDTO(with: userId, entity: entity)
+        case .home:
+            return StatHomeDTO(with: userId, entity: entity)
+        case .project:
+            return StatProjectDTO(with: userId, entity: entity)
+        case .todo:
+            return StatTodoDTO(with: userId, entity: entity)
+        case .challenge:
+            return StatChallengeDTO(
+                with: userId, entity: entity, chlgStep: challengeStep, mychlg: myChallenge)
+        case .center:
+            return StatCenterDTO(
+                with: userId, entity: entity, chlgStep: challengeStep, mychlg: myChallenge)
+        }
+    }
+    //----------------------------------------------
     
     // Update Check
     private func checkUpdate(with entity: StatisticsEntity, to dto: StatUpdateDTO) throws -> Bool {
         var isUpdated = false
         
-        if let statDrop = dto.stat_drop {
-            isUpdated = util.updateFieldIfNeeded(&entity.stat_drop, newValue: Int32(statDrop)) || isUpdated
+        if let newDrop = dto.newDrop {
+            isUpdated = util.updateFieldIfNeeded(&entity.stat_drop, newValue: Int32(newDrop)) || isUpdated
         }
-        if let statTerm = dto.stat_term {
-            isUpdated = util.updateFieldIfNeeded(&entity.stat_term, newValue: Int32(statTerm)) || isUpdated
+        if let newTerm = dto.newTerm {
+            isUpdated = util.updateFieldIfNeeded(&entity.stat_term, newValue: Int32(newTerm)) || isUpdated
         }
-        if let statProjReg = dto.stat_proj_reg {
-            isUpdated = util.updateFieldIfNeeded(&entity.stat_proj_reg, newValue: Int32(statProjReg)) || isUpdated
+        if let newProjectRegisted = dto.newProjectRegisted {
+            isUpdated = util.updateFieldIfNeeded(&entity.stat_proj_reg, newValue: Int32(newProjectRegisted)) || isUpdated
         }
-        if let statProjFin = dto.stat_proj_fin {
-            isUpdated = util.updateFieldIfNeeded(&entity.stat_proj_fin, newValue: Int32(statProjFin)) || isUpdated
+        if let newProjectFinished = dto.newProjectFinished {
+            isUpdated = util.updateFieldIfNeeded(&entity.stat_proj_fin, newValue: Int32(newProjectFinished)) || isUpdated
         }
-        if let statProjAlert = dto.stat_proj_alert {
-            isUpdated = util.updateFieldIfNeeded(&entity.stat_proj_alert, newValue: Int32(statProjAlert)) || isUpdated
+        if let newProjectAlerted = dto.newProjectAlerted {
+            isUpdated = util.updateFieldIfNeeded(&entity.stat_proj_alert, newValue: Int32(newProjectAlerted)) || isUpdated
         }
-        if let statProjExt = dto.stat_proj_ext {
-            isUpdated = util.updateFieldIfNeeded(&entity.stat_proj_ext, newValue: Int32(statProjExt)) || isUpdated
+        if let newProjectExtended = dto.newProjectExtended {
+            isUpdated = util.updateFieldIfNeeded(&entity.stat_proj_ext, newValue: Int32(newProjectExtended)) || isUpdated
         }
-        if let statTodoReg = dto.stat_todo_reg {
-            isUpdated = util.updateFieldIfNeeded(&entity.stat_todo_reg, newValue: Int32(statTodoReg)) || isUpdated
+        if let newTodoRegisted = dto.newTodoRegisted {
+            isUpdated = util.updateFieldIfNeeded(&entity.stat_todo_reg, newValue: Int32(newTodoRegisted)) || isUpdated
         }
-        if let statTodoLimit = dto.stat_todo_limit {
-            isUpdated = util.updateFieldIfNeeded(&entity.stat_todo_limit, newValue: Int32(statTodoLimit)) || isUpdated
+        if let newTodoLimit = dto.newTodoLimit {
+            isUpdated = util.updateFieldIfNeeded(&entity.stat_todo_limit, newValue: Int32(newTodoLimit)) || isUpdated
         }
-        if let statChlgStep = dto.stat_chlg_step {
-            let chlgStepJSON = try util.convertToJSON(data: statChlgStep)
-            isUpdated = util.updateFieldIfNeeded(&entity.stat_chlg_step, newValue: chlgStepJSON) || isUpdated
+        if let newUploadAt = dto.newUploadAt {
+            isUpdated = util.updateFieldIfNeeded(&entity.stat_upload_at, newValue: newUploadAt)
         }
-        if let statMychlg = dto.stat_mychlg {
-            let myChlgJSON = try util.convertToJSON(data: statMychlg)
-            isUpdated = util.updateFieldIfNeeded(&entity.stat_mychlg, newValue: myChlgJSON) || isUpdated
+        if let newLogHead = dto.newLogHead {
+            let newLogHeadString = try util.convertToJSON(data: newLogHead)
+            isUpdated = util.updateFieldIfNeeded(&entity.stat_log_head, newValue: newLogHeadString) || isUpdated
+        }
+        if let newChallengeStep = dto.newChallengeStep {
+            let newChallengeStepString = try util.convertToJSON(data: newChallengeStep)
+            isUpdated = util.updateFieldIfNeeded(&entity.stat_chlg_step, newValue: newChallengeStepString) || isUpdated
+        }
+        if let newMyChallenge = dto.newMyChallenge {
+            let newMyChallengeString = try util.convertToJSON(data: newMyChallenge)
+            isUpdated = util.updateFieldIfNeeded(&entity.stat_mychlg, newValue: newMyChallengeString) || isUpdated
         }
         return isUpdated
     }
@@ -205,15 +227,15 @@ extension StatisticsServicesCoredata{
 //===============================
 // MARK: - Exception
 //===============================
-enum StaticErrorCD: LocalizedError {
-    case StatRetrievalByIdentifierFailed
+enum StatErrorCD: LocalizedError {
+    case UnexpectedSearchError
     case UnexpectedConvertError
     case UnexpectedFetchError
     
     var errorDescription: String?{
         switch self {
-        case .StatRetrievalByIdentifierFailed:
-            return "Coredata: Unable to retrieve 'Statistics' data using the provided identifier."
+        case .UnexpectedSearchError:
+            return "Coredata: There was an unexpected error while Search 'Statistics' with Given 'UserId'"
         case .UnexpectedConvertError:
             return "Coredata: There was an unexpected error while Convert 'Statistics' details"
         case .UnexpectedFetchError:

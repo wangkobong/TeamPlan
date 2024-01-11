@@ -91,6 +91,7 @@ final class ChallengeService {
     let challengeCD = ChallengeServicesCoredata()
     let challengeLogCD = ChallengeLogServicesCoredata()
     let statCD = StatisticsServicesCoredata()
+    let logManager = LogManager()
     
     var userId: String
     let statCenter: StatisticsCenter
@@ -106,6 +107,7 @@ final class ChallengeService {
         self.userId = userId
         self.statCenter = StatisticsCenter(with: userId)
         self.statDTO = StatChallengeDTO()
+        self.logManager.readyParameter(userId: userId)
     }
     // Init function
     func readyService() throws {
@@ -115,6 +117,8 @@ final class ChallengeService {
         challengeArray = try challengeCD.getChallenges(onwer: userId)
         // Step3. get MyChallenge
         try readyMyChallenge()
+        // ready log manager
+        try logManager.readyManager()
     }
     // Init Statistics
     private func readyStatistics() throws {
@@ -129,10 +133,10 @@ final class ChallengeService {
     // Init MyChallenge
     private func readyMyChallenge() throws {
         // Step1. Check MyChallenge Empty Case
-        if !statDTO.stat_mychlg.isEmpty{
+        if !statDTO.myChallenge.isEmpty{
             
             // Step2. Filled MyChallenge Array with Statistics Data
-            for idx in statDTO.stat_mychlg {
+            for idx in statDTO.myChallenge {
                 try setMyChallenges(with: idx)
             }
         }
@@ -206,7 +210,7 @@ extension ChallengeService {
         let challenge = try fetchChallenge(with: challengeId)
         
         // Step2. Update Statistics
-        statDTO.stat_drop += challenge.chlg_reward
+        statDTO.drop += challenge.chlg_reward
         
         // Step3. Update Challenge Step
         try updateChallengeStep(with: challenge)
@@ -223,47 +227,50 @@ extension ChallengeService {
     //-------------------------------
     // * Update Challenge Status
     private func updateChallengeStatus(with challengeId: Int, type: functionType) throws {
-        // Step1. Search Additional Challenge Data
-        let challenge = try fetchChallenge(with: challengeId)
-        // Step2. Struct UpdateDTO
-        var updatedStatus = ChallengeStatusDTO(with: challenge)
         let updatedDate = Date()
         
-        // Step3. Update by Type
+        // update & apply
         switch type{
         case .set:
-            updatedStatus.updateSelected(with: true)
-            updatedStatus.updateSelectedAt(with: updatedDate)
+            let updated = ChallengeUpdateDTO(challengeId: challengeId, userId: userId,
+                                             newSelected: true, newSelectedAt: updatedDate)
+            try challengeCD.updateChallenge(with: updated)
         case .disable:
-            updatedStatus.updateSelected(with: false)
-            updatedStatus.updateUnselectedAt(with: updatedDate)
+            let updated = ChallengeUpdateDTO(challengeId: challengeId, userId: userId,
+                                             newSelected: false, newUnSelectedAt: updatedDate)
+            try challengeCD.updateChallenge(with: updated)
         case .reward:
-            updatedStatus.updateStatus(with: true)
-            updatedStatus.updateFinishedAt(with: updatedDate)
-            updatedStatus.updateSelected(with: false)
+            let updated = ChallengeUpdateDTO(challengeId: challengeId, userId: userId,
+                                             newSelected: false, newStatus: true,
+                                             newUnSelectedAt: updatedDate ,newFinishedAt: updatedDate)
+            try challengeCD.updateChallenge(with: updated)
         case .next:
-            updatedStatus.updateLock(with: false)
+            let updated = ChallengeUpdateDTO(challengeId: challengeId, userId: userId,
+                                             newLock: false)
+            try challengeCD.updateChallenge(with: updated)
         }
-        // Step4. Update with DTO
-        try challengeCD.updateChallenge(with: updatedStatus)
     }
     
     // * Statistics Update
     private func updateStatistics() throws {
-        let updatedStatistics = StatUpdateDTO(challengeDTO: statDTO)
-        try statCD.updateStatistics(with: updatedStatistics)
+        let updated = StatUpdateDTO(userId: userId,
+                                    newDrop: statDTO.drop,
+                                    newChallengeStep: statDTO.challengeStep,
+                                    newMyChallenge: statDTO.myChallenge
+        )
+        try statCD.updateStatistics(with: updated)
     }
     
     // * Challenge Log Update
     private func updatedChallengeLog(with challengeId: Int) throws {
-        try challengeLogCD.updateLog(with: userId, challenge: challengeId, updatedAt: Date())
+        try logManager.addChallengeLog(with: challengeId, and: Date())
     }
     
     // * Challenge Step Update
     private func updateChallengeStep(with challenge: ChallengeObject) throws {
         let challengeType = challenge.chlg_type.rawValue
-        if let currentVal = statDTO.stat_chlg_step[challengeType] {
-            statDTO.stat_chlg_step[challengeType] = currentVal + 1
+        if let currentVal = statDTO.challengeStep[challengeType] {
+            statDTO.challengeStep[challengeType] = currentVal + 1
         } else {
             throw ChallengeError.UnexpectedStepUpdateError
         }
@@ -300,13 +307,13 @@ extension ChallengeService {
         let dto = MyChallengeDTO(with: myChallenge, and: userProgress)
         // Step4. Append MyChallenge
         myChallenges.append(dto)
-        statDTO.stat_mychlg.append(challengeId)
+        statDTO.myChallenge.append(challengeId)
     }
 
     // * Remove challenge from arrays
     private func removeChallengeFromArrays(with challengeId: Int) {
         myChallenges.removeAll { $0.challengeID == challengeId }
-        statDTO.stat_mychlg.removeAll { $0 == challengeId }
+        statDTO.myChallenge.removeAll { $0 == challengeId }
     }
     
     // * Find Next Challenge ID

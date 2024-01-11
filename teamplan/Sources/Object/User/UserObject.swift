@@ -17,8 +17,6 @@ struct UserObject{
     // content
     //--------------------
     let user_id: String
-    var user_fb_id: String
-
     let user_email: String
     let user_name: String
     let user_social_type: String
@@ -32,8 +30,7 @@ struct UserObject{
     //--------------------
     // SignupService
     init(newUser: UserSignupDTO, signupDate: Date) {
-        self.user_id = newUser.identifier
-        self.user_fb_id = ""
+        self.user_id = newUser.userId
         self.user_email = newUser.email
         self.user_name = newUser.nickName
         self.user_social_type = newUser.provider.rawValue
@@ -58,7 +55,6 @@ struct UserObject{
         }
         // Assigning values
         self.user_id = user_id
-        self.user_fb_id = userEntity.user_fb_id ?? ""
         self.user_email = user_email
         self.user_name = user_name
         self.user_social_type = user_social_type
@@ -69,7 +65,7 @@ struct UserObject{
     }
     
     // Firestore
-    init?(userData: [String : Any], docsId: String) {
+    init?(userData: [String : Any]) {
         guard let user_id = userData["user_id"] as? String,
               let user_email = userData["user_email"] as? String,
               let user_name = userData["user_name"] as? String,
@@ -83,7 +79,6 @@ struct UserObject{
         }
         // Assigning values
         self.user_id = user_id
-        self.user_fb_id = docsId
         self.user_email = user_email
         self.user_name = user_name
         self.user_social_type = user_social_type
@@ -96,11 +91,6 @@ struct UserObject{
     //--------------------
     // function
     //--------------------
-    mutating func addDocsId(docsId: String){
-        self.user_fb_id = docsId
-    }
-    
-    // Dictionary Converter
     func toDictionary() -> [String: Any] {
 
         return [
@@ -123,8 +113,6 @@ enum UserStatus: String{
     case active = "Active"
     case dormant = "Dormant"
     case unknown = "Unknown"
-    case unStableCD = "FailedToSetCoredata"
-    case unStableFS = "FailedToSetFirestore"
 }
 
 enum Providers: String{

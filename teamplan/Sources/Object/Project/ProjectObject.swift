@@ -24,6 +24,7 @@ struct ProjectObject{
     let proj_started_at: Date
     let proj_deadline: Date
     let proj_finished: Bool
+    let proj_alerted: Int
     
     // todo
     let proj_todo: [TodoObject]
@@ -39,21 +40,21 @@ struct ProjectObject{
     // Constructor
     //--------------------
     // Set
-    init(from dto: ProjectSetDTO, id: Int, userId: String) {
-        let setDate = Date()
+    init(from dto: ProjectSetDTO, id: Int, userId: String, at setDate: Date) {
         self.proj_id = id
         self.proj_user_id = userId
         self.proj_title = dto.title
         self.proj_started_at = dto.startedAt
         self.proj_deadline = dto.deadline
         self.proj_finished = false
+        self.proj_alerted = 0
         self.proj_todo = []
         self.proj_todo_registed = 0
         self.proj_todo_finished = 0
         self.proj_registed_at = setDate
         self.proj_changed_at = setDate
     }
-    // Get
+    // CoreData
     init?(entity: ProjectEntity){
         guard let userId = entity.proj_user_id,
               let title = entity.proj_title,
@@ -75,6 +76,7 @@ struct ProjectObject{
         self.proj_started_at = startedAt
         self.proj_deadline = deadline
         self.proj_finished = entity.proj_finished
+        self.proj_alerted = Int(entity.proj_alerted)
         self.proj_todo_registed = Int(entity.proj_todo_registed)
         self.proj_todo_finished = Int(entity.proj_todo_finished)
         self.proj_registed_at = registedAt

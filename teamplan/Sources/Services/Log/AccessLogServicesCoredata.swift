@@ -12,102 +12,161 @@ import CoreData
 final class AccessLogServicesCoredata{
     
     //================================
-    // MARK: - Parameter Setting
+    // MARK: - Parameter
     //================================
     let util = Utilities()
     let cd = CoreDataManager.shared
     var context: NSManagedObjectContext {
         return cd.context
     }
+}
+
+//================================
+// MARK: - Main Function
+//================================
+extension AccessLogServicesCoredata{
     
-    //================================
-    // MARK: - Set AccessLog
-    //================================
+    //--------------------
+    // Set
+    //--------------------
     func setLog(with log: AccessLog) throws {
-        
-        // Create Entity & Set Data
-        try setLogEntity(with: log)
+        try setEntity(with: log)
         try context.save()
     }
-    // Support Function
-    private func setLogEntity(with log: AccessLog) throws {
-        // Convert Log to JSON
+    
+    //--------------------
+    // Get
+    //--------------------
+    // Single
+    func getLog(with userId: String, and logId: Int) throws -> AccessLog {
+        // fetch entity
+        let entity = try fetchEntity(with: userId, and: logId)
+        // convert & return
+        return try convertToLog(with: entity)
+    }
+    // List
+    func getLogList(with userId: String) throws -> [AccessLog] {
+        // fetch entities
+        let entities = try fetchEntities(with: userId)
+        // convert & return
+        return try entities.map { try convertToLog(with: $0) }
+    }
+    
+    //--------------------
+    // Update
+    //--------------------
+    func updateLog(with dto: AccessLogUpdateDTO) throws {
+        // fetch entity
+        let entity = try fetchEntity(with: dto.userId, and: dto.logId)
+        // update & apply
+        if try checkUpdate(from: entity, with: dto) {
+            try context.save()
+        }
+    }
+    
+    //--------------------
+    // Delete
+    //--------------------
+    // Single
+    func deleteLog(with userId: String, and logId: Int) throws {
+        // fetch entity
+        let entity = try fetchEntity(with: userId, and: logId)
+        // delete & apply
+        context.delete(entity)
+        try context.save()
+    }
+    // List
+    func deleteLogList(with userId: String) throws {
+        // fetch entities
+        let entities = try fetchEntities(with: userId)
+        // delete & apply
+        entities.forEach(context.delete)
+        try context.save()
+    }
+}
+
+//================================
+// MARK: - Support Function
+//================================
+extension AccessLogServicesCoredata{
+    
+    // Set
+    private func setEntity(with log: AccessLog) throws {
         let entity = AccessLogEntity(context: context)
         let log_access_string = try util.convertToJSON(data: log.log_access)
         
+        entity.log_id = Int32(log.log_id)
         entity.log_user_id = log.log_user_id
         entity.log_access = log_access_string
+        entity.log_upload_at = log.log_upload_at
     }
+    //----------------------------------------------
     
-    //================================
-    // MARK: - Get AccessLog
-    //================================
-    func getLog(with userId: String) throws -> AccessLog {
-        
+    // Fetch
+    private func fetchEntity(with userId: String, and logId: Int) throws -> AccessLogEntity {
         // parameter setting
         let fetchReq: NSFetchRequest<AccessLogEntity> = AccessLogEntity.fetchRequest()
-        
         // Request Query
-        fetchReq.predicate = NSPredicate(format: "log_user_id == %@", userId)
+        fetchReq.predicate = NSPredicate(format: "log_user_id == %@ AND log_id = %d", userId, logId)
         fetchReq.fetchLimit = 1
-        
         // Search Data
         guard let entity = try context.fetch(fetchReq).first else {
-            throw AccessLogErrorCD.AccLogRetrievalByIdentifierFailed
+            throw AccessLogErrorCD.UnexpectedSearchError
         }
-        // Convert JSON to Log
-        let log = try util.convertFromJSON(jsonString: entity.log_access, type: [Date].self)
-        
-        return AccessLog(with: userId, and: log)
+        return entity
     }
     
-    //================================
-    // MARK: - Update AccessLog
-    //================================
-    func updateLog(with userId: String, when: Date) throws {
-        
+    // Fetch Entities
+    private func fetchEntities(with userId: String) throws -> [AccessLogEntity] {
         // parameter setting
         let fetchReq: NSFetchRequest<AccessLogEntity> = AccessLogEntity.fetchRequest()
-        
-        // Request Query
+        // request query
         fetchReq.predicate = NSPredicate(format: "log_user_id == %@", userId)
-        fetchReq.fetchLimit = 1
-        
-        // Search Data
-        guard let entity = try self.context.fetch(fetchReq).first else {
-            throw AccessLogErrorCD.AccLogRetrievalByIdentifierFailed
-        }
-        // Convert JSON to Log
-        var log = try util.convertFromJSON(jsonString: entity.log_access, type: [Date].self)
+        // fetch & return
+        return try context.fetch(fetchReq)
+    }
+    //----------------------------------------------
     
-        // Update Data
-        log.append(when)
+    // Convert: to Object
+    private func convertToLog(with entity: AccessLogEntity) throws -> AccessLog {
+        // ready element
+        guard let logAccessString = entity.log_access else {
+            throw AccessLogErrorCD.UnexpectedFetchError
+        }
+        // convert element
+        let logAccess = try util.convertFromJSON(jsonString: logAccessString, type: [Date].self)
+        // convert & return
+        guard let log = AccessLog(with: entity, log: logAccess) else {
+            throw AccessLogErrorCD.UnexpectedConvertError
+        }
+        return log
+    }
+    //----------------------------------------------
+    
+    // Update: Check
+    private func checkUpdate(from entity: AccessLogEntity, with dto: AccessLogUpdateDTO) throws -> Bool {
+        var isUpdated = false
         
-        // Convert Log to JSON
-        let log_access_string = try util.convertToJSON(data: log)
-        entity.log_access = log_access_string
-        try context.save()
+        if let newLogAccess = dto.newAccessDate {
+            guard let log = try updateLog(with: entity, to: newLogAccess) else {
+                throw AccessLogErrorCD.UnexpectedConvertError
+            }
+            isUpdated = util.updateFieldIfNeeded(&entity.log_access, newValue: log) || isUpdated
+        }
+        if let newUploadAt = dto.newUploadAt {
+            isUpdated = util.updateFieldIfNeeded(&entity.log_upload_at, newValue: newUploadAt) || isUpdated
+        }
+        return isUpdated
     }
     
-    //================================
-    // MARK: - Delete AccessLog
-    //================================
-    func deleteLog(with userId: String) throws {
-        
-        // parameter setting
-        let fetchReq: NSFetchRequest<AccessLogEntity> = AccessLogEntity.fetchRequest()
-        
-        // Request Query
-        fetchReq.predicate = NSPredicate(format: "log_user_id == %@", userId)
-        fetchReq.fetchLimit = 1
-        
-        // Search Data
-        guard let entity = try context.fetch(fetchReq).first else {
-            throw AccessLogErrorCD.AccLogRetrievalByIdentifierFailed
+    // Update: Append Log
+    private func updateLog(with entity: AccessLogEntity, to updated: Date) throws -> String? {
+        guard let logAccessString = entity.log_access else {
+            throw AccessLogErrorCD.UnexpectedFetchError
         }
-        // Delete Log
-        context.delete(entity)
-        try context.save()
+        var logAccess = try util.convertFromJSON(jsonString: logAccessString, type: [Date].self)
+        logAccess.append(updated)
+        return try util.convertToJSON(data: logAccess)
     }
 }
 
@@ -115,18 +174,18 @@ final class AccessLogServicesCoredata{
 // MARK: - Exception
 //===============================
 enum AccessLogErrorCD: LocalizedError {
-    case AccLogRetrievalByIdentifierFailed
     case UnexpectedConvertError
-    case InternalError
+    case UnexpectedFetchError
+    case UnexpectedSearchError
     
     var errorDescription: String?{
         switch self {
-        case .AccLogRetrievalByIdentifierFailed:
-            return "Coredata: Unable to retrieve 'AccessLog' data using the provided identifier."
         case .UnexpectedConvertError:
             return "Coredata: There was an unexpected error while Convert 'AccessLog' details"
-        case .InternalError:
-            return "Coredata: Internal Error Occurred while process 'AccessLog' details"
+        case .UnexpectedFetchError:
+            return "Coredata: There was an unexpected error while Fetch 'AccessLog' details"
+        case .UnexpectedSearchError:
+            return "CoreData: There was an unexpected error while Search 'AccessLog' with Given UserId"
         }
     }
 }

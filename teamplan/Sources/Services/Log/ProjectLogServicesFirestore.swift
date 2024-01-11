@@ -1,9 +1,9 @@
 //
-//  AccessLogServicesFirestore.swift
+//  ProjectLogServicesFirestore.swift
 //  teamplan
 //
-//  Created by 주찬혁 on 2023/10/20.
-//  Copyright © 2023 team1os. All rights reserved.
+//  Created by 주찬혁 on 1/5/24.
+//  Copyright © 2024 team1os. All rights reserved.
 //
 
 import Foundation
@@ -13,8 +13,8 @@ import FirebaseFirestoreSwift
 //================================
 // MARK: - Main Function
 //================================
-final class AccessLogServicesFirestore{
-
+final class ProjectLogServicesFirestore{
+    
     //--------------------
     // Parameter
     //--------------------
@@ -23,40 +23,38 @@ final class AccessLogServicesFirestore{
     //--------------------
     // Set
     //--------------------
-    func setLog(with log: AccessLog) async throws {
-        
-        // Search & Set Data
-        let collectionRef = fs.collection("AccessLog")
-        try await collectionRef.addDocument(data: log.toDictionary())
+    func setLog(with log: ProjectLog) async throws {
+        // Search & Set
+        let collection = fetchCollection()
+        try await collection.addDocument(data: log.toDictionary())
     }
     
     //--------------------
     // Get
     //--------------------
     // Single
-    func getLog(with userId: String, and logId: Int) async throws -> AccessLog {
+    func getLog(with projectId: Int, by userId: String) async throws -> ProjectLog {
         // Fetch Document
-        let docs = try await fetchDocument(with: userId, and: logId)
+        let docs = try await fetchDocument(with: projectId, by: userId)
         // Convert & Return
         return try convertToLog(with: docs.data())
     }
     
     // List
-    func getLogList(with userId: String) async throws -> [AccessLog] {
+    func getLogList(with userId: String) async throws -> [ProjectLog] {
         // Fetch Documents
         let docsList = try await fetchDocuments(with: userId)
         // Convert & Return
-        return try docsList.compactMap { doc in
-            try convertToLog(with: doc.data())
-        }
+        return try docsList.map { try convertToLog(with: $0.data()) }
+        
     }
     
     //--------------------
     // Update
     //--------------------
-    func updateLog(to updated: AccessLog) async throws {
+    func updateLog(with updated: ProjectLog) async throws {
         // Fetch Document
-        let docs = try await fetchDocument(with: updated.log_user_id, and: updated.log_id)
+        let docs = try await fetchDocument(with: updated.projectId, by: updated.userId)
         // Apply Update
         try await docs.reference.updateData(updated.toDictionary())
     }
@@ -64,45 +62,35 @@ final class AccessLogServicesFirestore{
     //--------------------
     // Delete
     //--------------------
-    // Single
-    func deleteLog(with userId: String, and logId: Int) async throws {
+    func deleteLog(with projectId: Int, by userId: String) async throws {
         // Fetch Document
-        let docs = try await fetchDocument(with: userId, and: logId)
+        let docs = try await fetchDocument(with: projectId, by: userId)
         // Delete Document
         try await docs.reference.delete()
     }
     
-    // List
-    func deleteLogList(with userId: String) async throws {
-        // Fetch Documents
-        let docsList = try await fetchDocuments(with: userId)
-        // Delete Documents
-        for docs in docsList {
-            try await docs.reference.delete()
-        }
-    }
 }
 
 //================================
-// MARK: - Main Function
+// MARK: - Support Function
 //================================
-extension AccessLogServicesFirestore {
+extension ProjectLogServicesFirestore{
     
     // fetch collection
     private func fetchCollection() -> CollectionReference {
-        return fs.collection("AccessLog")
+        return fs.collection("ProjectLog")
     }
     
     // fetch document
-    private func fetchDocument(with userId: String, and logId: Int) async throws -> QueryDocumentSnapshot {
+    private func fetchDocument(with projectId: Int, by userId: String) async throws -> QueryDocumentSnapshot {
         // Fetch Reference
         let docsRef = try await fetchCollection()
             .whereField("log_user_id", isEqualTo: userId)
-            .whereField("log_id", isEqualTo: logId)
+            .whereField("log_project_id", isEqualTo: projectId)
             .getDocuments()
         // Check & Return
         guard let docs = docsRef.documents.first else {
-            throw AccessLogErrorFS.UnexpectedFetchError
+            throw ProjectLogErrorFS.UnexpectedFetchError
         }
         return docs
     }
@@ -118,28 +106,30 @@ extension AccessLogServicesFirestore {
     }
     
     // Convert: to Object
-    private func convertToLog(with data: [String : Any]) throws -> AccessLog {
-        guard let log = AccessLog(data: data) else {
-            throw AccessLogErrorFS.UnexpectedConvertError
+    private func convertToLog(with data: [String : Any]) throws -> ProjectLog {
+        guard let log = ProjectLog(firestoreData: data) else {
+            throw ProjectLogErrorFS.UnexpectedConvertError
         }
         return log
     }
 }
 
-
 //================================
 // MARK: - Exception
 //================================
-enum AccessLogErrorFS: LocalizedError {
+enum ProjectLogErrorFS: LocalizedError {
     case UnexpectedFetchError
     case UnexpectedConvertError
+    case InternalError
     
-    var errorDescription: String? {
+    var errorDescription: String?{
         switch self {
         case .UnexpectedFetchError:
-            return "Firestore: There was an unexpected error while Fetch 'Accesslog' details"
+            return "Firestore: There was an unexpected error while Fetch 'ProjectLog' Documents"
         case .UnexpectedConvertError:
-            return "Firestore: There was an unexpected error while Convert 'Accesslog' details"
+            return "Firestore: There was an unexpected error while Convert 'ProjectLog' details"
+        case .InternalError:
+            return "Firestore: Internal Error Occurred while process 'ProjectLog' details"
         }
     }
 }

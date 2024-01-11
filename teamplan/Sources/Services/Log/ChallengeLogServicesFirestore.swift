@@ -10,90 +10,117 @@ import Foundation
 import FirebaseFirestore
 import FirebaseFirestoreSwift
 
+//================================
+// MARK: - Main Function
+//================================
 final class ChallengeLogServicesFirestore{
     
-    //================================
-    // MARK: - Parameter Setting
-    //================================
+    //--------------------
+    // Parameter
+    //--------------------
     let fs = Firestore.firestore()
     
-    //================================
-    // MARK: - Set ChallengeLog
-    //================================
+    //--------------------
+    // Set
+    //--------------------
     func setLog(with log: ChallengeLog) async throws {
-        
-        // Search & Set Data
         let collectionRef = fs.collection("ChallengeLog")
         try await collectionRef.addDocument(data: log.toDictionary())
     }
     
-    //================================
-    // MARK: - Get ChallengeLog
-    //================================
-    func getLog(with userId: String) async throws -> ChallengeLog {
-        
-        // Search Table
-        let collectionRef = fs.collection("ChallengeLog")
-        let docsRef = try await collectionRef.whereField("log_user_id", isEqualTo: userId).getDocuments()
-        
-        // Exception Handling : Search Error
-        guard docsRef.documents.count == 1 else {
-            if docsRef.documents.count > 1 {
-                throw ChallengeLogErrorFS.MultipleChallengeLogFound
-            } else {
-                throw ChallengeLogErrorFS.InternalError
-            }
+    //--------------------
+    // Get
+    //--------------------
+    // Single
+    func getLog(with userId: String, and logId: Int) async throws -> ChallengeLog {
+        // fetch doc
+        let docs = try await fetchDocument(with: userId, and: logId)
+        // convert & return
+        return try convertToLog(with: docs.data())
+    }
+    
+    // List
+    func getLogList(with userId: String) async throws -> [ChallengeLog] {
+        // fetch docs
+        let docsList = try await fetchDocuments(with: userId)
+        // convert & return
+        return try docsList.compactMap { doc in
+            try convertToLog(with: doc.data())
         }
-        // Convert to Object & Get
-        let docs = docsRef.documents.first!
-        guard let log = ChallengeLog(challengeData: docs.data()) else {
+    }
+    
+    //--------------------
+    // Update
+    //--------------------
+    func updateLog(with updated: ChallengeLog) async throws {
+        // fetch doc
+        let docs = try await fetchDocument(with: updated.log_user_id, and: updated.log_id)
+        // apply update
+        try await docs.reference.updateData(updated.toDictionary())
+    }
+    
+    //--------------------
+    // Delete
+    //--------------------
+    // Single
+    func deleteLog(with userId: String, and logId: Int) async throws {
+        // fetch doc
+        let docs = try await fetchDocument(with: userId, and: logId)
+        // delete doc
+        try await docs.reference.delete()
+    }
+    
+    // List
+    func deleteLogList(with userId: String) async throws {
+        // fetch docs
+        let docsList = try await fetchDocuments(with: userId)
+        // delete docs
+        for docs in docsList {
+            try await docs.reference.delete()
+        }
+    }
+}
+
+//================================
+// MARK: - Support Function
+//================================
+extension ChallengeLogServicesFirestore{
+    
+    // Fetch Collection
+    private func fetchCollection() -> CollectionReference {
+        return fs.collection("ChallengeLog")
+    }
+    
+    // Fetch Document
+    private func fetchDocument(with userId: String, and logId: Int) async throws -> QueryDocumentSnapshot {
+        // fetch reference
+        let docsRef = try await fetchCollection()
+            .whereField("log_user_id", isEqualTo: userId)
+            .whereField("log_id", isEqualTo: logId)
+            .getDocuments()
+        // check & return
+        guard let docs = docsRef.documents.first else {
+            throw ChallengeLogErrorFS.UnexpectedFetchError
+        }
+        return docs
+    }
+    
+    // Fetch Documents
+    private func fetchDocuments(with userId: String) async throws -> [QueryDocumentSnapshot] {
+        // fetch reference
+        let docsRef = try await fetchCollection()
+            .whereField("log_user_id", isEqualTo: userId)
+            .getDocuments()
+        // check & return
+        return docsRef.documents
+    }
+    
+    // Convert: to Object
+    private func convertToLog(with data: [String : Any]) throws -> ChallengeLog {
+        guard let log = ChallengeLog(from: data) else {
             throw ChallengeLogErrorFS.UnexpectedConvertError
         }
         return log
-    }
-    
-    //================================
-    // MARK: - Update ChallengeLog
-    //================================
-    func updateLog(to updatedLog: ChallengeLog) async throws {
-        
-        // Search Table
-        let collectionRef = fs.collection("ChallengeLog")
-        let docsRef = try await collectionRef.whereField("log_user_id", isEqualTo: updatedLog.log_user_id).getDocuments()
-        
-        // Exception Handling : Search Error
-        guard docsRef.documents.count == 1 else {
-            if docsRef.documents.count > 1 {
-                throw ChallengeLogErrorFS.MultipleChallengeLogFound
-            } else {
-                throw ChallengeLogErrorFS.InternalError
-            }
-        }
-        // Update Documents
-        let docs = docsRef.documents.first!
-        try await docs.reference.updateData(updatedLog.toDictionary())
-    }
-    
-    //================================
-    // MARK: - Delete ChallengeLog
-    //================================
-    func deleteLog(with userId: String) async throws {
-        
-        // Target Table
-        let collectionRef = fs.collection("ChallengeLog")
-        let docsRef = try await collectionRef.whereField("log_user_id", isEqualTo: userId).getDocuments()
-        
-        // Exception Handling : Search Error
-        guard docsRef.documents.count == 1 else {
-            if docsRef.documents.count > 1 {
-                throw ChallengeLogErrorFS.MultipleChallengeLogFound
-            } else {
-                throw ChallengeLogErrorFS.InternalError
-            }
-        }
-        // Delete Documents
-        let docs = docsRef.documents.first!
-        try await docs.reference.delete()
     }
 }
 
@@ -101,18 +128,15 @@ final class ChallengeLogServicesFirestore{
 // MARK: - Exception
 //================================
 enum ChallengeLogErrorFS: LocalizedError {
+    case UnexpectedFetchError
     case UnexpectedConvertError
-    case MultipleChallengeLogFound
-    case InternalError
     
     var errorDescription: String?{
         switch self {
+        case .UnexpectedFetchError:
+            return "Firestore: There was an unexpected error while Fetch 'ChallengeLog' Documents"
         case .UnexpectedConvertError:
             return "Firestore: There was an unexpected error while Convert 'ChallengeLog' details"
-        case .MultipleChallengeLogFound:
-            return "Firestore: Multiple 'ChallengeLog' found. Expected only one."
-        case .InternalError:
-            return "Firestore: Internal Error Occurred while process 'ChallengeLog' details"
         }
     }
 }

@@ -29,40 +29,29 @@ extension ProjectServicesCoredata{
     //--------------------
     // Set
     //--------------------
-    func setProject(from project: ProjectSetDTO, at id: Int, by userId: String) throws {
-        
-        // Create Entity & Set Data
-        setEntity(with: ProjectObject(from: project, id: id, userId: userId))
+    func setProject(with project: ProjectSetDTO, id: Int, by userId: String, at setDate: Date) throws {
+        // Create Entity
+        setEntity(with: ProjectObject(from: project, id: id, userId: userId, at: setDate))
+        // Set Entity
         try context.save()
     }
     
     //--------------------
-    // Get: Object
+    // Get
     //--------------------
+    // Object
     func getProject(from projectId: Int, and userId: String) throws -> ProjectObject {
         // Fetch Entity
         let entity = try fetchEntity(with: projectId, and: userId)
-        
-        // Convert to Object & Get
-        guard let data = ProjectObject(entity: entity) else {
-            throw ProjectErrorCD.UnexpectedConvertError
-        }
-        return data
+        // Convert & Return
+        return try convertToObject(with: entity)
     }
-    
-    //--------------------
-    // Get: Cards
-    //--------------------
+    // DTO
     func getProjectCards(by userId: String) throws -> [ProjectCardDTO] {
         // Fetch Entities
         let entities = try fetchEntities(with: userId)
-        
-        // Convert to Card
-        let data = entities.compactMap { ProjectCardDTO(from: $0) }
-        if data.count != entities.count {
-            throw ProjectErrorCD.UnexpectedConvertError
-        }
-        return data
+        // Convert & Return
+        return try entities.map { try convertToDTO(with: $0) }
     }
     
     //--------------------
@@ -71,7 +60,6 @@ extension ProjectServicesCoredata{
     func updateProject(to dto: ProjectUpdateDTO) throws {
         // Fetch Entity
         let entity = try fetchEntity(with: dto.projectId, and: dto.userId)
-        
         // Update Data
         if checkUpdate(from: entity, to: dto){
             try context.save()
@@ -84,7 +72,6 @@ extension ProjectServicesCoredata{
     func deleteProject(with projectId: Int, and userId: String) throws {
         // Fetch Entity
         let entity = try fetchEntity(with: projectId, and: userId)
-
         // Delete Data & Adjust
         context.delete(entity)
         try context.save()
@@ -100,11 +87,10 @@ extension ProjectServicesCoredata{
     private func fetchEntity(with projectId: Int, and userId: String) throws -> ProjectEntity {
         // parameter setting
         let fetchReq: NSFetchRequest<ProjectEntity> = ProjectEntity.fetchRequest()
-        
         // Request Query
         fetchReq.predicate = NSPredicate(format: "proj_id == %d AND proj_user_id == %@", projectId, userId)
         fetchReq.fetchLimit = 1
-        
+        // convert & return
         guard let entity = try context.fetch(fetchReq).first else {
             throw ProjectErrorCD.ProjectRetrievalByIdentifierFailed
         }
@@ -115,20 +101,36 @@ extension ProjectServicesCoredata{
     private func fetchEntities(with userId: String) throws -> [ProjectEntity] {
         // parameter setting
         let fetchReq: NSFetchRequest<ProjectEntity> = ProjectEntity.fetchRequest()
-        
         // Request Query
         fetchReq.predicate = NSPredicate(format: "proj_user_id == %@", userId)
-        
+        // fetch & return
         return try context.fetch(fetchReq)
     }
+    //----------------------------------------------
     
     // Update Check
     private func checkUpdate(from origin: ProjectEntity, to updated: ProjectUpdateDTO) -> Bool {
         var isUpdated = false
-        isUpdated = util.updateFieldIfNeeded(&origin.proj_title, newValue: updated.newTitle) || isUpdated
-        isUpdated = util.updateFieldIfNeeded(&origin.proj_deadline, newValue: updated.newDeadline) || isUpdated
+
+        if let newTitle = updated.newTitle {
+            isUpdated = util.updateFieldIfNeeded(&origin.proj_title, newValue: newTitle) || isUpdated
+        }
+        if let newStatus = updated.newStatus {
+            isUpdated = util.updateFieldIfNeeded(&origin.proj_finished, newValue: newStatus) || isUpdated
+        }
+        if let newDeadline = updated.newDeadline {
+            isUpdated = util.updateFieldIfNeeded(&origin.proj_deadline, newValue: newDeadline) || isUpdated
+        }
+        if let newTodoRegist = updated.newTodoRegist {
+            isUpdated = util.updateFieldIfNeeded(&origin.proj_todo_registed, newValue: Int32(newTodoRegist)) || isUpdated
+        }
+        if let newTodoFinish = updated.newTodoFinish {
+            isUpdated = util.updateFieldIfNeeded(&origin.proj_todo_finished, newValue: Int32(newTodoFinish)) || isUpdated
+        }
+
         return isUpdated
     }
+    //----------------------------------------------
     
     // Set Entity
     private func setEntity(with reqProject: ProjectObject){
@@ -146,6 +148,23 @@ extension ProjectServicesCoredata{
         entity.proj_changed_at = reqProject.proj_changed_at
         entity.proj_finished_at = reqProject.proj_finished_at
     }
+    //----------------------------------------------
+    
+    // Convert: to Object
+    private func convertToObject(with entity: ProjectEntity) throws -> ProjectObject {
+        guard let object = ProjectObject(entity: entity) else {
+            throw ProjectErrorCD.UnexpectedObjectConvertError
+        }
+        return object
+    }
+    
+    // Convert: to Card
+    private func convertToDTO(with entity: ProjectEntity) throws -> ProjectCardDTO {
+        guard let dto = ProjectCardDTO(entity: entity) else {
+            throw ProjectErrorCD.UnexpectedDTOConvertError
+        }
+        return dto
+    }
 }
 
 //===============================
@@ -153,14 +172,17 @@ extension ProjectServicesCoredata{
 //===============================
 enum ProjectErrorCD: LocalizedError {
     case ProjectRetrievalByIdentifierFailed
-    case UnexpectedConvertError
+    case UnexpectedObjectConvertError
+    case UnexpectedDTOConvertError
     
     var errorDescription: String?{
         switch self {
         case .ProjectRetrievalByIdentifierFailed:
             return "Coredata: Unable to retrieve 'Project' data using the provided identifier."
-        case .UnexpectedConvertError:
-            return "Coredata: There was an unexpected error while Convert 'Project' details"
+        case .UnexpectedObjectConvertError:
+            return "Coredata: There was an unexpected error while Convert 'Project' Entity to Object"
+        case .UnexpectedDTOConvertError:
+            return "Coredata: There was an unexpected error while Convert 'Project' Entity to DTO"
         }
     }
 }

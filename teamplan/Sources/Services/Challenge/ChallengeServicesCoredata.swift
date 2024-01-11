@@ -6,113 +6,81 @@
 //  Copyright © 2023 team1os. All rights reserved.
 //
 
-import Foundation
 import CoreData
+import Foundation
 
 final class ChallengeServicesCoredata{
     
     //================================
-    // MARK: - Parameter Setting
+    // MARK: - Parameter
     //================================
-    let cd = CoreDataManager.shared
+    let util = Utilities()
+    let cm = CoreDataManager.shared
     var context: NSManagedObjectContext {
-        return cd.context
+        return cm.context
     }
+}
+
+//================================
+// MARK: - Main Function
+//================================
+extension ChallengeServicesCoredata{
     
-    //================================
-    // MARK: - Set Challenge
-    //================================
+    //--------------------
+    // Set
+    //--------------------
     func setChallenges(with array: [ChallengeObject]) throws {
-        
-        // Create Entity & Set Data
+        // create & set entity
         for challenge in array {
             setEntity(with: challenge)
         }
         try context.save()
     }
-    // Support Function
-    private func setEntity(with challenge: ChallengeObject) {
-        let chlgEntity = ChallengeEntity(context: context)
-        
-        chlgEntity.chlg_id = Int32(challenge.chlg_id)
-        chlgEntity.chlg_user_id = challenge.chlg_user_id
-        chlgEntity.chlg_type = Int32(challenge.chlg_type.rawValue)
-        chlgEntity.chlg_title = challenge.chlg_title
-        chlgEntity.chlg_desc = challenge.chlg_desc
-        chlgEntity.chlg_goal = Int32(challenge.chlg_goal)
-        chlgEntity.chlg_reward = Int32(challenge.chlg_reward)
-        chlgEntity.chlg_step = Int32(challenge.chlg_step)
-        chlgEntity.chlg_selected = challenge.chlg_selected
-        chlgEntity.chlg_status = challenge.chlg_status
-        chlgEntity.chlg_lock = challenge.chlg_lock
-        chlgEntity.chlg_selected_at = challenge.chlg_selected_at
-        chlgEntity.chlg_unselected_at = challenge.chlg_unselected_at
-        chlgEntity.chlg_finished_at = challenge.chlg_finished_at
-    }
     
-    //================================
-    // MARK: - Get Challenge
-    //================================
+    //--------------------
+    // Get
+    //--------------------
     // Single
     func getChallenge(with challengeId: Int, owner userId: String) throws -> ChallengeObject{
-        
-        // Fetch Entity
+        // fetch entity
        let entity = try fetchEntity(with: challengeId, onwer: userId)
-        
-        // Convert to Object & Get
+        // convert & return
         guard let object = ChallengeObject(chlgEntity: entity) else {
             throw ChallengeErrorCD.UnexpectedConvertError
         }
         return object
     }
-    
     // Array
     func getChallenges(onwer userId: String) throws -> [ChallengeObject] {
-        
-        // Fetch EntityArray
+        // fetch entities
         let entities = try fetchEntities(owner: userId)
-        
-        // Convert to Object Array
+        // convert & return
         let array = entities.compactMap { ChallengeObject(chlgEntity: $0) }
-        
-        // Exception Handling: Convert
         if array.count != entities.count {
             throw ChallengeErrorCD.UnexpectedConvertError
         }
         return array
     }
     
-    //================================
-    // MARK: - update Challenge
-    //================================
-    func updateChallenge(with dto: ChallengeStatusDTO) throws {
-        
-        // Fetch Entity
-        let entity = try fetchEntity(with: dto.chlg_id, onwer: dto.chlg_user_id)
-        
-        // Update Data
-        checkUpdate(from: entity, to: dto)
-        try context.save()
-    }
-    // Support Function
-    private func checkUpdate(from origin: ChallengeEntity, to updated: ChallengeStatusDTO) {
-        origin.chlg_selected = updated.chlg_selected
-        origin.chlg_status = updated.chlg_status
-        origin.chlg_lock = updated.chlg_lock
-        origin.chlg_selected_at = updated.chlg_selected_at
-        origin.chlg_unselected_at = updated.chlg_unselected_at
-        origin.chlg_finished_at = updated.chlg_finished_at
+    //--------------------
+    // Update
+    //--------------------
+    func updateChallenge(with dto: ChallengeUpdateDTO) throws {
+        // fetch entity
+        let entity = try fetchEntity(with: dto.challengeId, onwer: dto.userId)
+        // update & apply
+        if checkUpdate(from: entity, to: dto) {
+            try context.save()
+        }
     }
     
-    //================================
-    // MARK: - Delete Challenges
-    //================================
+    //--------------------
+    // Update
+    //--------------------
     func deleteChallenges(with userId: String) throws {
-        
-        // parameter setting
+        // fetch entities
         let entities = try fetchEntities(owner: userId)
-        
-        // Delete Data
+        // delete & apply
         for challenge in entities {
             context.delete(challenge)
         }
@@ -124,15 +92,12 @@ final class ChallengeServicesCoredata{
     //================================
     // Signle Entity
     private func fetchEntity(with challengeId: Int, onwer userId: String) throws -> ChallengeEntity {
-
         // parameter setting
         let fetchReq: NSFetchRequest<ChallengeEntity> = ChallengeEntity.fetchRequest()
-        
-        // Request Query
+        // reqeust query
         fetchReq.predicate = NSPredicate(format: "chlg_id == %d AND chlg_user_id == %@", challengeId, userId)
         fetchReq.fetchLimit = 1
-        
-        // Search Data
+        // search data
         guard let entity = try context.fetch(fetchReq).first else {
             throw ChallengeErrorCD.ChallengeRetrievalByIdentifierFailed
         }
@@ -141,20 +106,68 @@ final class ChallengeServicesCoredata{
     
     // Array Entity
     private func fetchEntities(owner userId: String) throws -> [ChallengeEntity] {
-        
         // parameter setting
         let fetchReq: NSFetchRequest<ChallengeEntity> = ChallengeEntity.fetchRequest()
-        
-        // Request Query
+        // reqeust query
         fetchReq.predicate = NSPredicate(format: "chlg_user_id == %@", userId)
         fetchReq.fetchLimit = challengeCount
-        
-        // Search Data
+        // search data
         let entities = try self.context.fetch(fetchReq)
         if entities.count != challengeCount {
             throw ChallengeErrorCD.ChallengeRetrievalByIdentifierFailed
         }
         return entities
+    }
+}
+
+//================================
+// MARK: - Support Function
+//================================
+extension ChallengeServicesCoredata{
+    
+    // Set
+    private func setEntity(with object: ChallengeObject) {
+        let entity = ChallengeEntity(context: context)
+        
+        entity.chlg_id = Int32(object.chlg_id)
+        entity.chlg_user_id = object.chlg_user_id
+        entity.chlg_type = Int32(object.chlg_type.rawValue)
+        entity.chlg_title = object.chlg_title
+        entity.chlg_desc = object.chlg_desc
+        entity.chlg_goal = Int32(object.chlg_goal)
+        entity.chlg_reward = Int32(object.chlg_reward)
+        entity.chlg_step = Int32(object.chlg_step)
+        entity.chlg_selected = object.chlg_selected
+        entity.chlg_status = object.chlg_status
+        entity.chlg_lock = object.chlg_lock
+        entity.chlg_selected_at = object.chlg_selected_at
+        entity.chlg_unselected_at = object.chlg_unselected_at
+        entity.chlg_finished_at = object.chlg_finished_at
+    }
+    
+    // Update
+    private func checkUpdate(from origin: ChallengeEntity, to updated: ChallengeUpdateDTO) -> Bool {
+        var isUpdated = false
+        
+        if let newSelected = updated.newSelected {
+            isUpdated = util.updateFieldIfNeeded(&origin.chlg_selected, newValue: newSelected)
+        }
+        if let newStatus = updated.newStatus {
+            isUpdated = util.updateFieldIfNeeded(&origin.chlg_status, newValue: newStatus)
+        }
+        if let newLock = updated.newLock {
+            isUpdated = util.updateFieldIfNeeded(&origin.chlg_lock, newValue: newLock)
+        }
+        if let newSelectedAt = updated.newSelectedAt {
+            isUpdated = util.updateFieldIfNeeded(&origin.chlg_selected_at, newValue: newSelectedAt)
+        }
+        if let newUnSelectedAt = updated.newUnSelectedAt{
+            isUpdated = util.updateFieldIfNeeded(&origin.chlg_unselected_at, newValue: newUnSelectedAt)
+        }
+        if let newFinishedAt = updated.newFinishedAt {
+            isUpdated = util.updateFieldIfNeeded(&origin.chlg_finished_at, newValue: newFinishedAt)
+        }
+        return isUpdated
     }
 }
 
