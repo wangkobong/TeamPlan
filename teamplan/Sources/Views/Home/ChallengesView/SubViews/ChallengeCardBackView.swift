@@ -14,9 +14,13 @@ struct ChallengeCardBackView: View {
     let challenge: MyChallengeDTO
     let parentsWidth: CGFloat
     
+    @Binding var isPresented: Bool
+    @Binding var type: ChallengeAlertType
+    
     var body: some View {
         VStack {
-                
+            let goal = challenge.goal
+            let progress = challenge.progress
             Text(challenge.title)
                 .font(.appleSDGothicNeo(.bold, size: 12))
                 .foregroundColor(.theme.blackColor)
@@ -37,7 +41,7 @@ struct ChallengeCardBackView: View {
                     .fill(
                         Color.theme.mainBlueColor
                     )
-                    .frame(width: 30, height: 5)
+                    .frame(width: calculateProgressBarWidth(), height: 5)
             }
             .padding(.leading, 17)
             .padding(.trailing, 17)
@@ -54,11 +58,17 @@ struct ChallengeCardBackView: View {
                 .padding(.trailing, 10)
                 .onTapGesture {
                     print("포기하기")
-                    homeViewModel.quitChallenge(with: challenge.challengeID)
+                    self.type = .quit
+                    self.isPresented.toggle()
                 }
         }
         .frame(width: setCardWidth(screenWidth: parentsWidth),height: 144)
+        .onAppear {
+            print("goal: \(challenge.goal)")
+            print("progress: \(challenge.progress)")
+        }
     }
+        
 }
 
 //struct ChallengeOverleafView_Previews: PreviewProvider {
@@ -79,5 +89,15 @@ extension ChallengeCardBackView {
     func setCardWidth(screenWidth: CGFloat) -> CGFloat {
         let cardsWidth = screenWidth / 3 - 24
         return cardsWidth
+    }
+    
+    
+    private func calculateProgressBarWidth() -> CGFloat {
+        guard challenge.goal != 0 else {
+            return 0
+        }
+
+        let progressRatio = CGFloat(challenge.progress) / CGFloat(challenge.goal)
+        return progressRatio * (setCardWidth(screenWidth: parentsWidth) - 34) // Adjusted width based on the padding
     }
 }

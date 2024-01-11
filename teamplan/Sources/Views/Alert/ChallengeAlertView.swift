@@ -13,6 +13,8 @@ public enum ChallengeAlertType {
     case didSelected
     case willChallenge
     case lock
+    case quit
+    case didChallenge
 }
 
 public struct ChallengeAlertView: View {
@@ -53,6 +55,10 @@ public struct ChallengeAlertView: View {
                     willChallengeAlert
                 case .lock:
                     lockAlert
+                case .quit:
+                    quitAlert
+                case .didChallenge:
+                    didChallengeAlert
                 }
             }
             .frame(width: 296, height: 323)
@@ -249,6 +255,138 @@ extension ChallengeAlertView {
                 .onTapGesture {
                     self.isPresented = false
                 }
+        }
+    }
+    
+    private var quitAlert: some View {
+        VStack {
+
+            Spacer()
+            
+            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].chlg_type, isLock: self.allChallenge[index].chlg_lock, isComplete: self.allChallenge[index].chlg_status))
+                .frame(width: 82, height: 82)
+            
+            Text("\(getChallenge(index: self.index).chlg_title)")
+                .font(.appleSDGothicNeo(.bold, size: 24))
+                .multilineTextAlignment(.center)
+                .foregroundColor(.theme.mainPurpleColor)
+    
+            
+            Text("\(getChallenge(index: self.index).chlg_title)프로젝트 5개\n연속 해결하기")
+                .font(.appleSDGothicNeo(.regular, size: 17))
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .foregroundColor(.theme.darkGreyColor)
+                .padding(.top, 12)
+                .padding(.horizontal, 40)
+            
+            HStack {
+                
+                Text("닫기")
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .font(.appleSDGothicNeo(.bold, size: 14))
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.theme.mainPurpleColor)
+                    .background(Color.theme.mainPurpleColor.opacity(0.2))
+                    .cornerRadius(8)
+                    .onTapGesture {
+                        self.isPresented = false
+                    }
+                
+                Spacer()
+                    .frame(width: 16)
+                
+                Text("포기하기")
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .font(.appleSDGothicNeo(.bold, size: 14))
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.theme.mainPurpleColor)
+//                    .background(Color.theme.mainPurpleColor)
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .inset(by: 0.5)
+                            .stroke(Color(red: 0.45, green: 0.28, blue: 0.88), lineWidth: 1)
+                        
+                    )
+                    .onTapGesture {
+                        self.isPresented = false
+                        action()
+                    }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 44)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 16)
+        }
+    }
+    
+    private var didChallengeAlert: some View {
+        ZStack {
+            
+            VStack {
+                Spacer()
+                    .frame(height: 30)
+                HStack {
+                    Image("alert_didChallenge_red")
+                        .offset(y: -10)
+                        .offset(x: -40)
+                    Image("alert_didChallenge_x")
+                        .offset(y: 5)
+                    Image("alert_didChallenge_yellow1")
+                        .offset(y: 35)
+                        .offset(x: -80)
+                    Image("alert_didChallenge_rectangle_blue")
+                        .offset(y: -5)
+                        .offset(x: 110)
+                    Image("alert_didChallenge_yellow2")
+                        .offset(y: 5)
+                        .offset(x: 35)
+                    Image("alert_didChallenge_rectangle_grey")
+                        .offset(y: 65)
+                        .offset(x: -120)
+                    Image("alert_didChallenge_rectangle_plus")
+                        .offset(y: 35)
+                        .offset(x: 40)
+                }
+                Spacer()
+            }
+            
+            VStack {
+
+                Spacer()
+                    .frame(height: 50)
+                
+                Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].chlg_type))
+                    .frame(width: 82, height: 82)
+                
+                Spacer()
+                    .frame(height: 9)
+                
+                Text("나의 도전과제로\n등록되었습니다.")
+                    .font(.appleSDGothicNeo(.semiBold, size: 20))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .foregroundColor(.theme.darkGreyColor)
+                    .padding(.top, 12)
+                    .padding(.horizontal, 40)
+                
+                Text("닫기")
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .font(.appleSDGothicNeo(.bold, size: 14))
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.theme.mainPurpleColor)
+                    .background(Color.theme.mainPurpleColor.opacity(0.2))
+                    .cornerRadius(8)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 16)
+                    .onTapGesture {
+                        self.isPresented = false
+                    }
+            }
         }
     }
 }
