@@ -45,13 +45,13 @@ extension ProjectIndexService{
     //--------------------
     func setProject(with inputData: ProjectSetDTO) throws {
         // Statistics Update
-        statDTO.updateProjectRegist(to: statDTO.stat_proj_reg + 1)
+        statDTO.updateProjectRegist(to: statDTO.projectRegisted + 1)
         
         // Set New ProjectData to Coredata
-        try projectCD.setProject(from: inputData, at: statDTO.stat_proj_reg, by: userId)
+        try projectCD.setProject(from: inputData, at: statDTO.projectRegisted, by: userId)
         
         // Adjust Update
-        try updateStatistics()
+        try updateStatProjectRegist()
     }
     
     //--------------------
@@ -124,8 +124,11 @@ extension ProjectIndexService{
 //===============================
 extension ProjectIndexService{
     
-    private func updateStatistics() throws {
-        let updatedData = StatUpdateDTO(projectDTO: statDTO)
+    private func updateStatProjectRegist() throws {
+        let updatedData = StatUpdateDTO(
+            userId: userId,
+            newProjectRegisted: statDTO.projectRegisted
+        )
         try statCD.updateStatistics(with: updatedData)
     }
     
@@ -136,8 +139,12 @@ extension ProjectIndexService{
     }
     
     private func updateStatExtend() throws {
-        statDTO.updateProjectExtend(to: statDTO.stat_proj_ext + 1)
-        try updateStatistics()
+        statDTO.updateProjectExtend(to: statDTO.projectExtended + 1)
+        let updatedData = StatUpdateDTO(
+            userId: userId,
+            newProjectExtended: statDTO.projectExtended
+        )
+        try statCD.updateStatistics(with: updatedData)
     }
 }
 

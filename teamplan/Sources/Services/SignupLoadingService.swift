@@ -33,7 +33,7 @@ final class SignupLoadingService{
     init(newUser: UserSignupDTO){
         let signupDate = Date()
         self.newProfile = UserObject(newUser: newUser, signupDate: signupDate)
-        self.newStat = StatisticsObject(identifier: newUser.identifier, signupDate: signupDate)
+        self.newStat = StatisticsObject(userId: newUser.identifier, setDate: signupDate)
         self.newAccessLog = AccessLog(identifier: newUser.identifier, signupDate: signupDate)
         self.newChallengeLog = ChallengeLog(identifier: newUser.identifier, signupDate: signupDate)
     }

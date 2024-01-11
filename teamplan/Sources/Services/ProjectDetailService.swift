@@ -79,7 +79,7 @@ extension ProjectDetailService{
         try updateProjectDetail()
         statDTO.updateTodoRegist(
             with: statDTO.todoRegist + 1)
-        try updateStatisticsDTO()
+        try updateStatProjectFinished()
     }
     
     //--------------------
@@ -177,8 +177,9 @@ extension ProjectDetailService{
     }
     
     // StatisticsDTO Update
-    private func updateStatisticsDTO() throws {
-        let updated = StatUpdateDTO(todoDTO: statDTO)
+    private func updateStatProjectFinished() throws {
+        let updated = StatUpdateDTO(
+            userId: userId, newProjectFinished: statDTO.projectFinish)
         try statCD.updateStatistics(with: updated)
     }
 }

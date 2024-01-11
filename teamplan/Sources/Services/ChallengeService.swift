@@ -129,10 +129,10 @@ final class ChallengeService {
     // Init MyChallenge
     private func readyMyChallenge() throws {
         // Step1. Check MyChallenge Empty Case
-        if !statDTO.stat_mychlg.isEmpty{
+        if !statDTO.myChallenge.isEmpty{
             
             // Step2. Filled MyChallenge Array with Statistics Data
-            for idx in statDTO.stat_mychlg {
+            for idx in statDTO.myChallenge {
                 try setMyChallenges(with: idx)
             }
         }
@@ -206,7 +206,7 @@ extension ChallengeService {
         let challenge = try fetchChallenge(with: challengeId)
         
         // Step2. Update Statistics
-        statDTO.stat_drop += challenge.chlg_reward
+        statDTO.drop += challenge.chlg_reward
         
         // Step3. Update Challenge Step
         try updateChallengeStep(with: challenge)
@@ -250,8 +250,12 @@ extension ChallengeService {
     
     // * Statistics Update
     private func updateStatistics() throws {
-        let updatedStatistics = StatUpdateDTO(challengeDTO: statDTO)
-        try statCD.updateStatistics(with: updatedStatistics)
+        let updated = StatUpdateDTO(userId: userId,
+                                    newDrop: statDTO.drop,
+                                    newChallengeStep: statDTO.challengeStep,
+                                    newMyChallenge: statDTO.myChallenge
+        )
+        try statCD.updateStatistics(with: updated)
     }
     
     // * Challenge Log Update
@@ -262,8 +266,8 @@ extension ChallengeService {
     // * Challenge Step Update
     private func updateChallengeStep(with challenge: ChallengeObject) throws {
         let challengeType = challenge.chlg_type.rawValue
-        if let currentVal = statDTO.stat_chlg_step[challengeType] {
-            statDTO.stat_chlg_step[challengeType] = currentVal + 1
+        if let currentVal = statDTO.challengeStep[challengeType] {
+            statDTO.challengeStep[challengeType] = currentVal + 1
         } else {
             throw ChallengeError.UnexpectedStepUpdateError
         }
@@ -300,13 +304,13 @@ extension ChallengeService {
         let dto = MyChallengeDTO(with: myChallenge, and: userProgress)
         // Step4. Append MyChallenge
         myChallenges.append(dto)
-        statDTO.stat_mychlg.append(challengeId)
+        statDTO.myChallenge.append(challengeId)
     }
 
     // * Remove challenge from arrays
     private func removeChallengeFromArrays(with challengeId: Int) {
         myChallenges.removeAll { $0.challengeID == challengeId }
-        statDTO.stat_mychlg.removeAll { $0 == challengeId }
+        statDTO.myChallenge.removeAll { $0 == challengeId }
     }
     
     // * Find Next Challenge ID

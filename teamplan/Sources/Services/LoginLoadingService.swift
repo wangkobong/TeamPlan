@@ -33,9 +33,6 @@ final class LoginLoadingService{
     var userStat: StatLoginDTO
     var userLog: AccessLog
     
-    // Update Parameter
-    var userStatUpdate: StatUpdateDTO?
-    
     // Restore UserData Parameter
     private var rollbackStack: [() throws -> Void ] = []
     
@@ -111,7 +108,6 @@ final class LoginLoadingService{
         self.userData = userData
         self.userStat = userStat
         self.userLog = userLog
-        self.userStatUpdate = StatUpdateDTO(loginDTO: self.userStat)
     }
     
     // Test Function
@@ -136,14 +132,15 @@ final class LoginLoadingService{
     // Step 1-1. Update Servcie Term
     // -----------------------------
     private func updateServiceTerm() {
-        userStat.updateServiceTerm(with: userStat.stat_term + 1)
+        userStat.updateServiceTerm(with: userStat.term + 1)
     }
     // -----------------------------
     // Step 2. Update Local Statistics Data (Daily)
     // -----------------------------
     private func updateLocalStatistics() throws {
         // (Local) Update Statistics
-        try statCD.updateStatistics(with: StatUpdateDTO(loginDTO: userStat))
+        let updated = StatUpdateDTO(userId: userId, newTerm: userStat.term)
+        try statCD.updateStatistics(with: updated)
         // (Local) Update AccessLog
         try acclogCD.updateLog(with: userId, when: loginDate)
     }
@@ -151,11 +148,9 @@ final class LoginLoadingService{
     // Step 3. Update Local Statistics Data (Weekly)
     // -----------------------------
     private func updateServerStatistics() async throws {
-        guard let updateStat = userStatUpdate else {
-            throw LoginLoadingServiceError.EmptyStatistics
-        }
+        let uploadStat = try statCD.getStatisticsForObject(with: userId)
         // (Server) Update Statistics
-        try await statFS.updateStatistics(with: updateStat)
+        try await statFS.updateStatistics(with: uploadStat)
         // (Server) Update AccessLog
         try await acclogFS.updateLog(to: try acclogCD.getLog(with: userId))
     }
@@ -163,7 +158,7 @@ final class LoginLoadingService{
     // Support Function
     // -----------------------------
     private func isWeeklyUpdateDue() -> Bool {
-        return userStat.stat_term % 7 == 0
+        return userStat.term % 7 == 0
     }
 }
 
