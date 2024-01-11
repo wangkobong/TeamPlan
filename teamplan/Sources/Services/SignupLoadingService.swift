@@ -17,13 +17,13 @@ final class SignupLoadingService{
     let userCD = UserServicesCoredata()
     let statFS = StatisticsServicesFirestore()
     let statCD = StatisticsServicesCoredata()
+    let logManager = LogManager()
+    let challengeManager = ChallengeManager()
     
     let userId: String
     let signupDate: Date
     var newProfile: UserObject
     var newStat: StatisticsObject
-    let logManager: LogManager
-    let challengeManager = ChallengeManager()
     
     let onboardingChallenge: Int = 100
     
@@ -40,7 +40,6 @@ final class SignupLoadingService{
             newUser: newUser, signupDate: signupDate)
         self.newStat = StatisticsObject(
             userId: userId, setDate: signupDate)
-        self.logManager = LogManager()
         self.logManager.readyParameter(userId: self.userId)
     }
 }
@@ -52,7 +51,6 @@ extension SignupLoadingService{
     
     func executor() async throws -> UserInfoDTO {
         // Ready Parameter
-        try logManager.readyManager()
         let localSetResult: Bool
         let serverSetResult: Bool
     
@@ -91,6 +89,9 @@ extension SignupLoadingService{
             try setNewStatAtLocal()
             rollbackStack.append(rollbackSetNewStatAtLocal)
             
+            // Init Log Manager
+            try logManager.readyManager()
+            
             // 3. AccessLog
             try setNewAccessLogAtLocal()
             rollbackStack.append(rollbackSetNewAccessLogAtLocal)
@@ -103,7 +104,8 @@ extension SignupLoadingService{
             return true
             
         } catch {
-            throw SignupLoadingError.UnexpectedLocalSignupError
+            print("Service: There was an unexpected error while Set New UserData at Local in 'SignupLoadingService'")
+            return false
         }
     }
     
@@ -134,7 +136,8 @@ extension SignupLoadingService{
             return true
             
         } catch {
-            throw SignupLoadingError.UnexpectedServerSignupError
+            print("Service: There was an unexpected error while Set New UserData at Server in 'SignupLoadingService'")
+            return false
         }
     }
     
@@ -259,16 +262,10 @@ extension SignupLoadingService{
 // MARK: - Exception
 //===============================
 enum SignupLoadingError: LocalizedError {
-    case UnexpectedLocalSignupError
-    case UnexpectedServerSignupError
     case UnexpectedSignupError
     
     var errorDescription: String?{
         switch self {
-        case .UnexpectedLocalSignupError:
-            return "Service: There was an unexpected error while Set New UserData at Local in 'SignupLoadingService'"
-        case .UnexpectedServerSignupError:
-            return "Service: There was an unexpected error while Set New UserData at Server in 'SignupLoadingService'"
         case .UnexpectedSignupError:
             return "Service: There was an unexpected error while Processing Set NewUser at 'SignupLoadingService'"
         }

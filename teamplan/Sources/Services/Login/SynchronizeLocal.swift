@@ -19,8 +19,8 @@ final class SynchronizeLocal{
     let statCD = StatisticsServicesCoredata()
     let challengeCD = ChallengeServicesCoredata()
     let challengeManager = ChallengeManager()
-    
     var logManager = LogManager()
+    
     var userId: String
     
     private var rollbackStack: [() throws -> Void ] = []
@@ -32,9 +32,9 @@ final class SynchronizeLocal{
         self.userId = "unknown"
     }
     
-    func readySync(with userId: String, and manager: LogManager) throws {
+    func readySync(with userId: String) {
         self.userId = userId
-        self.logManager = manager
+        self.logManager.readyParameter(userId: userId)
     }
 }
 
@@ -45,9 +45,6 @@ extension SynchronizeLocal{
     
     func syncExecutor(with syncDate: Date) async throws {
         do {
-            // Erase Every Local Data
-            try clearLocal()
-            
             // User
             let user = try await getUserFromServer()
             try resetLocalUser(with: user, and: syncDate)
@@ -57,6 +54,9 @@ extension SynchronizeLocal{
             let stat = try await getStatFromServer()
             try resetLocalStat(with: stat)
             rollbackStack.append(rollbackResetStat)
+            
+            // Init Log Manager
+            try self.logManager.readyManager()
             
             // Access Log
             let accessLogList = try await getAccessLogFromServer()
@@ -92,7 +92,7 @@ extension SynchronizeLocal{
             throw error
         }
     }
-    
+    // Test Function
     private func clearLocal() throws {
         try userCD.deleteUser(with: userId)
         try statCD.deleteStatistics(with: userId)
@@ -178,6 +178,9 @@ extension SynchronizeLocal{
     
     // Challenge
     private func resetLocalChallenge(stat: StatisticsObject, logList: [ChallengeLog], challengeList: [ChallengeObject]) throws {
+        // apply local
+        try challengeManager.setChallenge()
+        // restore progress
         for log in logList {
             try restoreChallengeProgress(stat: stat, challengeLog: log.log_complete, challengeList: challengeList)
         }

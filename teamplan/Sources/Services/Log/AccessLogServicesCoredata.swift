@@ -98,6 +98,7 @@ extension AccessLogServicesCoredata{
         entity.log_id = Int32(log.log_id)
         entity.log_user_id = log.log_user_id
         entity.log_access = log_access_string
+        entity.log_upload_at = log.log_upload_at
     }
     //----------------------------------------------
     
@@ -106,7 +107,7 @@ extension AccessLogServicesCoredata{
         // parameter setting
         let fetchReq: NSFetchRequest<AccessLogEntity> = AccessLogEntity.fetchRequest()
         // Request Query
-        fetchReq.predicate = NSPredicate(format: "log_user_id == %@ AND log_id = %d", userId)
+        fetchReq.predicate = NSPredicate(format: "log_user_id == %@ AND log_id = %d", userId, logId)
         fetchReq.fetchLimit = 1
         // Search Data
         guard let entity = try context.fetch(fetchReq).first else {

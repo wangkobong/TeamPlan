@@ -113,7 +113,7 @@ extension ChallengeLogServicesCoredata{
         fetchReq.fetchLimit = 1
         // convert & return
         guard let entity = try context.fetch(fetchReq).first else {
-            throw ChallengeErrorCD.ChallengeRetrievalByIdentifierFailed
+            throw ChallengeLogErrorCD.UnexpectedFetchError
         }
         return entity
     }

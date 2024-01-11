@@ -28,7 +28,7 @@ final class SynchronizeServer {
         self.userId = "unknown"
     }
     
-    func readySync(with userId: String, and manager: LogManager) throws {
+    func readySync(with userId: String, and manager: LogManager) {
         self.userId = userId
         self.logManager = manager
     }

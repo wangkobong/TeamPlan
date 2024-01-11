@@ -45,18 +45,6 @@ final class LoginLoadingService{
         self.userData = UserInfoDTO()
         self.userStat = StatLoginDTO()
     }
-    // ready manager & sync
-    private func readyService(with userId: String) throws {
-        self.userId = userId
-        
-        // ready log manager
-        logManager.readyParameter(userId: userId)
-        try logManager.readyManager()
-        
-        // ready sync
-        try syncLocal.readySync(with: userId, and: logManager)
-        try syncServer.readySync(with: userId, and: logManager)
-    }
 }
 
 //===============================
@@ -65,9 +53,10 @@ final class LoginLoadingService{
 extension LoginLoadingService{
     
     func executor(with dto: AuthSocialLoginResDTO) async throws -> UserInfoDTO {
-        // init service
-        try readyService(with: try extractUserId(from: dto))
-        let loginDate = Date()
+        // ready parameter
+        self.loginDate = Date()
+        self.userId = try extractUserId(from: dto)
+        self.logManager.readyParameter(userId: userId)
         
         // check & sync local if need
         try await checkAndSyncData(at: loginDate)
@@ -91,9 +80,11 @@ extension LoginLoadingService{
     // Check & Local Sync
     private func checkAndSyncData(at loginDate: Date) async throws {
         if !checkLocalData() {
+            syncLocal.readySync(with: userId)
             try await syncProcess(attemptCount: 0, at: loginDate)
         }
         try getLocalData()
+        try self.logManager.readyManager()
     }
     
     // Filiter
@@ -223,6 +214,7 @@ extension LoginLoadingService{
     // Weekly
     private func weeklyUpdateProcess(attempCount: Int = 0, at syncDate: Date) async throws {
         do {
+            syncServer.readySync(with: userId, and: logManager)
             try await syncServer.syncExecutor(with: syncDate)
         } catch {
             if attempCount >= maxSyncAttemps{
