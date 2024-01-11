@@ -78,9 +78,12 @@ struct HomeView: View {
         }
         .onAppear {
             isExistProject = false
-            isChallenging = !homeViewModel.myChallenges.isEmpty
             pageControlCount = max(homeViewModel.myChallenges.count, 1)
             homeViewModel.configureData()
+            isChallenging = !homeViewModel.myChallenges.isEmpty
+        }
+        .onChange(of: homeViewModel.myChallenges) { newValue in
+            isChallenging = !homeViewModel.myChallenges.isEmpty
         }
     }
 }
@@ -383,14 +386,31 @@ extension HomeView {
     private var challengeCardsArea: some View {
         ZStack {
             HStack(spacing: 17) {
-                ForEach(challengeCardsExample, id: \.self) { challenge in
+                
+                ForEach(0..<$homeViewModel.myChallenges.count, id: \.self) { index in
+                    let challenge = self.$homeViewModel.myChallenges[index]
                     let screenWidth = UIScreen.main.bounds.size.width
-                    ChallengeExampleView(challenge: challenge, parentsWidth: screenWidth)
-                        .background(.white)
-                        .cornerRadius(4)
-                        .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 0)
+                    ZStack {
+                        ChallengeCardFrontView(challenge: challenge.wrappedValue, parentsWidth: screenWidth)
+                            .background(.white)
+                            .cornerRadius(4)
+                    }
+                }
+                
+                if $homeViewModel.myChallenges.count < 3 {
+                    // 나머지 뷰를 채우는 코드
+                    ForEach($homeViewModel.myChallenges.count..<3, id: \.self) { index in
+                        // 다른 뷰 표시 (여기서는 기본 Text를 사용하겠습니다.)
+                        ChallengeEmptyView()
+                            .background(.white)
+                            .cornerRadius(4)
+                    }
                 }
             }
+            .padding(.leading, 16)
+            .padding(.trailing, 16)
+            .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 0)
+
             
             VStack {
                 HStack {
