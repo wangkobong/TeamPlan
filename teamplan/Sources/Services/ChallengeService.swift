@@ -91,6 +91,7 @@ final class ChallengeService {
     let challengeCD = ChallengeServicesCoredata()
     let challengeLogCD = ChallengeLogServicesCoredata()
     let statCD = StatisticsServicesCoredata()
+    let logManager = LogManager()
     
     var userId: String
     let statCenter: StatisticsCenter
@@ -106,6 +107,7 @@ final class ChallengeService {
         self.userId = userId
         self.statCenter = StatisticsCenter(with: userId)
         self.statDTO = StatChallengeDTO()
+        self.logManager.readyParameter(userId: userId)
     }
     // Init function
     func readyService() throws {
@@ -115,6 +117,8 @@ final class ChallengeService {
         challengeArray = try challengeCD.getChallenges(onwer: userId)
         // Step3. get MyChallenge
         try readyMyChallenge()
+        // ready log manager
+        try logManager.readyManager()
     }
     // Init Statistics
     private func readyStatistics() throws {
@@ -260,7 +264,7 @@ extension ChallengeService {
     
     // * Challenge Log Update
     private func updatedChallengeLog(with challengeId: Int) throws {
-        try challengeLogCD.updateLog(with: userId, challenge: challengeId, updatedAt: Date())
+        try logManager.addChallengeLog(with: challengeId, and: Date())
     }
     
     // * Challenge Step Update

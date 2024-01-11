@@ -148,11 +148,3 @@ struct StatisticsObject{
         ]
     }
 }
-
-//================================
-// MARK: - Enum
-//================================
-enum LogType: Int{
-    case access = 1
-    case challenge = 2
-}

@@ -19,12 +19,14 @@ final class SignupLoadingService{
     let chlglogFS = ChallengeLogServicesFirestore()
     let chlglogCD = ChallengeLogServicesCoredata()
     let chlgManager = ChallengeManager()
+    let logManager = LogManager()
     
     let userId: String
+    let signupDate: Date
     var newProfile: UserObject
     var newStat: StatisticsObject
-    var newAccessLog: AccessLog
-    var newChallengeLog: ChallengeLog
+    
+    let onboardingChallenge: Int = 100
     
     private var rollbackStack: [() async throws -> Void ] = []
     
@@ -32,12 +34,11 @@ final class SignupLoadingService{
     // MARK: - Constructor
     //===============================
     init(newUser: UserSignupDTO){
-        let signupDate = Date()
+        self.signupDate = Date()
         self.userId = newUser.userId
         self.newProfile = UserObject(newUser: newUser, signupDate: signupDate)
         self.newStat = StatisticsObject(userId: userId, setDate: signupDate)
-        self.newAccessLog = AccessLog(identifier: userId, signupDate: signupDate)
-        self.newChallengeLog = ChallengeLog(identifier: userId, signupDate: signupDate)
+        self.logManager.readyParameter(userId: self.userId)
     }
     
     //===============================
@@ -87,12 +88,12 @@ final class SignupLoadingService{
             rollbackStack.append(rollbackSetStatisticsCD)
             
             // 3. AccessLog
-            try setAccessLogCD()
-            rollbackStack.append(rollbackSetAccessLogCD)
+            try setNewAccessLogAtLocal()
+            rollbackStack.append(rollbackSetNewAccessLogAtLocal)
             
             // 4. ChallengeLog
-            try setChallengeLogCD()
-            rollbackStack.append(rollbackSetChallengeLogCD)
+            try setNewChallengeLogAtLocal()
+            rollbackStack.append(rollbackSetNewChallengeLogAtLocal)
             
             rollbackStack.removeAll()
             return true
@@ -115,12 +116,12 @@ final class SignupLoadingService{
             rollbackStack.append(rollbackSetStatisticsFS)
             
             // 3. AccessLog
-            try await setAccessLogFS()
-            rollbackStack.append(rollbackSetAccessLogFS)
+            try await setNewAccessLogAtServer()
+            rollbackStack.append(rollbackSetNewAccessLogAtServer)
             
             // 4. ChallengeLog
-            try await setChallengeLogFS()
-            rollbackStack.append(rollbackSetChallengeLogFS)
+            try await setNewChallengeLogAtServer()
+            rollbackStack.append(rollbackSetNewChallengeLogAtServer)
             
             // 5. Challenge
             try await setChallenge()
@@ -188,39 +189,39 @@ final class SignupLoadingService{
     //===============================
     // MARK: - Set AccessLog
     //===============================
-    // : Firestore
-    func setAccessLogFS() async throws {
-        try await aclogFS.setLog(with: newAccessLog)
+    // : CoreData
+    private func setNewAccessLogAtLocal() throws {
+        try logManager.setNewAccessLogAtLocal(with: signupDate)
     }
-    private func rollbackSetAccessLogFS() async throws {
-        try await aclogFS.deleteLog(with: newProfile.user_id)
+    private func rollbackSetNewAccessLogAtLocal() throws {
+        try logManager.deleteAllAccessLogAtLocal()
     }
     
-    // : CoreData
-    func setAccessLogCD() throws {
-        try aclogCD.setLog(with: newAccessLog)
+    // : Firestore
+    private func setNewAccessLogAtServer() async throws {
+        try await logManager.setNewAccessLogAtServer()
     }
-    private func rollbackSetAccessLogCD() throws {
-        try aclogCD.deleteLog(with: newProfile.user_id)
+    private func rollbackSetNewAccessLogAtServer() async throws {
+        try await logManager.deleteAllAccessLogAtServer()
     }
     
     //===============================
     // MARK: - Set ChallengeLog
     //===============================
-    // : Firestore
-    func setChallengeLogFS() async throws {
-        try await chlglogFS.setLog(with: newChallengeLog)
+    // : Coredata
+    private func setNewChallengeLogAtLocal() throws {
+        try logManager.setNewChallengeLogAtLocal(with: onboardingChallenge, and: signupDate)
     }
-    private func rollbackSetChallengeLogFS() async throws {
-        try await chlglogFS.deleteLog(with: newProfile.user_id)
+    private func rollbackSetNewChallengeLogAtLocal() throws {
+        try logManager.deleteAllChallengeLogAtLocal()
     }
     
-    // : Coredata
-    func setChallengeLogCD() throws {
-        try chlglogCD.setLog(with: newChallengeLog)
+    // : Firestore
+    private func setNewChallengeLogAtServer() async throws {
+        try await logManager.setNewChallengeLogAtServer()
     }
-    private func rollbackSetChallengeLogCD() throws {
-        try chlglogCD.deleteLog(with: newProfile.user_id)
+    private func rollbackSetNewChallengeLogAtServer() async throws {
+        try await logManager.deleteAllChallengeLogAtServer()
     }
     
     //===============================

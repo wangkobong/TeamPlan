@@ -25,6 +25,7 @@ final class LoginLoadingService{
     let acclogFS = AccessLogServicesFirestore()
     let chlglogCD = ChallengeLogServicesCoredata()
     let chlglogFS = ChallengeLogServicesFirestore()
+    let logManager = LogManager()
     
     // Component Parameter
     var userId: String
@@ -48,6 +49,9 @@ final class LoginLoadingService{
     // MARK: - Executor
     //===============================
     func executor(with dto: AuthSocialLoginResDTO) async throws -> UserInfoDTO {
+        logManager.readyParameter(userId: userId)
+        try logManager.readyManager()
+        
         // Extract Identifier
         self.userId = try await getIdentifier(from: dto)
         
@@ -115,8 +119,8 @@ final class LoginLoadingService{
         try userCD.deleteUser(with: userId)
         try statCD.deleteStatistics(with: userId)
         try chlgManager.delChallenge(with: userId)
-        try acclogCD.deleteLog(with: userId)
-        try chlglogCD.deleteLog(with: userId)
+        try logManager.deleteAllAccessLogAtLocal()
+        try logManager.deleteAllChallengeLogAtLocal()
     }
     
     // -----------------------------
@@ -142,7 +146,7 @@ final class LoginLoadingService{
         let updated = StatUpdateDTO(userId: userId, newTerm: userStat.term)
         try statCD.updateStatistics(with: updated)
         // (Local) Update AccessLog
-        try acclogCD.updateLog(with: userId, when: loginDate)
+        // try acclogCD.updateLog(with: userId, when: loginDate)
     }
     // -----------------------------
     // Step 3. Update Local Statistics Data (Weekly)
@@ -152,7 +156,7 @@ final class LoginLoadingService{
         // (Server) Update Statistics
         try await statFS.updateStatistics(with: uploadStat)
         // (Server) Update AccessLog
-        try await acclogFS.updateLog(to: try acclogCD.getLog(with: userId))
+        // try await acclogFS.updateLog(to: try acclogCD.getLog(with: userId))
     }
     // -----------------------------
     // Support Function
@@ -219,7 +223,7 @@ extension LoginLoadingService{
     }
     
     private func fetchLogFromCoredata(with userId: String) throws -> AccessLog? {
-        return try? acclogCD.getLog(with: userId)
+        return try? logManager.getAccessLogAtLocal()
     }
 }
 
@@ -300,13 +304,13 @@ extension LoginLoadingService{
     // -----------------------------
     // Access Log
     private func getAccLogFS() async throws -> AccessLog {
-        return try await acclogFS.getLog(with: userId)
+        return try await logManager.getAccessLogAtServer()
     }
     
     // -----------------------------
     // Challenge Log
     private func getChlgLogFS() async throws -> ChallengeLog {
-        return try await chlglogFS.getLog(with: userId)
+        return try await logManager.getChallengeLogAtServer()
     }
     
     
@@ -349,7 +353,7 @@ extension LoginLoadingService{
     }
     
     private func rollbackSetAccLogCD() throws {
-        try acclogCD.deleteLog(with: userId)
+        try logManager.deleteAllAccessLogAtLocal()
     }
     
     // -----------------------------
@@ -359,7 +363,7 @@ extension LoginLoadingService{
     }
     
     private func rollbackSetChlgLogCD() throws {
-        try chlglogCD.deleteLog(with: userId)
+        try logManager.deleteAllChallengeLogAtLocal()
     }
     
     // -----------------------------
