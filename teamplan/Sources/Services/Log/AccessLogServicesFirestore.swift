@@ -10,16 +10,19 @@ import Foundation
 import FirebaseFirestore
 import FirebaseFirestoreSwift
 
+//================================
+// MARK: - Main Function
+//================================
 final class AccessLogServicesFirestore{
 
-    //================================
-    // MARK: - Parameter Setting
-    //================================
+    //--------------------
+    // Parameter
+    //--------------------
     let fs = Firestore.firestore()
     
-    //================================
-    // MARK: - Set AccessLog
-    //================================
+    //--------------------
+    // Set
+    //--------------------
     func setLog(with log: AccessLog) async throws {
         
         // Search & Set Data
@@ -27,97 +30,116 @@ final class AccessLogServicesFirestore{
         try await collectionRef.addDocument(data: log.toDictionary())
     }
     
-    //================================
-    // MARK: - Get AccessLog
-    //================================
-    func getLog(with userId: String) async throws -> AccessLog {
-        
-        // Search Data
-        let collectionRef = fs.collection("AccessLog")
-        let docsRef = try await collectionRef.whereField("log_user_id", isEqualTo: userId).getDocuments()
-        
-        // Exception Handling : Search Error
-        guard docsRef.documents.count == 1 else {
-            if docsRef.documents.count > 1 {
-                throw AccessLogErrorFS.MultipleAcclogFound
-            } else {
-                throw AccessLogErrorFS.InternalError
-            }
+    //--------------------
+    // Get
+    //--------------------
+    // Single
+    func getLog(with userId: String, and logId: Int) async throws -> AccessLog {
+        // Fetch Document
+        let docs = try await fetchDocument(with: userId, and: logId)
+        // Convert & Return
+        return try convertToLog(with: docs.data())
+    }
+    
+    // List
+    func getLogList(with userId: String) async throws -> [AccessLog] {
+        // Fetch Documents
+        let docsList = try await fetchDocuments(with: userId)
+        // Convert & Return
+        return try docsList.compactMap { doc in
+            try convertToLog(with: doc.data())
         }
-        
-        // Convert to Log & Get
-        let docs = docsRef.documents.first!
-        guard let log = AccessLog(logData: docs.data()) else {
+    }
+    
+    //--------------------
+    // Update
+    //--------------------
+    func updateLog(to updated: AccessLog) async throws {
+        // Fetch Document
+        let docs = try await fetchDocument(with: updated.log_user_id, and: updated.log_id)
+        // Apply Update
+        try await docs.reference.updateData(updated.toDictionary())
+    }
+    
+    //--------------------
+    // Delete
+    //--------------------
+    // Single
+    func deleteLog(with userId: String, and logId: Int) async throws {
+        // Fetch Document
+        let docs = try await fetchDocument(with: userId, and: logId)
+        // Delete Document
+        try await docs.reference.delete()
+    }
+    
+    // List
+    func deleteLogList(with userId: String) async throws {
+        // Fetch Documents
+        let docsList = try await fetchDocuments(with: userId)
+        // Delete Documents
+        for docs in docsList {
+            try await docs.reference.delete()
+        }
+    }
+}
+
+//================================
+// MARK: - Main Function
+//================================
+extension AccessLogServicesFirestore {
+    
+    // fetch collection
+    private func fetchCollection() -> CollectionReference {
+        return fs.collection("AccessLog")
+    }
+    
+    // fetch document
+    private func fetchDocument(with userId: String, and logId: Int) async throws -> QueryDocumentSnapshot {
+        // Fetch Reference
+        let docsRef = try await fetchCollection()
+            .whereField("log_user_id", isEqualTo: userId)
+            .whereField("log_id", isEqualTo: logId)
+            .getDocuments()
+        // Check & Return
+        guard let docs = docsRef.documents.first else {
+            throw AccessLogErrorFS.UnexpectedFetchError
+        }
+        return docs
+    }
+    
+    // fetch documents
+    private func fetchDocuments(with userId: String) async throws -> [QueryDocumentSnapshot] {
+        // Fetch Reference
+        let docsRef = try await fetchCollection()
+            .whereField("log_user_id", isEqualTo: userId)
+            .getDocuments()
+        // Check & Return
+        return docsRef.documents
+    }
+    
+    // Convert: to Object
+    private func convertToLog(with data: [String : Any]) throws -> AccessLog {
+        guard let log = AccessLog(data: data) else {
             throw AccessLogErrorFS.UnexpectedConvertError
         }
         return log
     }
-    
-    //================================
-    // MARK: - Update AccessLog
-    //================================
-    func updateLog(to updatedLog: AccessLog) async throws {
-        
-        // Search Data
-        let collectionRef = fs.collection("AccessLog")
-        let docsRef = try await collectionRef.whereField("log_user_id", isEqualTo: updatedLog.log_user_id).getDocuments()
-        
-        // Exception Handling : Search Error
-        guard docsRef.documents.count == 1 else {
-            if docsRef.documents.count > 1 {
-                throw AccessLogErrorFS.MultipleAcclogFound
-            } else {
-                throw AccessLogErrorFS.InternalError
-            }
-        }
-        // Update Log
-        let docs = docsRef.documents.first!
-        try await docs.reference.updateData(updatedLog.toDictionary())
-    }
-    
-    
-    //================================
-    // MARK: - Delete AccessLog
-    //================================
-    func deleteLog(with userId: String) async throws {
-        
-        // Search Data
-        let collectionRef = fs.collection("AccessLog")
-        let docsRef = try await collectionRef.whereField("log_user_id", isEqualTo: userId).getDocuments()
-        
-        // Exception Handling : Search Error
-        guard docsRef.documents.count == 1 else {
-            if docsRef.documents.count > 1 {
-                throw AccessLogErrorFS.MultipleAcclogFound
-            } else {
-                throw AccessLogErrorFS.InternalError
-            }
-        }
-        // Delete Documents
-        let docs = docsRef.documents.first!
-        try await docs.reference.delete()
-    }
 }
+
 
 //================================
 // MARK: - Exception
 //================================
 enum AccessLogErrorFS: LocalizedError {
+    case UnexpectedFetchError
     case UnexpectedConvertError
-    case AcclogRetrievalByIdentifierFailed
-    case MultipleAcclogFound
-    case InternalError
     
     var errorDescription: String? {
         switch self {
+        case .UnexpectedFetchError:
+            return "Firestore: There was an unexpected error while Fetch 'Accesslog' details"
         case .UnexpectedConvertError:
             return "Firestore: There was an unexpected error while Convert 'Accesslog' details"
-        case .AcclogRetrievalByIdentifierFailed:
-            return "Firestore: Unable to retrieve 'Accesslog' data using the provided identifier."
-        case .MultipleAcclogFound:
-            return "Firestore: Multiple 'Accesslog' found. Expected only one."
-        case .InternalError:
-            return "Firestore: Internal Error Occurred while process 'Accesslog' details"
         }
     }
 }
