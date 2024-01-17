@@ -121,6 +121,12 @@ extension UserServicesCoredata{
         if let newNickName = updated.newNickName {
             isUpdated = util.updateFieldIfNeeded(&origin.user_name, newValue: newNickName) || isUpdated
         }
+        if let newUpdateAt = updated.newUpdateAt {
+            isUpdated = util.updateFieldIfNeeded(&origin.user_updated_at, newValue: newUpdateAt) || isUpdated
+        }
+        if let newLoginAt = updated.newLoginAt {
+            isUpdated = util.updateFieldIfNeeded(&origin.user_login_at, newValue: newLoginAt) || isUpdated
+        }
         return isUpdated
     }
 }
