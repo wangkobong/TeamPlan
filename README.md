@@ -1,15 +1,15 @@
-<h1>단기 프로젝트 수행을 도전과제로 더욱 즐겁게! '투두팡'</h1>
+![투두팡배너](https://github.com/1OS-DevTeam/TodoPang/assets/50852143/0e4aa4ab-e4c3-4b35-a6f7-acca852de34d)
 
-![image](https://github.com/crossbell8368/TodoPang_fork/assets/50852143/1d39c6eb-2ba2-485a-ac6d-b27a8d082bab)
 
-## Description
-* Created By: 'Team1OS'
-* 2022.01 ~ continue
-* 도전과제를 활용한 단기 프로젝트 진행유도 서비스
+# Description
+### 작은 목표들을 모아 내가 원하는 곳으로!
+* 투두팡은 '도전과제'와 '폭탄맨 케어'라는 동기부여로 단기목표 달성을 도와드리는 서비스입니다
+* 단기 목표달성을 통해 궁극적으로 사용자가 원하는 큰 성취를 이뤄내는 것을 목표로 하고 있습니다
+
 
 <br><br>
 
-## Contributors
+# Contributors
 <div align = center> 
 <table border = 1>
   <th>[ PM & API/DB ]<br>주찬혁</th>
