@@ -12,25 +12,25 @@
 # Contributors
 <div align = center> 
 <table border = 1>
-  <th>[ PM & API/DB ]<br>주찬혁</th>
-  <th>[ App Developer ]<br>김성연</th>
-  <th>[ UX/UI & Designer ]<br>홍수빈</th>
-  <th>[ UX/UI & Designer ]<br>박나영</th>
+  <th>PM & Back-End</th>
+  <th>iOS AppDeveloper</th>
+  <th>UX/UI & Designer</th>
+  <th>UX/UI & Designer</th>
     <tr>
       <td><a href="https://github.com/crossbell8368"><img src="https://avatars.githubusercontent.com/u/50852143?v=4" width=160/></a>
       </td>
-      <td><a href="https://github.com/wangkobong"><img src="https://avatars.githubusercontent.com/u/61865579?v=4" width=160/></a>
+      <td><a href="https://github.com/wangkobong"><img src="https://github.com/1OS-DevTeam/TodoPang/assets/50852143/6ae3bc74-9815-4fd2-8c7b-f59722d1b595" width=160/></a>
       </td>
-      <td><a href="https://github.com/crossbell8368"><img src="https://avatars.githubusercontent.com/u/50852143?v=4" width=160/></a>
+      <td><a href="https://github.com/crossbell8368"><img src="https://github.com/1OS-DevTeam/TodoPang/assets/50852143/6a34054d-323f-4e9a-a00f-16d49182b43b" width=160/></a>
       </td>
-      <td><a href="https://github.com/crossbell8368"><img src="https://avatars.githubusercontent.com/u/50852143?v=4" width=160/></a>
+      <td><a href="https://github.com/crossbell8368"><img src="https://github.com/1OS-DevTeam/TodoPang/assets/50852143/d5f19f34-2d61-4a0e-8ed5-7ac824b56a74" width=160/></a>
       </td>
     </tr>
   <tr>
-    <td align = center>프로젝트 진행 협의 & 조율<br>인프라 구성<br>API 함수개발</td>
-    <td align = center>Working Progress...</td>
-    <td align = center>Working Progress...</td>
-    <td align = center>Working Progress...</td>
+    <td align = center>활동적이고 말많은 I</td>
+    <td align = center>한량 개발자</td>
+    <td align = center>감성순도100% T</td>
+    <td align = center>애매모호..? 다재다능!</td>
   </tr>
 </table>
 </div>
