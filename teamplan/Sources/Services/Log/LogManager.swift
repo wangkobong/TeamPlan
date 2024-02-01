@@ -13,6 +13,7 @@ final class LogManager{
     //================================
     // MARK: - Parameter
     //================================
+    // for manager
     let challengeLogCD = ChallengeLogServicesCoredata()
     let challengeLogFS = ChallengeLogServicesFirestore()
     let accessLogCD = AccessLogServicesCoredata()
@@ -20,7 +21,7 @@ final class LogManager{
     let projectLogCD = ProjectLogServicesCoredata()
     let projectLogFS = ProjectLogServicesFirestore()
     let statCD = StatisticsServicesCoredata()
-    let util = Utilities()
+    let statFS = StatisticsServicesFirestore()
     
     var userId: String
     var projectId: Int?
@@ -32,10 +33,13 @@ final class LogManager{
     private let accessLogLimit = 32000
     private let maxLogCount = 5
     
+    // for log
+    let util = Utilities()
+    let location = "LogManager"
+    
     //===============================
     // MARK: - Initialize
     //===============================
-    // defualt
     init(){
         self.userId = "unknown"
         self.projectId = 0
@@ -47,103 +51,98 @@ final class LogManager{
     func readyParameter(userId: String, projectId: Int? = nil){
         self.userId = userId
         self.projectId = projectId
+        util.log(.info, location, "Parameter Ready! Manager Ready Require!", self.userId)
     }
     
     func readyManager() throws {
+        // fetch log head
         logHead = try statCD.getStatisticsForObject(with: userId).stat_log_head
-        // Fetch ChallengeLog ID
+        
+        // fetch challenglog id
         guard let challengeLogId = logHead[LogType.challenge.rawValue] else {
             throw LogManagerError.UnexpectedFetchError
         }
         self.challengeLogId = challengeLogId
-        // Fetch AccessLog ID
+        
+        // fetch accesslog id
         guard let accessLogId = logHead[LogType.access.rawValue] else {
             throw LogManagerError.UnexpectedFetchError
         }
         self.accessLogId = accessLogId
+        
+        util.log(.info, location, "Manager Ready! \n* LogHead: \(logHead) \n* AccessLogID: \(self.accessLogId) \n* ChallengeLogID: \(self.challengeLogId)", userId)
     }
 }
 
 //================================
 // MARK: - Challenge Log
+// Main Function
 //================================
 extension LogManager{
     
     //--------------------
-    // Create
+    // Set
     //--------------------
-    // Coredata
+    // new log: local (input -> local)
     func setNewChallengeLogAtLocal(with challengeId: Int, and completeDate: Date) throws {
-        let log = ChallengeLog(logId: challengeLogId, userId: userId, challengeId: challengeId, completeDate: completeDate)
+        let log = ChallengeLog(
+            logId: challengeLogId, userId: userId, challengeId: challengeId, completeDate: completeDate)
         try challengeLogCD.setLog(with: log)
     }
-    func setChallengeLogAtLocal(with challengeLogList: [ChallengeLog]) throws {
-        for log in challengeLogList {
-            try challengeLogCD.setLog(with: log)
-        }
-    }
     
-    // Firestore
+    // new log: server (local -> server)
     func setNewChallengeLogAtServer() async throws {
         let log = try challengeLogCD.getLog(with: userId, and: challengeLogId)
         try await challengeLogFS.setLog(with: log)
     }
     
+    // log list: local (sever -> local)
+    func setChallengeLogWithList(with challengeLogList: [ChallengeLog]) throws {
+        for log in challengeLogList {
+            try challengeLogCD.setLog(with: log)
+        }
+    }
+
     //--------------------
     // Get
     //--------------------
-    // Coredata
+    // single log: local
     func getChallengeLogAtLocal() throws -> ChallengeLog {
         return try challengeLogCD.getLog(with: userId, and: challengeLogId)
     }
     
-    // Firestore
+    // single log: server
     func getChallengeLogAtServer() async throws -> ChallengeLog {
         return try await challengeLogFS.getLog(with: userId, and: challengeLogId)
     }
+    
+    // log list: server
     func getChallengeLogListAtServer() async throws -> [ChallengeLog] {
         return try await challengeLogFS.getLogList(with: userId)
     }
-    
-    //--------------------
-    // Append
-    //--------------------
-    func addChallengeLog(with challengeId: Int, and completeDate: Date) throws {
-        if try shouldCreateNewChallengeLog() {
-            // case: need new log
-            try createNewChallengeLog(with: challengeId, and: completeDate)
-        } else {
-            // case: used log
-            try appendChallengeLog(with: challengeId, and: completeDate)
-        }
-    }
 
     //--------------------
-    // Sync
+    // Update
     //--------------------
-    func syncLocalAndServerChallengeLog(with syncDate: Date) async throws {
-        // ready log
-        var localLog = try challengeLogCD.getLog(with: userId, and: challengeLogId)
-        localLog.updateUploadAt(with: syncDate)
-        // sync log
-        if try await isNewChallengeLogNeed() {
-            try await challengeLogFS.setLog(with: localLog)
-        } else {
-            try await challengeLogFS.updateLog(with: localLog)
-        }
-        // apply local
-        let updated = ChallengeLogUpdateDTO(userId: userId, logId: challengeLogId, uploadAt: syncDate)
+    // append: local only
+    func appendChallengeLog(with challengeId: Int, and completeDate: Date) throws {
+        let updated = ChallengeLogUpdateDTO(
+            userId: userId,
+            logId: challengeLogId,
+            challengeId: challengeId,
+            updatedAt: completeDate
+        )
         try challengeLogCD.updateLog(with: updated)
     }
-
     
     //--------------------
     // Delete
     //--------------------
+    // total log: local
     func deleteAllChallengeLogAtLocal() throws {
         try challengeLogCD.deleteLogList(with: userId)
     }
-    
+    // total log: server
     func deleteAllChallengeLogAtServer() async throws {
         try await challengeLogFS.deleteLogList(with: userId)
     }
@@ -155,66 +154,58 @@ extension LogManager{
 extension LogManager{
     
     //--------------------
-    // Create
+    // Set
     //--------------------
-    // Coredata
+    // new log: local (input -> local)
     func setNewAccessLogAtLocal(with accessDate: Date) throws {
         let log = AccessLog(logId: accessLogId, userId: userId, accessDate: accessDate)
         try accessLogCD.setLog(with: log)
     }
+    
+    // new log: server (local -> server)
+    func setNewAccessLogAtServer() async throws {
+        let log = try accessLogCD.getLog(with: userId, and: accessLogId)
+        try await accessLogFS.setLog(with: log)
+    }
+    
+    // log list: local (server -> local)
     func setAccessLogAtLocal(with accessLogList: [AccessLog]) throws {
         for log in accessLogList {
             try accessLogCD.setLog(with: log)
         }
     }
     
-    // Firestore
-    func setNewAccessLogAtServer() async throws {
-        let log = try accessLogCD.getLog(with: userId, and: accessLogId)
-        try await accessLogFS.setLog(with: log)
-    }
-    
     //--------------------
     // Get
     //--------------------
-    // Coredata
+    // single log: local
     func getAccessLogAtLocal() throws -> AccessLog {
         return try accessLogCD.getLog(with: userId, and: accessLogId)
     }
     
-    // Firestore
+    // single log: server
     func getAccessLogAtServer() async throws -> AccessLog {
         return try await accessLogFS.getLog(with: userId, and: accessLogId)
     }
+    
+    // log list: server
     func getAccessLogListAtServer() async throws -> [AccessLog] {
         return try await accessLogFS.getLogList(with: userId)
     }
     
     //--------------------
-    // Append
+    // Update
     //--------------------
-    func addAccessLog(with accessDate: Date) async throws {
+    // append: local only
+    func appendAccessLog(with accessDate: Date) async throws {
         if try shouldCreateNewAccessLog() {
-            // case: need to create new log
+            // new log case
+            util.log(LogLevel.info, location, "Require New AccessLog", userId)
             try await createNewAccessLog(with: accessDate)
         } else {
-            // case: used log
-            try appendAccessLog(with: accessDate)
+            // used log case
+            try addAccessLog(with: accessDate)
         }
-    }
-    
-    //--------------------
-    // Sync
-    //--------------------
-    func syncLocalAndServerAccessLog(with syncDate: Date) async throws {
-        // ready log
-        var localLog = try accessLogCD.getLog(with: userId, and: accessLogId)
-        localLog.updateUploadAt(with: syncDate)
-        // sync log
-        try await accessLogFS.updateLog(to: localLog)
-        // apply local
-        let updated = AccessLogUpdateDTO(userId: userId, logId: accessLogId, newUploadAt: syncDate)
-        try accessLogCD.updateLog(with: updated)
     }
     
     //--------------------
@@ -242,67 +233,118 @@ extension LogManager{
     //--------------------
 }
 
-
 //================================
-// MARK: - ChallengeLog Support Function
+// MARK: - Executor
 //================================
 extension LogManager{
     
-    // Check: Log Size
-    private func shouldCreateNewChallengeLog() throws -> Bool {
-        let log = try challengeLogCD.getLog(with: userId, and: challengeLogId)
-        return log.log_complete.count > challengeLogLimit
-    }
-    
-    // Update: Log ID
-    private func updateChallengeLogId(newId: Int) throws {
-        // apply service
-        logHead[LogType.challenge.rawValue] = newId
-        challengeLogId = newId
-        // apply coredata
-        let updated = StatUpdateDTO(userId: userId, newLogHead: logHead)
-        try statCD.updateStatistics(with: updated)
-    }
-    
-    // Get: Outdate LogId
-    private func extractOutdatedChallengeLog() throws -> Int {
-        let logList = try challengeLogCD.getLogList(with: userId)
+    // main executor
+    private func accessLogCreateExecutor(with accessDate: Date) async throws {
+        // prepare parameter
+        let priviousLogId = accessLogId
+        accessLogId += 1
         
-        guard let outdateLogId = logList.map({ $0.log_id }).min() else {
-            throw LogManagerError.UnexpectedSearchIdError
-        }
-        return outdateLogId
-    }
-    
-    // Sync: Signal
-    private func isNewChallengeLogNeed() async throws -> Bool {
-        let serverLogId = try await challengeLogFS.getLog(with: userId, and: challengeLogId).log_id
-        
-        if serverLogId == challengeLogId {
-            return false
-        } else {
-            return true
+        // create process
+        do {
+            try await createNewAccessLog(with: accessDate)
+            try await accessLogIdUpdate(with: accessLogId)
+            try await manageOutdatedLogs()
+            
+        } catch {
+            // rollback
+            accessLogId = priviousLogId
+            util.log(.critical, location, "Unexpected Error while Processing Create New AccessLog: \(error)", userId)
+            throw error
         }
     }
-    
-    // Excutor: Create New Challenge Log
-    private func createNewChallengeLog(with challengeId: Int, and completeDate: Date) throws {
-        // update log id
-        let newLogId = challengeId + 1
-        try updateChallengeLogId(newId: newLogId)
-        // set new log at local
-        try setNewChallengeLogAtLocal(with: challengeId, and: completeDate)
-    }
-    
-    // Append: Add New Log
-    private func appendChallengeLog(with challengeId: Int, and completeDate: Date) throws {
-        let updated = ChallengeLogUpdateDTO(userId: userId, logId: challengeLogId, challengeId: challengeId, updatedAt: completeDate)
-        try challengeLogCD.updateLog(with: updated)
+    // sub executor
+    private func accessLogIdUpdate(with newId: Int) async throws {
+        // prepare date parameter
+        let uploadAt = Date()
+        let previousUploadAt = try statCD.getStatisticsForObject(with: userId).stat_upload_at
+        
+        // update process
+        try updateLocalAccessLog(with: newId, at: uploadAt)
+        try await updateServerAccessLog(with: previousUploadAt)
     }
 }
 
 //================================
-// MARK: - AccessLog Support Function
+// MARK: - Element
+//================================
+extension LogManager{
+    
+    // create process
+    private func createNewAccessLog(with accessDate: Date) async throws {
+        // create new log at local
+        try setNewAccessLogAtLocal(with: accessDate)
+        util.log(.info, location, "Successfully Set New AccessLog at Local", userId)
+        // create new log at server
+        try await setNewAccessLogAtServer()
+        util.log(.info, location, "Successfully Set New AccessLog at Server", userId)
+    }
+    
+    // update logId ======================================================
+    // local
+    private func updateLocalAccessLog(with newId: Int, at uploadAt: Date) throws {
+        // prepare parameter
+        let priviousId = logHead[LogType.access.rawValue]
+        
+        // update process
+        do {
+            logHead[LogType.access.rawValue] = newId
+            let updatedDTO = StatUpdateDTO(userId: userId, newLogHead: logHead, newUploadAt: uploadAt)
+            try statCD.updateStatistics(with: updatedDTO)
+            util.log(.info, location, "Successfully Update Local Statistics AccessLogId", userId)
+            
+        // rollback process
+        } catch {
+            logHead[LogType.access.rawValue] = priviousId
+            util.log(.critical, location, "Unexpected Error while Processing Update Local Statistics AccessLogID: \(error)", userId)
+        }
+    }
+    // server
+    private func updateServerAccessLog(with previousUploadAt: Date) async throws {
+        // prepare parameter
+        let updatedObject = try statCD.getStatisticsForObject(with: userId)
+        
+        // update process
+        do {
+            try await statFS.updateStatistics(with: updatedObject)
+            util.log(.info, location, "Successfully Update Server Statistics AccessLogId", userId)
+            
+        // rollback process
+        } catch {
+            util.log(.critical, location, "Unexpected Error while Processing Update Server Statistics AccessLogID: \(error)", userId)
+            rollbackServerStatistics(to: previousUploadAt)
+            throw error
+        }
+    }
+    //======================================================
+    
+    // manage outdate log
+    private func manageOutdatedLogs() async throws {
+        if try shouldDeleteOutdatedAccessLog() {
+            util.log(LogLevel.info, location, "Log Limit Excess, Start Delete Outdate Log", userId)
+            let outdatedLogId = try extractOutdatedAccessLog()
+            try await deleteAccessLog(with: outdatedLogId)
+            util.log(LogLevel.info, location, "Successfully Delete Outdate Log", userId)
+        }
+    }
+    
+    // rollback: local
+    private func rollbackServerStatistics(to previousUploadAt: Date) {
+        let rollbackDTO = StatUpdateDTO(userId: userId, newUploadAt: previousUploadAt)
+        do {
+            try statCD.updateStatistics(with: rollbackDTO)
+        } catch {
+            util.log(.critical, location, "Failed to rollback Server Statistics: \(error)", userId)
+        }
+    }
+}
+
+//================================
+// MARK: - Support Function
 //================================
 extension LogManager{
     // Check: Log Size
@@ -314,17 +356,7 @@ extension LogManager{
     // Check: Log Count
     private func shouldDeleteOutdatedAccessLog() throws -> Bool {
         let logList = try accessLogCD.getLogList(with: userId)
-        return logList.count < maxLogCount
-    }
-    
-    // Update: AccessLogID
-    private func updateAccessLogId(newId: Int) throws {
-        // apply service
-        logHead[LogType.access.rawValue] = newId
-        accessLogId = newId
-        // apply coredata
-        let updated = StatUpdateDTO(userId: userId, newLogHead: logHead)
-        try statCD.updateStatistics(with: updated)
+        return logList.count > maxLogCount
     }
     
     // Get: Outdated LogId
@@ -345,24 +377,8 @@ extension LogManager{
         try await accessLogFS.deleteLog(with: userId, and: outdatedLogId)
     }
     
-    // Exector: Create New AccessLog
-    private func createNewAccessLog(with accessDate: Date) async throws {
-        // update LogId
-        let newLogId = accessLogId + 1
-        try updateAccessLogId(newId: newLogId)
-        // add new log at local & server
-        try setNewAccessLogAtLocal(with: accessDate)
-        try await setNewAccessLogAtServer()
-        // check log struct count
-        if try shouldDeleteOutdatedAccessLog() {
-            // delete outdated log
-            let outdatedLogId = try extractOutdatedAccessLog()
-            try await deleteAccessLog(with: outdatedLogId)
-        }
-    }
-    
     // Append: Add new Log
-    private func appendAccessLog(with accessDate: Date) throws {
+    private func addAccessLog(with accessDate: Date) throws {
         var log = try accessLogCD.getLog(with: userId, and: accessLogId)
         log.log_access.append(accessDate)
     }
