@@ -142,6 +142,21 @@ extension DateFormatter {
 //================================
 // MARK: - Exception
 //================================
+extension Utilities{
+    func log(_ level: LogLevel, _ service: String, _ message: String, _ userId: String) {
+        print("[\(level.rawValue)]\(service) - \(userId): \(message)")
+    }
+}
+
+enum LogLevel: String {
+    case info = "Info"
+    case warning = "Warning"
+    case critical = "Critical"
+}
+
+//================================
+// MARK: - Exception
+//================================
 enum UtilError: LocalizedError {
     case InvalidEmailFormat
     case InvalidJsonStringFormat

@@ -8,6 +8,7 @@
 
 import Foundation
 
+let challengeLogId = 1
 //============================
 // MARK: Entity
 //============================

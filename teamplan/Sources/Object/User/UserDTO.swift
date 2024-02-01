@@ -87,16 +87,22 @@ struct UserUpdateDTO{
     let userId: String
     var newEmail: String?
     var newNickName: String?
+    var newUpdateAt: Date?
+    var newLoginAt: Date?
     
     //--------------------
     // constructor
     //--------------------
-    init(userId: String,
+    init(userId: String, 
          newEmail: String? = nil,
-         newNickName: String? = nil)
+         newNickName: String? = nil,
+         newUpdateAt: Date? = nil,
+         newLoginAt: Date? = nil) 
     {
         self.userId = userId
         self.newEmail = newEmail
         self.newNickName = newNickName
+        self.newUpdateAt = newUpdateAt
+        self.newLoginAt = newLoginAt
     }
 }
