@@ -13,7 +13,7 @@ final class LoginLoadingService{
     //================================
     // MARK: - Parameter
     //================================
-    // Service Parameter
+    // for service
     let util = Utilities()
     let userCD = UserServicesCoredata()
     let userFS = UserServicesFirestore()
@@ -25,16 +25,16 @@ final class LoginLoadingService{
     let syncServer = SynchronizeServer()
     let logManager = LogManager()
     
-    // Component Parameter
-    var userId: String
-    var loginDate : Date
-    var userData: UserInfoDTO
-    var userStat: StatLoginDTO
-    
-    // Restore UserData Parameter
-    private var rollbackStack: [() throws -> Void ] = []
-    
     private let maxSyncAttemps = 3
+    
+    // for component
+    private var userId: String
+    private var loginDate : Date
+    private var userData: UserInfoDTO
+    private var userStat: StatLoginDTO
+    
+    // for log
+    private let location = "LoginLoading"
     
     //===============================
     // MARK: - Initialize
@@ -44,63 +44,66 @@ final class LoginLoadingService{
         self.userId = "Unknown"
         self.userData = UserInfoDTO()
         self.userStat = StatLoginDTO()
-        util.log(LogLevel.info, "LoginLoading", "Service Initilizie Complete", userId)
+        util.log(LogLevel.info, location, "Service Initilizie Complete", userId)
     }
 }
 
 //===============================
-// MARK: - Main Function
+// MARK: - Executor
 //===============================
 extension LoginLoadingService{
     
     func executor(with dto: AuthSocialLoginResDTO) async throws -> UserInfoDTO {
-        // ready parameter
+        // prepare parameters
         self.loginDate = Date()
         self.userId = try extractUserId(from: dto)
         self.logManager.readyParameter(userId: userId)
-        util.log(LogLevel.info, "LoginLoading", "Login Process Start", userId)
+        util.log(LogLevel.info, location, "Login Process Start", userId)
         
-        // check & sync local if need
-        try await checkAndSyncData(at: loginDate)
+        // Step1. data inspection
+        try await preDataInspection(at: loginDate)
+        try self.logManager.readyManager()
         
-        // filiter
+        // Step2. user filitering
         if try userFiliter() {
             // re-login user
-            util.log(LogLevel.info, "LoginLoading", "Filtering Complete (Re-Login User)", userId)
+            util.log(LogLevel.info, location, "Filtering Complete (Re-Login User)", userId)
             return userData
         }
-        util.log(LogLevel.info, "LoginLoading", "Filtering Complete (Daily-Update Require)", userId)
-        // update & sync server if need
-        try await updateAndSyncData(with: loginDate)
-        util.log(LogLevel.info, "LoginLoading", "Login Process Complete", userId)
-        // data check & return
-        try dataCheck()
+        util.log(LogLevel.info, location, "Filtering Complete (Update Require)", userId)
+        
+        // Step3. classify update type
+        try await updateSorter(with: loginDate)
+        util.log(LogLevel.info, location, "Login Process Complete", userId)
+        
+        // Step4. data inspection
+        try afterDataInsepction()
         return userData
     }
 }
 
 //===============================
-// MARK: - Main Element
+// MARK: - Element
 //===============================
 extension LoginLoadingService{
     
-    // Check & Local Sync
-    private func checkAndSyncData(at loginDate: Date) async throws {
+    // inspection local data
+    private func preDataInspection(at loginDate: Date) async throws {
         if !checkLocalData() {
-            util.log(LogLevel.info, "LoginLoading",
-                     "No Data at Local Device, Start Synchronize with Server", userId)
+            // case: no local data, need sync process
             syncLocal.readySync(with: userId)
+            util.log(LogLevel.info, location,"No Data at Local Device, Start Synchronize Process", userId)
             try await syncProcess(attemptCount: 0, at: loginDate)
+            util.log(LogLevel.info, location,"Synchronize Process Complete", userId)
         }
-        util.log(LogLevel.info, "LoginLoading",
-                 "Local data Verification complete, Continue Login Process", userId)
+        // case: verifiy local data
+        util.log(LogLevel.info, location,"Local data Verification complete, Continue Login Process", userId)
         try getLocalData()
-        try self.logManager.readyManager()
     }
     
     // Filiter
     private func userFiliter() throws -> Bool {
-        util.log(LogLevel.info, "LoginLoading", "Start Filtering User", userId)
+        util.log(LogLevel.info, location, "Start Filtering User", userId)
         // check & get access log
         let log = try logManager.getAccessLogAtLocal()
         guard let lastLogin = log.log_access.last else {
@@ -109,28 +112,54 @@ extension LoginLoadingService{
         return util.compareTime(currentTime: loginDate, lastTime: lastLogin)
     }
     
-    // Update & Server Sync
-    private func updateAndSyncData(with loginDate: Date) async throws {
-        // Daily
+    // classify update types
+    private func updateSorter(with loginDate: Date) async throws {
+        // daily: service term update
+        util.log(LogLevel.info, location, "Start Daily Update: \n* Privious Service Term: \(userStat.term)", userId)
         try await dailyUpdateProcess(with: loginDate)
-        // Weekly
+        util.log(LogLevel.info, location, "Start Daily Update: \n* Applied Service Term: \(userStat.term)", userId)
+        
+        // Weekly: synchronize
         if isWeeklyUpdateDue() {
-            util.log(LogLevel.info, "LoginLoading", "Weekly-Update Require", userId)
-            try weeklyStatUpdate(with: loginDate)
+            util.log(LogLevel.info, location, "Weekly-Update Require", userId)
+            try updateUploadAt(with: loginDate)
             try await weeklyUpdateProcess(at: loginDate)
         }
     }
     
-    private func dataCheck() throws {
+    private func afterDataInsepction() throws {
         // User
-        util.log(LogLevel.info, "LoginLoading","<---------- UserData Check ---------->", userId)
-        print(try userCD.getUser(with: userId))
-        print("==========================================")
+        util.log(LogLevel.info, location," !!!!! Login UserData Insepction !!!!! ", userId)
+        let userProfile = try userCD.getUser(with: userId)
+        var logOutput = """
+            * ID: \(userProfile.user_id)
+            * Email: \(userProfile.user_email)
+            * NickName: \(userProfile.user_name)
+            * Status: \(userProfile.user_status)
+            * CreateAt: \(userProfile.user_created_at)
+            * LoginAt: \(userProfile.user_login_at)
+            * UpdateAt: \(userProfile.user_updated_at)
+            """
+        print(logOutput)
         
         // Statistics
-        util.log(LogLevel.info, "LoginLoading","<---------- Statistics Check ---------->", userId)
-        print(try statCD.getStatisticsForObject(with: userId))
-        print("==========================================")
+        util.log(LogLevel.info, location," !!!!! Login User Statistics Insepction !!!!! ", userId)
+        let userStat = try statCD.getStatisticsForObject(with: userId)
+        logOutput = """
+        * ID: \(userStat.stat_user_id)
+        * serviceTerm: \(userStat.stat_term)
+        * waterDrop: \(userStat.stat_drop)
+        * registProject: \(userStat.stat_proj_reg)
+        * finishedProject: \(userStat.stat_proj_fin)
+        * alertedProject: \(userStat.stat_proj_alert)
+        * extendedProject: \(userStat.stat_proj_ext)
+        * registedTodo: \(userStat.stat_todo_reg)
+        * todoLimit: \(userStat.stat_todo_limit)
+        * challengeStep: \(userStat.stat_chlg_step)
+        * logID: \(userStat.stat_log_head)
+        * uploadServerAt: \(userStat.stat_upload_at)
+        """
+        print(logOutput)
     }
 }
 
@@ -158,7 +187,7 @@ extension LoginLoadingService{
             let _ = try userCD.getUser(with: userId)
             return true
         } catch {
-            util.log(LogLevel.warning, "LoginLoading", "Local UserData is Not Available: \(error)", userId)
+            util.log(LogLevel.warning, location, "Local UserData is Not Available: \(error)", userId)
             return false
         }
     }
@@ -168,7 +197,7 @@ extension LoginLoadingService{
             let _ = try statCD.getStatisticsForDTO(with: userId, type: .login) as? StatLoginDTO
             return true
         } catch {
-            util.log(LogLevel.warning, "LoginLoading", "Local Statistics is Not Available: \(error)", userId)
+            util.log(LogLevel.warning, location, "Local Statistics is Not Available: \(error)", userId)
             return false
         }
     }
@@ -178,7 +207,7 @@ extension LoginLoadingService{
             let _ = try logManager.getAccessLogAtLocal()
             return true
         } catch {
-            util.log(LogLevel.warning, "LoginLoading", "Local AccessLog is Not Available: \(error)", userId)
+            util.log(LogLevel.warning, location, "Local AccessLog is Not Available: \(error)", userId)
             return false
         }
     }
@@ -188,7 +217,7 @@ extension LoginLoadingService{
             let _ = try logManager.getChallengeLogAtLocal()
             return true
         } catch {
-            util.log(LogLevel.warning, "LoginLoading", "Local ChallengeLog is Not Available: \(error)", userId)
+            util.log(LogLevel.warning, location, "Local ChallengeLog is Not Available: \(error)", userId)
             return false
         }
     }
@@ -198,10 +227,10 @@ extension LoginLoadingService{
     //--------------------
     private func syncProcess(attemptCount: Int, at loginDate: Date) async throws {
         do {
-            util.log(LogLevel.info, "LoginLoading", "Start Synchronize Local to Server", userId)
+            util.log(LogLevel.info, location, "Start Synchronize Local with Server", userId)
             try await syncLocal.syncExecutor(with: loginDate)
         } catch {
-            util.log(LogLevel.critical, "LoginLoading", "Local Synchronizer Failure", userId)
+            util.log(LogLevel.critical, location, "Local Synchronizer Failure", userId)
             if attemptCount >= maxSyncAttemps {
                 throw LoginLoadingServiceError.TooManyLocalSyncAttempt
             }
@@ -228,53 +257,59 @@ extension LoginLoadingService{
     //--------------------
     // Update Process
     //--------------------
-    // Signal
+    // standard
     private func isWeeklyUpdateDue() -> Bool {
-        return userStat.term % 7 == 0
+        return true
+        //return userStat.term % 7 == 0
     }
-    // Daily
+    
+    // daily
     private func dailyUpdateProcess(with loginDate: Date) async throws {
-        util.log(LogLevel.info, "LoginLoading", "Start Daily Update", userId)
         // update & apply local data
-        try dailyStatUpdate()
-        try dailyUserUpdate(with: loginDate)
+        try updateServiceTerm()
+        util.log(.info, location, "Service Term update complete: ", userId)
+        
+        try updateLoginAt(with: loginDate)
         // update & apply local access log
-        try await logManager.addAccessLog(with: loginDate)
+        try await logManager.appendAccessLog(with: loginDate)
     }
-    // Weekly
+    
+    // weekly
     private func weeklyUpdateProcess(attempCount: Int = 0, at syncDate: Date) async throws {
         do {
-            util.log(LogLevel.info, "LoginLoading", "Start Weekly Update", userId)
+            util.log(.info, location, "Start Weekly Update", userId)
             syncServer.readySync(with: userId, and: logManager)
             try await syncServer.syncExecutor(with: syncDate)
         } catch {
-            util.log(LogLevel.critical, "LoginLoading", "Weekly Update Failure", userId)
+            util.log(.critical, location, "Weekly Update Failure", userId)
             if attempCount >= maxSyncAttemps{
                 throw LoginLoadingServiceError.TooManyServerSyncAttempt
             }
             try await weeklyUpdateProcess(attempCount: attempCount + 1, at: syncDate)
         }
     }
-    // Update Process: Daily
-    private func dailyStatUpdate() throws {
+
+    // service term: daily
+    private func updateServiceTerm() throws {
+        // update service parameter
         let newTerm = userStat.term + 1
         userStat.updateServiceTerm(with: newTerm)
+        // apply local
         let updated = StatUpdateDTO(userId: userId, newTerm: newTerm)
         try statCD.updateStatistics(with: updated)
     }
-    private func dailyUserUpdate(with loginDate: Date) throws {
+    
+    // loginAt: daily
+    private func updateLoginAt(with loginDate: Date) throws {
+        // apply local
         let updated = UserUpdateDTO(userId: userId, newLoginAt: loginDate)
         try userCD.updateUser(with: updated)
     }
     
-    // Update Process: Weekly
-    private func weeklyStatUpdate(with syncDate: Date) throws {
+    // statistics uploadAt: weekly
+    private func updateUploadAt(with syncDate: Date) throws {
         let updated = StatUpdateDTO(userId: userId, newUploadAt: syncDate)
         try statCD.updateStatistics(with: updated)
-    }
-    private func weeklyUserUpdate(with updateDate: Date) throws {
-        let updated = UserUpdateDTO(userId: userId, newUpdateAt: updateDate)
-        try userCD.updateUser(with: updated)
     }
     
     //--------------------
