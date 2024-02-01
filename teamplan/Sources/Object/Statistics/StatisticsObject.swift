@@ -25,7 +25,7 @@ struct StatisticsObject{
     let stat_chlg_step: [Int : Int]
     let stat_mychlg: [Int]
     let stat_log_head: [Int : Int]
-    let stat_upload_at: Date
+    var stat_upload_at: Date
     
     //--------------------
     // constructor
@@ -146,5 +146,9 @@ struct StatisticsObject{
             "stat_log_head": logHeadString,
             "stat_upload_at": DateFormatter.standardFormatter.string(from: self.stat_upload_at)
         ]
+    }
+    
+    mutating func setUploadAt(with newDate: Date){
+        self.stat_upload_at = newDate
     }
 }

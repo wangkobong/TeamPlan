@@ -23,7 +23,7 @@ struct UserObject{
     let user_status: String
     let user_created_at: Date
     let user_login_at: Date
-    let user_updated_at: Date
+    var user_updated_at: Date
     
     //--------------------
     // constructor
@@ -103,6 +103,10 @@ struct UserObject{
             "user_login_at" : DateFormatter.standardFormatter.string(from: self.user_login_at),
             "user_updated_at" : DateFormatter.standardFormatter.string(from: self.user_updated_at)
         ]
+    }
+    
+    mutating func setUpdatedAt(with newDate: Date){
+        self.user_updated_at = newDate
     }
 }
 
