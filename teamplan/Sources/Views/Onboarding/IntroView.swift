@@ -19,6 +19,7 @@ struct IntroView: View {
     @AppStorage("mainViewState") var mainViewState: MainViewState = .login
     @StateObject var notificationViewModel = NotificationViewModel()
     @State private var hasCheckedLoginStatus = false
+    @EnvironmentObject var authViewModel: AuthenticationViewModel
     
     var body: some View {
         ZStack {
@@ -64,7 +65,12 @@ extension IntroView {
         let userDefaultManager = UserDefaultManager.loadWith(key: "user")
         let identifier = userDefaultManager?.identifier
         
-        self.mainViewState = identifier == "" ? .login : .main
+        if let identifier = identifier, !identifier.isEmpty {
+            self.mainViewState = .main
+        } else {
+            self.mainViewState = .login
+        }
+        
         hasCheckedLoginStatus = true
     }
 }

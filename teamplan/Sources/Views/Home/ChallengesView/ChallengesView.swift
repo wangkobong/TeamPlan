@@ -17,6 +17,7 @@ struct ChallengesView: View {
     @State private var currentPage = 0
     @State private var indexForAlert = 0
     @State private var selectedCardIndex: Int? = nil
+    @State private var toast: Toast? = nil
     
     let columns = [
       //추가 하면 할수록 화면에 보여지는 개수가 변함
@@ -87,6 +88,7 @@ struct ChallengesView: View {
                     }
                 }
             }
+            .toastView(toast: $toast)
             .onAppear {
                 homeViewModel.challengeArray.forEach {
                     print("-------")
@@ -100,6 +102,7 @@ struct ChallengesView: View {
                     print("prevTitle: \($0.chlg_title)")
                     
                 }
+                print("$homeViewModel.challengeArray: \($homeViewModel.challengeArray.count)")
             }
         }
     }
@@ -233,7 +236,6 @@ extension ChallengesView {
                                     print("isComplete: \(item.wrappedValue.chlg_status)")
                                     print("prevGoal: \(item.wrappedValue.chlg_goal)")
                                     print("prevTitle: \(item.wrappedValue.chlg_title)")
-                                    self.isPresented.toggle()
                                 }
                         }
                     }
@@ -271,15 +273,23 @@ extension ChallengesView {
         // 완료한 도전과제
         if challenge.chlg_status == true && challenge.chlg_selected == false && challenge.chlg_lock == false {
             self.type = .didComplete
+            self.isPresented.toggle()
         // 등록된 도전과제
         } else if challenge.chlg_status == false && challenge.chlg_selected == true && challenge.chlg_lock == false {
             self.type = .didSelected
+            self.isPresented.toggle()
         // 도전하기
         } else if challenge.chlg_status == false && challenge.chlg_selected == false && challenge.chlg_lock == false {
-            self.type = .willChallenge
+            if homeViewModel.myChallenges.count == 3 {
+                toast = Toast(style: .error, message: "나의 도전과제는 3개까지만 등록이 가능합니다.", width: 300)
+            } else {
+                self.type = .willChallenge
+                self.isPresented.toggle()
+            }
         // 잠금해제 안됨
         } else if challenge.chlg_status == false && challenge.chlg_selected == false && challenge.chlg_lock == true {
             self.type = .lock
+            self.isPresented.toggle()
         }
     }
 }
