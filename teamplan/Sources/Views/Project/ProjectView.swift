@@ -11,7 +11,7 @@ import SwiftUI
 struct ProjectView: View {
     
     @State private var isNotificationViewActive = false
-    private var isEmpty = true
+    private var isEmpty = false
     
     var body: some View {
         VStack {
