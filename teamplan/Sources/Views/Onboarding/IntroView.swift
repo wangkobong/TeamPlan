@@ -19,6 +19,7 @@ struct IntroView: View {
     @AppStorage("mainViewState") var mainViewState: MainViewState = .login
     @StateObject var notificationViewModel = NotificationViewModel()
     @State private var hasCheckedLoginStatus = false
+    @EnvironmentObject var authViewModel: AuthenticationViewModel
     
     var body: some View {
         ZStack {
