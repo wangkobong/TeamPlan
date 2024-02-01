@@ -13,12 +13,16 @@ final class HomeService {
     //===============================
     // MARK: - Parameter Setting
     //===============================
+    // for service
     let userCD = UserServicesCoredata()
     let projectCD = ProjectServicesCoredata()
     let challenge: ChallengeService
     let phrase = UserPhrase()
-    
     let userId: String
+    
+    // for log
+    let util = Utilities()
+    let location = "HomeService"
     
     //===============================
     // MARK: - Initializer
@@ -31,6 +35,7 @@ final class HomeService {
     func readyService() throws {
         do {
             try self.challenge.readyService()
+            util.log(.info, location, "Service Ready", userId)
         } catch {
             print("(Service) Error while Init in HomeService : \(error)")
             throw HomeServiceError.UnexpectedInitError

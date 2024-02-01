@@ -263,7 +263,7 @@ extension ChallengeService {
     
     // * Challenge Log Update
     private func updatedChallengeLog(with challengeId: Int) throws {
-        try logManager.addChallengeLog(with: challengeId, and: Date())
+        try logManager.appendChallengeLog(with: challengeId, and: Date())
     }
     
     // * Challenge Step Update
