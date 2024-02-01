@@ -13,6 +13,8 @@ final class SynchronizeLocal{
     //================================
     // MARK: - Parameter
     //================================
+    // for service
+    let util = Utilities()
     let userFS = UserServicesFirestore()
     let userCD = UserServicesCoredata()
     let statFS = StatisticsServicesFirestore()
@@ -22,8 +24,18 @@ final class SynchronizeLocal{
     var logManager = LogManager()
     
     var userId: String
-    
+    var challengeStep: [Int:Int] =  [
+        ChallengeType.serviceTerm.rawValue : 1,
+        ChallengeType.totalTodo.rawValue : 1,
+        ChallengeType.projectAlert.rawValue : 1,
+        ChallengeType.projectFinish.rawValue : 1,
+        ChallengeType.waterDrop.rawValue : 1
+    ]
     private var rollbackStack: [() throws -> Void ] = []
+    
+    // for log
+    private let location = "LocalSynchronizer"
+    
     
     //===============================
     // MARK: - Initialize
@@ -34,7 +46,6 @@ final class SynchronizeLocal{
     
     func readySync(with userId: String) {
         self.userId = userId
-        self.logManager.readyParameter(userId: userId)
     }
 }
 
@@ -45,39 +56,49 @@ extension SynchronizeLocal{
     
     func syncExecutor(with syncDate: Date) async throws {
         do {
+            util.log(LogLevel.info, location, "Start Local Synchronize Process", userId)
+            
             // User
             let user = try await getUserFromServer()
             try resetLocalUser(with: user, and: syncDate)
             rollbackStack.append(rollbackResetUser)
+            util.log(LogLevel.info, location, "UserData Synchronize Complete", userId)
             
             // Statistics
             let stat = try await getStatFromServer()
             try resetLocalStat(with: stat)
             rollbackStack.append(rollbackResetStat)
+            util.log(LogLevel.info, location, "Statistics Synchronize Complete", userId)
             
             // Init Log Manager
+            self.logManager.readyParameter(userId: userId)
             try self.logManager.readyManager()
+            util.log(LogLevel.info, location, "LogManager Initialize Complete", userId)
             
             // Access Log
             let accessLogList = try await getAccessLogFromServer()
             try resetLocalAccessLog(with: accessLogList)
             rollbackStack.append(rollbackResetAccessLog)
+            util.log(LogLevel.info, location, "AccessLog Synchronize Complete", userId)
             
             // Challenge Log
             let challengeLogList = try await getChallengeLogFromServer()
             try resetLocalChallengeLog(with: challengeLogList)
             rollbackStack.append(rollbackResetChallengeLog)
+            util.log(LogLevel.info, location, "ChallengeLog Synchronize Complete", userId)
             
             // Challenge
             let challengeList = try await getChallengeListFromServer()
             try resetLocalChallenge(stat: stat, logList: challengeLogList, challengeList: challengeList)
             rollbackStack.append(rollbackResetChallenge)
-
+            util.log(LogLevel.info, location, "Challenge Synchronize Complete", userId)
+            
             rollbackStack.removeAll()
             
         } catch {
+            util.log(LogLevel.critical, location,
+                     "There was an unexpected error while Sync Server To Local Data: \(error)", userId)
             try rollbackAll()
-            print("(Service) There was an unexpected error while Sync Server To Local UserData at 'LoginLoading' : \(error)")
             throw error
         }
     }
@@ -87,8 +108,10 @@ extension SynchronizeLocal{
             for rollback in rollbackStack.reversed() {
                 try rollback()
             }
+            util.log(LogLevel.info, location, "Rollback Process Complete", userId)
             rollbackStack.removeAll()
         } catch {
+            util.log(LogLevel.critical, location, "Unexpected Error While Processing Rollback: \(error)", userId)
             throw error
         }
     }
@@ -169,7 +192,7 @@ extension SynchronizeLocal{
     
     // Challenge Log
     private func resetLocalChallengeLog(with logList: [ChallengeLog]) throws {
-        try logManager.setChallengeLogAtLocal(with: logList)
+        try logManager.setChallengeLogWithList(with: logList)
     }
     
     private func rollbackResetChallengeLog() throws {
@@ -197,20 +220,40 @@ extension SynchronizeLocal{
 extension SynchronizeLocal{
     
     private func restoreChallengeProgress(stat: StatisticsObject, challengeLog: [Int:Date], challengeList: [ChallengeObject]) throws {
+        util.log(LogLevel.info, location, "Start Restore Challenge Progress, target: \(challengeLog.count)", userId)
+        
+        // restore progress
         for (key, date) in challengeLog {
             guard let challenge = challengeList.first(where: { $0.chlg_id == key }) else {
                 throw SyncLocalError.UnexpectedChallengeProgressRestoreError
             }
+            // apply restore
             try updateChallenge(object: challenge, finishDate: date)
+            restoreChallengeStep(type: challenge.chlg_type, step: challenge.chlg_step)
+            util.log(LogLevel.info, location, "Restore Challenge Progress Complete: restored challengeID = \(challenge.chlg_id)", userId)
         }
+        try updateStatistics()
+        util.log(LogLevel.info, location, "Restore Complete: \n* Applied ChallengeStep: \(challengeStep)", userId)
     }
     
+    // Restore Challenge Step
+    private func restoreChallengeStep(type: ChallengeType, step: Int) {
+        self.challengeStep[type.rawValue] = step + 1
+    }
+    
+    // Apply Challenge Update
     private func updateChallenge(object: ChallengeObject, finishDate: Date) throws {
         let updated = ChallengeUpdateDTO(challengeId: object.chlg_id, userId: userId,
                                          newSelected: false, newStatus: true, newLock: false,
                                          newFinishedAt: finishDate
         )
         try challengeCD.updateChallenge(with: updated)
+    }
+    
+    // Apply Statistics Upadte
+    private func updateStatistics() throws {
+        let updated = StatUpdateDTO(userId: userId, newChallengeStep: challengeStep)
+        try statCD.updateStatistics(with: updated)
     }
 }
 

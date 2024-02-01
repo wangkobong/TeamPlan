@@ -13,51 +13,122 @@ final class SynchronizeServer {
     //================================
     // MARK: - Parameter
     //================================
+    // for service
     let userFS = UserServicesFirestore()
     let userCD = UserServicesCoredata()
     let statFS = StatisticsServicesFirestore()
     let statCD = StatisticsServicesCoredata()
+    let accessLogFS = AccessLogServicesFirestore()
+    let accessLogCD = AccessLogServicesCoredata()
+    let challengeLogFS = ChallengeLogServicesFirestore()
+    let challengeLogCD = ChallengeLogServicesCoredata()
     
-    var logManager = LogManager()
-    var userId: String
+    private var logManager = LogManager()
+    private var userId: String
+    private var previousStatUploadAt: Date
+    private var accessLogId: Int
+    private var previousAccessLogUploadAt: Date
+    private var challengeLogId: Int
+    private var previousChallengeLogUploadAt: Date
+    private var rollbackStack: [() throws -> Void ] = []
+    
+    // for log
+    let util = Utilities()
+    let location = "ServerSynchronizer"
     
     //===============================
     // MARK: - Initialize
     //===============================
-    init(){
+    init() {
         self.userId = "unknown"
+        self.previousStatUploadAt = Date()
+        self.accessLogId = 0
+        self.previousAccessLogUploadAt = Date()
+        self.challengeLogId = 0
+        self.previousChallengeLogUploadAt = Date()
     }
     
     func readySync(with userId: String, and manager: LogManager) {
         self.userId = userId
         self.logManager = manager
+        util.log(.info, location, "Synchronizer Ready", self.userId)
     }
 }
 
 //===============================
-// MARK: - Main Function
+// MARK: - Executor
 //===============================
 extension SynchronizeServer{
     
     func syncExecutor(with syncDate: Date) async throws {
         do {
+            util.log(.info, location, "Synchronize Start", userId)
+            
             // Statistics
-            let stat = try getStatFromLocal()
-            try await updateServerStat(with: stat)
-            
+            try await syncStatistics(at: syncDate)
             // AccessLog
-            let accessLog = try getAccessLogFromLocal()
-            try await updateServerAccesslog(with: accessLog, and: syncDate)
-            
+            try await syncAccessLog(at: syncDate)
             // ChallengeLog
-            let challengeLog = try getChallengeLogFromLocal()
-            try await updateServerChallengeLog(with: challengeLog, and: syncDate)
-            
+            try await syncChallengeLog(at: syncDate)
             // Project Log (WIP)
+            
         } catch {
-            print("(Service) There was an unexpected error while Sync Local to Server UserData at 'LoginLoading' : \(error)")
+            try rollbackAll()
+            util.log(.critical, location, "There was an unexpected error while SyncServer: \(error)", userId)
             throw error
         }
+    }
+    
+    private func rollbackAll() throws {
+        do {
+            for rollback in self.rollbackStack.reversed() {
+                try rollback()
+            }
+        } catch {
+            throw error
+        }
+    }
+}
+
+//===============================
+// MARK: - Element
+//===============================
+extension SynchronizeServer{
+
+    private func syncStatistics(at syncDate: Date) async throws {
+        // prepare sync
+        let stat = try getStatFromLocal()
+        rollbackStack.append(rollbackStatisticsUploadAt)
+        // sync process
+        try applyStatisticsUploadAt(with: syncDate)
+        try await updateServerStatistics(with: stat)
+        // clenaup
+        util.log(.info, location, "Statistics Synchronize Complete", userId)
+        rollbackStack.removeAll()
+    }
+    
+    private func syncAccessLog(at syncDate: Date) async throws {
+        // prepare sync
+        let accessLog = try getAccessLogFromLocal()
+        rollbackStack.append(rollbackAccessLogUploadAt)
+        // sync process
+        try applyAccessLogUploadAt(with: syncDate)
+        try await updateServerAccesslog(with: accessLog, and: syncDate)
+        // clenaup
+        util.log(.info, location, "AccessLog Synchronize Complete", userId)
+        rollbackStack.removeAll()
+    }
+    
+    private func syncChallengeLog(at syncDate: Date) async throws {
+        // prepare sync
+        let challengeLog = try getChallengeLogFromLocal()
+        rollbackStack.append(rollbackChallengeLogUploadAt)
+        // sync process
+        try applyChallengeLogUploadAt(with: syncDate)
+        try await updateServerChallengeLog(with: challengeLog, and: syncDate)
+        // clenaup
+        util.log(.info, location, "ChallengeLog Synchronize Complete", userId)
+        rollbackStack.removeAll()
     }
 }
 
@@ -68,40 +139,88 @@ extension SynchronizeServer{
     
     // Statistics
     private func getStatFromLocal() throws -> StatisticsObject {
-        return try statCD.getStatisticsForObject(with: userId)
+        let stat = try statCD.getStatisticsForObject(with: userId)
+        self.previousStatUploadAt = stat.stat_upload_at
+        return stat
     }
     
     // Access Log
     private func getAccessLogFromLocal() throws -> AccessLog {
-        return try logManager.getAccessLogAtLocal()
+        let log = try logManager.getAccessLogAtLocal()
+        self.accessLogId = log.log_id
+        self.previousAccessLogUploadAt = log.log_upload_at
+        return log
     }
     
     // Challenge Log
     private func getChallengeLogFromLocal() throws -> ChallengeLog {
-        return try logManager.getChallengeLogAtLocal()
+        let log = try logManager.getChallengeLogAtLocal()
+        self.challengeLogId = log.log_id
+        self.previousChallengeLogUploadAt = log.log_upload_at
+        return log
     }
     
     // Project Log (WIP)
 }
 
 //===============================
-// MARK: - SP2: Apply Local to Server
+// MARK: - SP2: Update Local UploadAt
 //===============================
 extension SynchronizeServer{
     
     // Statistics
-    private func updateServerStat(with object: StatisticsObject) async throws {
+    private func applyStatisticsUploadAt(with newDate: Date) throws {
+        let updated = StatUpdateDTO(userId: userId, newUploadAt: newDate)
+        try statCD.updateStatistics(with: updated)
+    }
+    private func rollbackStatisticsUploadAt() throws {
+        let updated = StatUpdateDTO(userId: userId, newUploadAt: previousStatUploadAt)
+        try statCD.updateStatistics(with: updated)
+    }
+    
+    // AccessLog
+    private func applyAccessLogUploadAt(with syncDate: Date) throws {
+        let updated = AccessLogUpdateDTO(userId: userId, logId: accessLogId, newUploadAt: syncDate)
+        try accessLogCD.updateLog(with: updated)
+    }
+    private func rollbackAccessLogUploadAt() throws {
+        let updated = AccessLogUpdateDTO(
+            userId: userId, logId: accessLogId, newUploadAt: previousAccessLogUploadAt)
+        try accessLogCD.updateLog(with: updated)
+    }
+    
+    // ChallengeLog
+    private func applyChallengeLogUploadAt(with syncDate: Date) throws {
+        let updated = ChallengeLogUpdateDTO(userId: userId, logId: challengeLogId, uploadAt: syncDate)
+        try challengeLogCD.updateLog(with: updated)
+    }
+    private func rollbackChallengeLogUploadAt() throws {
+        let updated = ChallengeLogUpdateDTO(
+            userId: userId, logId: challengeLogId, uploadAt: previousChallengeLogUploadAt)
+        try challengeLogCD.updateLog(with: updated)
+    }
+    
+    // Project Log (WIP)
+}
+
+//===============================
+// MARK: - SP3: Update Server
+//===============================
+extension SynchronizeServer{
+    
+    // Statistics
+    private func updateServerStatistics(with object: StatisticsObject) async throws {
         try await statFS.updateStatistics(with: object)
     }
     
     // Access Log
     private func updateServerAccesslog(with log: AccessLog, and syncDate: Date) async throws {
-        try await logManager.syncLocalAndServerAccessLog(with: syncDate)
+        try await accessLogFS.updateLog(to: log)
     }
     
     // Challenge Log
     private func updateServerChallengeLog(with log: ChallengeLog, and syncDate: Date) async throws {
-        try await logManager.syncLocalAndServerChallengeLog(with: syncDate)
+        try await challengeLogFS.updateLog(with: log)
     }
     
     // Project Log (WIP)
