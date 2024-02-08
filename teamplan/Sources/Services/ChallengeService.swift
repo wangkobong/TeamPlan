@@ -107,7 +107,7 @@ final class ChallengeService {
         self.userId = userId
         self.statCenter = StatisticsCenter(with: userId)
         self.statDTO = StatChallengeDTO()
-        self.logManager.readyParameter(userId: userId)
+        self.logManager.readyParameter(userId: userId, caller: "ChallengeService")
     }
     // Init function
     func readyService() throws {

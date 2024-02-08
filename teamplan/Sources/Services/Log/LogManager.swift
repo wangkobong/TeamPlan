@@ -13,7 +13,7 @@ final class LogManager{
     //================================
     // MARK: - Parameter
     //================================
-    // for manager
+    // reference
     let challengeLogCD = ChallengeLogServicesCoredata()
     let challengeLogFS = ChallengeLogServicesFirestore()
     let accessLogCD = AccessLogServicesCoredata()
@@ -23,19 +23,20 @@ final class LogManager{
     let statCD = StatisticsServicesCoredata()
     let statFS = StatisticsServicesFirestore()
     
-    var userId: String
-    var projectId: Int?
-    var logHead: [Int:Int]
-    var challengeLogId: Int
-    var accessLogId: Int
-    
+    // private
+    private var userId: String
+    private var projectId: Int?
+    private var logHead: [Int:Int]
+    private var challengeLogId: Int
+    private var accessLogId: Int
     private let challengeLogLimit = 25000
     private let accessLogLimit = 32000
     private let maxLogCount = 5
     
-    // for log
-    let util = Utilities()
-    let location = "LogManager"
+    // private: for log
+    private let util = Utilities()
+    private let location = "LogManager"
+    private var parent = "unknown"
     
     //===============================
     // MARK: - Initialize
@@ -48,10 +49,11 @@ final class LogManager{
         self.challengeLogId = 0
     }
     
-    func readyParameter(userId: String, projectId: Int? = nil){
+    func readyParameter(userId: String, projectId: Int? = nil, caller: String){
         self.userId = userId
         self.projectId = projectId
-        util.log(.info, location, "Parameter Ready! Manager Ready Require!", self.userId)
+        self.parent = caller
+        util.log(.info, location, "(\(caller)) Parameter Ready! Manager Ready Require!", self.userId)
     }
     
     func readyManager() throws {
@@ -70,7 +72,7 @@ final class LogManager{
         }
         self.accessLogId = accessLogId
         
-        util.log(.info, location, "Manager Ready! \n* LogHead: \(logHead) \n* AccessLogID: \(self.accessLogId) \n* ChallengeLogID: \(self.challengeLogId)", userId)
+        util.log(.info, location, "(\(parent)) Manager Ready! \n* LogHead: \(logHead) \n* AccessLogID: \(self.accessLogId) \n* ChallengeLogID: \(self.challengeLogId)", userId)
     }
 }
 
@@ -200,7 +202,7 @@ extension LogManager{
     func appendAccessLog(with accessDate: Date) async throws {
         if try shouldCreateNewAccessLog() {
             // new log case
-            util.log(LogLevel.info, location, "Require New AccessLog", userId)
+            util.log(LogLevel.info, location, "(\(parent)) Require New AccessLog", userId)
             try await createNewAccessLog(with: accessDate)
         } else {
             // used log case
@@ -253,7 +255,7 @@ extension LogManager{
         } catch {
             // rollback
             accessLogId = priviousLogId
-            util.log(.critical, location, "Unexpected Error while Processing Create New AccessLog: \(error)", userId)
+            util.log(.critical, location, "(\(parent)) Unexpected Error while Processing Create New AccessLog: \(error)", userId)
             throw error
         }
     }
@@ -278,10 +280,10 @@ extension LogManager{
     private func createNewAccessLog(with accessDate: Date) async throws {
         // create new log at local
         try setNewAccessLogAtLocal(with: accessDate)
-        util.log(.info, location, "Successfully Set New AccessLog at Local", userId)
+        util.log(.info, location, "(\(parent)) Successfully Set New AccessLog at Local", userId)
         // create new log at server
         try await setNewAccessLogAtServer()
-        util.log(.info, location, "Successfully Set New AccessLog at Server", userId)
+        util.log(.info, location, "(\(parent)) Successfully Set New AccessLog at Server", userId)
     }
     
     // update logId ======================================================
@@ -295,12 +297,12 @@ extension LogManager{
             logHead[LogType.access.rawValue] = newId
             let updatedDTO = StatUpdateDTO(userId: userId, newLogHead: logHead, newUploadAt: uploadAt)
             try statCD.updateStatistics(with: updatedDTO)
-            util.log(.info, location, "Successfully Update Local Statistics AccessLogId", userId)
+            util.log(.info, location, "(\(parent)) Successfully Update Local Statistics AccessLogId", userId)
             
         // rollback process
         } catch {
             logHead[LogType.access.rawValue] = priviousId
-            util.log(.critical, location, "Unexpected Error while Processing Update Local Statistics AccessLogID: \(error)", userId)
+            util.log(.critical, location, "(\(parent)) Unexpected Error while Processing Update Local Statistics AccessLogID: \(error)", userId)
         }
     }
     // server
@@ -311,11 +313,11 @@ extension LogManager{
         // update process
         do {
             try await statFS.updateStatistics(with: updatedObject)
-            util.log(.info, location, "Successfully Update Server Statistics AccessLogId", userId)
+            util.log(.info, location, "(\(parent)) Successfully Update Server Statistics AccessLogId", userId)
             
         // rollback process
         } catch {
-            util.log(.critical, location, "Unexpected Error while Processing Update Server Statistics AccessLogID: \(error)", userId)
+            util.log(.critical, location, "(\(parent)) Unexpected Error while Processing Update Server Statistics AccessLogID: \(error)", userId)
             rollbackServerStatistics(to: previousUploadAt)
             throw error
         }
@@ -325,10 +327,10 @@ extension LogManager{
     // manage outdate log
     private func manageOutdatedLogs() async throws {
         if try shouldDeleteOutdatedAccessLog() {
-            util.log(LogLevel.info, location, "Log Limit Excess, Start Delete Outdate Log", userId)
+            util.log(LogLevel.info, location, "(\(parent)) Log Limit Excess, Start Delete Outdate Log", userId)
             let outdatedLogId = try extractOutdatedAccessLog()
             try await deleteAccessLog(with: outdatedLogId)
-            util.log(LogLevel.info, location, "Successfully Delete Outdate Log", userId)
+            util.log(LogLevel.info, location, "(\(parent)) Successfully Delete Outdate Log", userId)
         }
     }
     
@@ -338,7 +340,7 @@ extension LogManager{
         do {
             try statCD.updateStatistics(with: rollbackDTO)
         } catch {
-            util.log(.critical, location, "Failed to rollback Server Statistics: \(error)", userId)
+            util.log(.critical, location, "(\(parent)) Failed to rollback Server Statistics: \(error)", userId)
         }
     }
 }
