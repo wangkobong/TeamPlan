@@ -13,21 +13,25 @@ final class SignupLoadingService{
     //================================
     // MARK: - Parameter
     //================================
+    // reference
+    let util = Utilities()
     let userFS = UserServicesFirestore()
     let userCD = UserServicesCoredata()
     let statFS = StatisticsServicesFirestore()
     let statCD = StatisticsServicesCoredata()
     let logManager = LogManager()
     let challengeManager = ChallengeManager()
-    
-    let userId: String
-    let signupDate: Date
-    var newProfile: UserObject
-    var newStat: StatisticsObject
-    
     let onboardingChallenge: Int = 100
-    
+
+    // private
+    private let userId: String
+    private let signupDate: Date
+    private var newProfile: UserObject
+    private var newStat: StatisticsObject
     private var rollbackStack: [() async throws -> Void ] = []
+    
+    // private: for log
+    private let location = "SignupLoading"
     
     //===============================
     // MARK: - Initialize
@@ -35,12 +39,10 @@ final class SignupLoadingService{
     init(newUser: UserSignupDTO){
         self.userId = newUser.userId
         self.signupDate = Date()
-        
-        self.newProfile = UserObject(
-            newUser: newUser, signupDate: signupDate)
-        self.newStat = StatisticsObject(
-            userId: userId, setDate: signupDate)
-        self.logManager.readyParameter(userId: self.userId)
+        self.newProfile = UserObject(newUser: newUser, signupDate: signupDate)
+        self.newStat = StatisticsObject(userId: userId, setDate: signupDate)
+        self.logManager.readyParameter(userId: self.userId, caller: location)
+        util.log(.info, location, "Ready for Signup Process", self.userId)
     }
 }
 
@@ -53,17 +55,26 @@ extension SignupLoadingService{
         // Ready Parameter
         let localSetResult: Bool
         let serverSetResult: Bool
+        
+        // Pre-DataInspection
+        util.log(.info, location, "Proceed Pre-DataInspection", userId)
+        dataInspection(with: self.newProfile)
     
         // Local Execute Result
         localSetResult = try localExecutor()
+        util.log(.info, location, "Proceed Local DataInspection", userId)
+        dataInspection(with: try userCD.getUser(with: userId))
         
         // Server Execute Result
         serverSetResult = try await serverExecutor()
+        util.log(.info, location, "Proceed Server DataInspection", userId)
+        dataInspection(with: try await userFS.getUser(from: userId))
         
         // Apply Execute
         switch (localSetResult, serverSetResult) {
             
         case (true, true):
+            util.log(.info, location, "Successfully set new-userdata at local & server", userId)
             return UserInfoDTO(with: newProfile)
             
         default:
@@ -80,14 +91,17 @@ extension SignupLoadingService{
     
     // Local
     private func localExecutor() throws -> Bool {
+        util.log(.info, location, "Proceed storage new-userdata at local device", userId)
         do {
             // 1. User
             try setNewUserProfileAtLocal()
             rollbackStack.append(rollbackSetNewUserProfileAtLocal)
+            util.log(.info, location, "Successfully set profile at local", userId)
             
             // 2. Statistics
             try setNewStatAtLocal()
             rollbackStack.append(rollbackSetNewStatAtLocal)
+            util.log(.info, location, "Successfully set statistics at local", userId)
             
             // Init Log Manager
             try logManager.readyManager()
@@ -95,48 +109,56 @@ extension SignupLoadingService{
             // 3. AccessLog
             try setNewAccessLogAtLocal()
             rollbackStack.append(rollbackSetNewAccessLogAtLocal)
+            util.log(.info, location, "Successfully set access-log at local", userId)
             
             // 4. ChallengeLog
             try setNewChallengeLogAtLocal()
             rollbackStack.append(rollbackSetNewChallengeLogAtLocal)
+            util.log(.info, location, "Successfully set challenge-log at local", userId)
             
             rollbackStack.removeAll()
             return true
             
         } catch {
-            print("Service: There was an unexpected error while Set New UserData at Local in 'SignupLoadingService'")
+            util.log(.critical, location, "Unexpected error while processing storage new user data at local device", userId)
             return false
         }
     }
     
     // Server
     private func serverExecutor() async throws -> Bool {
+        util.log(.info, location, "Proceed storage new-userdata at server", userId)
         do {
             // 1. User
             try await setNewUserProfileAtServer()
             rollbackStack.append(rollbackSetNewUserProfileAtServer)
+            util.log(.info, location, "Successfully set profile at server", userId)
             
             // 2. Statistics
             try await setNewStatAtServer()
             rollbackStack.append(rollbackSetNewStatAtServer)
+            util.log(.info, location, "Successfully set statistics at server", userId)
             
             // 3. AccessLog
             try await setNewAccessLogAtServer()
             rollbackStack.append(rollbackSetNewAccessLogAtServer)
+            util.log(.info, location, "Successfully set access-log at server", userId)
             
             // 4. ChallengeLog
             try await setNewChallengeLogAtServer()
             rollbackStack.append(rollbackSetNewChallengeLogAtServer)
+            util.log(.info, location, "Successfully set challenge-log at server", userId)
             
             // 5. Challenge
             try await setNewChallengeAtLocal()
             rollbackStack.append(rollbackSetNewChallengeAtLocal)
+            util.log(.info, location, "Successfully set challenge-data from server", userId)
             
             rollbackStack.removeAll()
             return true
             
         } catch {
-            print("Service: There was an unexpected error while Set New UserData at Server in 'SignupLoadingService'")
+            util.log(.critical, location, "Unexpected error while processing storage new user data at server", userId)
             return false
         }
     }
@@ -255,6 +277,25 @@ extension SignupLoadingService{
     }
     private func rollbackSetNewChallengeAtLocal() throws {
         try challengeManager.delChallenge(with: newProfile.user_id)
+    }
+}
+
+//===============================
+// MARK: - Inspection
+//===============================
+extension SignupLoadingService{
+    
+    private func dataInspection(with profile: UserObject) {
+        var log = """
+            * ID: \(profile.user_id)
+            * Email: \(profile.user_email)
+            * NickName: \(profile.user_name)
+            * Status: \(profile.user_status)
+            * CreateAt: \(profile.user_created_at)
+            * LoginAt: \(profile.user_login_at)
+            * UpdateAt: \(profile.user_updated_at)
+            """
+        print(log)
     }
 }
 

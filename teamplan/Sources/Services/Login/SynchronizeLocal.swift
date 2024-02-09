@@ -71,7 +71,7 @@ extension SynchronizeLocal{
             util.log(LogLevel.info, location, "Statistics Synchronize Complete", userId)
             
             // Init Log Manager
-            self.logManager.readyParameter(userId: userId)
+            self.logManager.readyParameter(userId: userId, caller: location)
             try self.logManager.readyManager()
             util.log(LogLevel.info, location, "LogManager Initialize Complete", userId)
             

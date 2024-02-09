@@ -57,7 +57,7 @@ extension LoginLoadingService{
         // prepare parameters
         self.loginDate = Date()
         self.userId = try extractUserId(from: dto)
-        self.logManager.readyParameter(userId: userId)
+        self.logManager.readyParameter(userId: userId, caller: location)
         util.log(LogLevel.info, location, "Login Process Start", userId)
         
         // Step1. data inspection
