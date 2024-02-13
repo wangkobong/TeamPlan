@@ -352,7 +352,7 @@ extension LogManager{
     // Check: Log Size
     private func shouldCreateNewAccessLog() throws -> Bool {
         let log = try accessLogCD.getLog(with: userId, and: accessLogId)
-        return log.log_access.count < accessLogLimit
+        return log.log_access.count > accessLogLimit
     }
     
     // Check: Log Count
