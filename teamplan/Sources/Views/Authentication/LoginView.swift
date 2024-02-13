@@ -157,10 +157,13 @@ extension LoginView {
                             withAnimation(.spring()) {
                                 mainViewState = .signup
                             }
+                        /*
                         case .unknown:
                             isLoading = false
                             break
+                        */
                         }
+                        
                     } catch {
                         print(error.localizedDescription)
                         isLoading = false

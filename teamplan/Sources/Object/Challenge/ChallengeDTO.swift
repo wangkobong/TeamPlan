@@ -45,67 +45,79 @@ struct ChallengeDTO{
     //--------------------
     // content
     //--------------------
+    // for index (essential)
     let id: Int
     let type: ChallengeType
     let title: String
-    let desc: String
-    let goal: Int
-    let reward: Int
+    let isComplete: Bool
+    let isSelected: Bool
+    let isUnlock: Bool
+    
+    // for detail (optional)
+    let desc: String?
+    let goal: Int?
+    let reward: Int?
     let step: Int?
-    let isComplete: Bool?
-    let isSelected: Bool?
-    let isUnlock: Bool?
-    let setMyChallengeAt: Date?
-    let disableMyChallengeAt: Date?
     let completeAt: Date?
+    
     let prevId: Int?
     let prevTitle: String?
     let prevDesc: String?
     let prevGoal: Int?
     
+    // for log (optional)
+    let setMyChallengeAt: Date?
+    let disableMyChallengeAt: Date?
+    
     //--------------------
     // constructor
     //--------------------
-    // Detail
-    init(with object: ChallengeObject, and prevObject: ChallengeObject){
+    // for index
+    init(forIndex object: ChallengeObject){
         self.id = object.chlg_id
         self.type = object.chlg_type
         self.title = object.chlg_title
-        self.desc = object.chlg_desc
-        self.goal = Int(object.chlg_goal)
-        self.reward = Int(object.chlg_reward)
-        self.prevId = prevObject.chlg_id
-        self.prevTitle = prevObject.chlg_title
-        self.prevDesc = prevObject.chlg_desc
-        self.prevGoal = prevObject.chlg_goal
-        self.step = object.chlg_step
         self.isComplete = object.chlg_status
         self.isSelected = object.chlg_selected
         self.isUnlock = object.chlg_lock
-        self.setMyChallengeAt = object.chlg_selected_at
-        self.disableMyChallengeAt = object.chlg_unselected_at
-        self.completeAt = object.chlg_finished_at
-    }
-    
-    // Total
-    init(with object: ChallengeObject){
-        self.id = object.chlg_id
-        self.type = object.chlg_type
-        self.title = object.chlg_title
-        self.desc = object.chlg_desc
-        self.goal = Int(object.chlg_goal)
-        self.reward = Int(object.chlg_reward)
+        
+        self.desc = nil
+        self.goal = nil
+        self.reward = nil
+        self.step = nil
+        self.completeAt = nil
+        
         self.prevId = nil
         self.prevTitle = nil
         self.prevDesc = nil
         self.prevGoal = nil
-        self.step = object.chlg_step
+        
+        self.setMyChallengeAt = nil
+        self.disableMyChallengeAt = nil
+    }
+    
+    // for detail
+    init(forDetail object: ChallengeObject, previous prevObject: ChallengeObject? = nil){
+        self.id = object.chlg_id
+        self.type = object.chlg_type
+        self.title = object.chlg_title
         self.isComplete = object.chlg_status
         self.isSelected = object.chlg_selected
         self.isUnlock = object.chlg_lock
+        
+        self.desc = object.chlg_desc
+        self.goal = Int(object.chlg_goal)
+        self.reward = Int(object.chlg_reward)
+        self.step = object.chlg_step
+        self.completeAt = object.chlg_finished_at
+        
+        self.prevId = prevObject?.chlg_id
+        self.prevTitle = prevObject?.chlg_title
+        self.prevDesc = prevObject?.chlg_desc
+        self.prevGoal = prevObject?.chlg_goal
+        
         self.setMyChallengeAt = object.chlg_selected_at
         self.disableMyChallengeAt = object.chlg_unselected_at
-        self.completeAt = object.chlg_finished_at
     }
 }
 

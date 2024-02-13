@@ -35,40 +35,24 @@ final class AuthenticationViewModel: ObservableObject{
     // Google Login
     //====================
     func signInGoogle() async throws -> AuthSocialLoginResDTO {
-        return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<AuthSocialLoginResDTO, Error>) in
-            Task {
-                await loginService.loginGoogle { result in
-                    switch result {
-                    case .success(let user):
-                        switch user.status {
-                        case .exist:
-                            print("########### Exist ###########")
-                            DispatchQueue.main.async {
-                                self.signupUser = user
-                            }
-                        case .new:
-                            print("########### New User ###########")
-                            DispatchQueue.main.async {
-                                self.signupUser = user
-                            }
-                        case .unknown:
-                            print("########### UNKNOWN ###########")
-                            DispatchQueue.main.async {
-                                self.signupUser = nil
-                            }
-                        }
-                        continuation.resume(returning: user)
-                        let keychain = KeychainSwift()
-                        keychain.set(user.idToken, forKey: "idToken")
-                        keychain.set(user.accessToken, forKey: "accessToken")
-                    case .failure(let error):
-                        // Login Fail
-                        print("########### Error ###########")
-                        print(error)
-                        continuation.resume(throwing: error)
-                    }
-                }
+        do {
+            let user = try await loginService.loginGoole()
+            
+            switch user.status {
+            case .exist:
+                self.signupUser = user
+            case .new:
+                self.signupUser = user
             }
+            let keychain = KeychainSwift()
+            keychain.set(user.idToken, forKey: "idToken")
+            keychain.set(user.accessToken, forKey: "accessToken")
+            
+            return user
+            
+        } catch {
+            print("[Critical]AuthViewModel - Throw: There was an unexpected error while proceed social login")
+            throw error
         }
     }
     

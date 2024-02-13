@@ -167,7 +167,6 @@ extension SynchronizeLocal{
     private func resetLocalUser(with object: UserObject, and loginDate: Date) throws {
         try userCD.setUser(with: object, and: loginDate)
     }
-    
     private func rollbackResetUser() throws {
         try userCD.deleteUser(with: userId)
     }
@@ -176,7 +175,6 @@ extension SynchronizeLocal{
     private func resetLocalStat(with object: StatisticsObject) throws {
         try statCD.setStatistics(with: object)
     }
-    
     private func rollbackResetStat() throws {
         try statCD.deleteStatistics(with: userId)
     }
@@ -185,7 +183,6 @@ extension SynchronizeLocal{
     private func resetLocalAccessLog(with logList: [AccessLog]) throws {
         try logManager.setAccessLogAtLocal(with: logList)
     }
-    
     private func rollbackResetAccessLog() throws {
         try logManager.deleteAllAccessLogAtLocal()
     }
@@ -194,18 +191,15 @@ extension SynchronizeLocal{
     private func resetLocalChallengeLog(with logList: [ChallengeLog]) throws {
         try logManager.setChallengeLogWithList(with: logList)
     }
-    
     private func rollbackResetChallengeLog() throws {
         try logManager.deleteAllChallengeLogAtLocal()
     }
     
     // Challenge
     private func resetLocalChallenge(stat: StatisticsObject, logList: [ChallengeLog], challengeList: [ChallengeObject]) throws {
-        // apply local
         try challengeManager.setChallenge()
-        // restore progress
         for log in logList {
-            try restoreChallengeProgress(stat: stat, challengeLog: log.log_complete, challengeList: challengeList)
+            try restoreExecutor(stat: stat, challengeLog: log.log_complete, challengeList: challengeList)
         }
     }
     
@@ -215,45 +209,92 @@ extension SynchronizeLocal{
 }
 
 //===============================
-// MARK: - Support Function
+// MARK: - Restore Challenge
 //===============================
 extension SynchronizeLocal{
     
-    private func restoreChallengeProgress(stat: StatisticsObject, challengeLog: [Int:Date], challengeList: [ChallengeObject]) throws {
-        util.log(LogLevel.info, location, "Start Restore Challenge Progress, target: \(challengeLog.count)", userId)
+    //-------------------------------
+    // Executor
+    //-------------------------------
+    private func restoreExecutor(stat: StatisticsObject, challengeLog: [Int:Date], challengeList: [ChallengeObject]) throws {
+        util.log(.info, location, "Proceed challenge resotre process, target: \(challengeLog.count)", userId)
         
         // restore progress
         for (key, date) in challengeLog {
-            guard let challenge = challengeList.first(where: { $0.chlg_id == key }) else {
-                throw SyncLocalError.UnexpectedChallengeProgressRestoreError
-            }
-            // apply restore
-            try updateChallenge(object: challenge, finishDate: date)
-            restoreChallengeStep(type: challenge.chlg_type, step: challenge.chlg_step)
-            util.log(LogLevel.info, location, "Restore Challenge Progress Complete: restored challengeID = \(challenge.chlg_id)", userId)
+            let targetChallenge = try restoreTargetChallenge(challengeList: challengeList, challengeId: key, finishDate: date)
+            try restoreNextChallenge(challengeList: challengeList, challenge: targetChallenge)
         }
         try updateStatistics()
-        util.log(LogLevel.info, location, "Restore Complete: \n* Applied ChallengeStep: \(challengeStep)", userId)
+        util.log(.info, location, "Restore Complete: \n* Applied ChallengeStep: \(challengeStep)", userId)
     }
     
-    // Restore Challenge Step
-    private func restoreChallengeStep(type: ChallengeType, step: Int) {
+    //-------------------------------
+    // Restore: target challenge
+    //-------------------------------
+    private func restoreTargetChallenge(challengeList: [ChallengeObject], challengeId: Int, finishDate: Date) throws -> ChallengeObject {
+        // fetch target cahllenge
+        guard let challenge = challengeList.first(where: { $0.chlg_id == challengeId }) else {
+            throw SyncLocalError.UnexpectedChallengeProgressRestoreError
+        }
+        // update challenge & step
+        try updateTargetChallenge(object: challenge, finishDate: finishDate)
+        updateChallengeStep(type: challenge.chlg_type, step: challenge.chlg_step)
+        
+        util.log(.info, location, "Restored Target Challenge Complete: restored challengeID = \(challenge.chlg_id)", userId)
+        return challenge
+    }
+    
+    //-------------------------------
+    // Restore: next challenge
+    //-------------------------------
+    private func restoreNextChallenge(challengeList: [ChallengeObject], challenge: ChallengeObject) throws {
+        // fetch next challenge
+        guard let prevChallenge = challengeList.first(where: {
+            ( $0.chlg_type == challenge.chlg_type ) && ( $0.chlg_step == challenge.chlg_step + 1 )
+        }) else {
+            throw SyncLocalError.UnexpectedChallengeProgressRestoreError
+        }
+        // update challenge
+        try updateNextChallenge(object: prevChallenge)
+        
+        util.log(.info, location, "Restored Next Challenge Complete: restored challengeID = \(prevChallenge.chlg_id)", userId)
+    }
+    
+    //-------------------------------
+    // Restore: support
+    //-------------------------------
+    // update: challenge step
+    private func updateChallengeStep(type: ChallengeType, step: Int) {
         self.challengeStep[type.rawValue] = step + 1
     }
     
-    // Apply Challenge Update
-    private func updateChallenge(object: ChallengeObject, finishDate: Date) throws {
-        let updated = ChallengeUpdateDTO(challengeId: object.chlg_id, userId: userId,
-                                         newSelected: false, newStatus: true, newLock: false,
-                                         newFinishedAt: finishDate
+    // update: challenge object
+    private func updateTargetChallenge(object: ChallengeObject, finishDate: Date) throws {
+        let updated = ChallengeUpdateDTO(
+            challengeId: object.chlg_id,
+            userId: userId,
+            newStatus: true,
+            newLock: false,
+            newFinishedAt: finishDate
         )
         try challengeCD.updateChallenge(with: updated)
     }
     
-    // Apply Statistics Upadte
+    // update: challenge object
+    private func updateNextChallenge(object: ChallengeObject) throws {
+        let updated = ChallengeUpdateDTO(
+            challengeId: object.chlg_id,
+            userId: userId,
+            newLock: false
+        )
+        try challengeCD.updateChallenge(with: updated)
+    }
+    
+    // update: statistics object
     private func updateStatistics() throws {
         let updated = StatUpdateDTO(userId: userId, newChallengeStep: challengeStep)
         try statCD.updateStatistics(with: updated)
+        challengeStep = try statCD.getStatisticsForObject(with: userId).stat_chlg_step
     }
 }
 

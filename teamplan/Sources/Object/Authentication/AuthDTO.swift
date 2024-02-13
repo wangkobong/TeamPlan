@@ -53,5 +53,4 @@ struct AuthSocialLoginResDTO{
 enum UserType: String{
     case new = "Normal: User User"
     case exist = "Normal: Exist User"
-    case unknown = "Caution: Unknown User"
 }

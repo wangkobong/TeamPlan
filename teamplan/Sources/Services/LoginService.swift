@@ -17,25 +17,8 @@ final class LoginService{
     //====================
     // MARK: GoogleLogin
     //====================
-    func loginGoogle(result: @escaping(Result<AuthSocialLoginResDTO, Error>) -> Void) async {
-        
-        await google.login(){ loginResult in
-            switch loginResult {
-            // Authentication Success: NewUser & Exist
-            case .success(let userInfo):
-                result(.success(userInfo))
-                break
-            // Authentication Failure: Unknown
-            case .failure(let error):
-                print(error)
-                break
-            }
-        }
-                
-    // TODO: case1. missing TopViewController
-    // TODO: case2. firebase authentication error
-    // TODO: case3. Google Social Login error
-
+    func loginGoole() async throws -> AuthSocialLoginResDTO {
+        return try await google.login()
     }
     
     //====================
