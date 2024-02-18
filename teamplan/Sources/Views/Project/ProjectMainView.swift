@@ -12,6 +12,8 @@ struct ProjectMainView: View {
     
     @StateObject var projectViewModel = ProjectViewModel()
     
+    @State private var isAddProjectViewActive = false
+    
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -31,6 +33,9 @@ struct ProjectMainView: View {
                     Spacer()
                 }
                 .padding(.horizontal, 16)
+                .sheet(isPresented: $isAddProjectViewActive) {
+                    AddProjectView()
+                }
             }
         }
 
@@ -71,7 +76,7 @@ extension ProjectMainView {
                 Image(systemName: "plus")
                     .foregroundColor(.theme.mainPurpleColor)
                     .imageScale(.small)
-                Text("프로젝트")
+                Text("목표")
                     .font(.appleSDGothicNeo(.semiBold, size: 14))
                     .foregroundColor(.theme.mainPurpleColor)
                     .offset(x: -3)
@@ -84,7 +89,7 @@ extension ProjectMainView {
             )
             .offset(x: 0)
             .onTapGesture {
-                print("프로젝트 생성하기")
+                isAddProjectViewActive.toggle()
             }
         }
 
