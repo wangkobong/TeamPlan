@@ -34,7 +34,17 @@ struct ProjectCardView: View {
                 }
                 Spacer()
                 
-                Image("project_menu_btn")
+                Menu {
+                    Button("삭제", action: {
+                        print("삭제")
+                    })
+                    Button("수정 및 기한 연장", action: {
+                        print("수정 및 기한 연장")
+                    })
+
+                } label: {
+                    Image("project_menu_btn")
+                }
             }
             .padding(.leading, 24)
             .padding(.trailing, 20)
@@ -55,6 +65,7 @@ struct ProjectCardView: View {
                             Color.theme.mainPurpleColor
                         )
                         .frame(width: 45, height: 8)
+
                     
                     Image("project_bomb_smile")
                         .offset(x: 22.5)
