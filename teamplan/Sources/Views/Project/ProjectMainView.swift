@@ -8,16 +8,32 @@
 
 import SwiftUI
 
+enum ProjectViewType {
+    case projectDetail
+}
+
 struct ProjectMainView: View {
     
     @StateObject var projectViewModel = ProjectViewModel()
     
     @State private var isAddProjectViewActive = false
+    @State private var isPushProjectDetailView = false
+    
+    @State var path: [ProjectViewType] = []
+    @State var projectDetailViewIndex = 0
     
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack {
+                    NavigationLink(
+                        destination: ProjectDetailView(index: projectDetailViewIndex)
+                            .environmentObject(projectViewModel),
+                        isActive: $isPushProjectDetailView) {
+                        
+                    }
+                    .opacity(0)
+                    
                     userNameArea
                     
                     Spacer()
@@ -29,7 +45,7 @@ struct ProjectMainView: View {
                         .frame(height: 15)
                     
                     projectsArea
-                    
+
                     Spacer()
                 }
                 .padding(.horizontal, 16)
@@ -168,11 +184,14 @@ extension ProjectMainView {
     private var projectsArea: some View {
         VStack {
             VStack {
-                ForEach(projectViewModel.projects, id: \.self) { project in
+                ForEach(Array(projectViewModel.projects.enumerated()), id: \.1.id) { index, project in
                     ProjectCardView(project: project)
-
+                        .onTapGesture {
+                            projectDetailViewIndex = index
+                            isPushProjectDetailView.toggle()
+                            print("Index: \(index)")
+                        }
                 }
-
             }
         }
     }
