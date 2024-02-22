@@ -228,14 +228,14 @@ extension ChallengesView {
                                 .onTapGesture {
                                     self.indexForAlert = absoluteIndex
                                     self.setAlert(challenge: item.wrappedValue)
-                                    print("-------")
-                                    print("desc: \(item.wrappedValue.chlg_desc)")
-                                    print("desc2: \(item.wrappedValue.chlg_title)")
-                                    print("isSelected: \(item.wrappedValue.chlg_selected)")
-                                    print("lock: \(item.wrappedValue.chlg_lock)")
-                                    print("isComplete: \(item.wrappedValue.chlg_status)")
-                                    print("prevGoal: \(item.wrappedValue.chlg_goal)")
-                                    print("prevTitle: \(item.wrappedValue.chlg_title)")
+//                                    print("-------")
+//                                    print("desc: \(item.wrappedValue.chlg_desc)")
+//                                    print("desc2: \(item.wrappedValue.chlg_title)")
+//                                    print("isSelected: \(item.wrappedValue.chlg_selected)")
+//                                    print("lock: \(item.wrappedValue.chlg_lock)")
+//                                    print("isComplete: \(item.wrappedValue.chlg_status)")
+//                                    print("prevGoal: \(item.wrappedValue.chlg_goal)")
+//                                    print("prevTitle: \(item.wrappedValue.chlg_title)")
                                 }
                         }
                     }

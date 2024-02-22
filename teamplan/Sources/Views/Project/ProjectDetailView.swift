@@ -11,17 +11,19 @@ import SwiftUI
 struct ProjectDetailView: View {
     
     @Environment(\.dismiss) var dismiss
-//    @EnvironmentObject var projectViewModel: ProjectViewModel
+    @EnvironmentObject var projectViewModel: ProjectViewModel
     let index: Int
     
     var body: some View {
-        ScrollView {
-            VStack {
-                header
-                
-                Divider()
-                    .padding(.horizontal, 16)
-            }
+        VStack {
+            header
+            
+            Divider()
+                .padding(.horizontal, 16)
+            
+            contents
+            
+            button
         }
         .navigationBarBackButtonHidden(true)
         .navigationTitle("막걸리 브랜딩어쩌구")
@@ -37,9 +39,10 @@ struct ProjectDetailView: View {
             }
         }
 //        .navigationTitle("\(projectViewModel.projects[index].name)")
-//        .onAppear {
+        .onAppear {
 //            print("\(projectViewModel.projects[safe: index]?.toDos.count)")
-//        }
+            print("테스트: \(projectViewModel.projects[index].toDos)")
+        }
     }
 }
 
@@ -72,8 +75,8 @@ extension ProjectDetailView {
                         .foregroundColor(.theme.darkGreyColor)
                         .background(
                             Color.init(hex: "7248E1").opacity(0.5)
-                                .frame(height: 3) // underline's height
-                                .offset(y: 7) // underline's y pos
+                                .frame(height: 3)
+                                .offset(y: 7)
                         )
                     Spacer()
                 }
@@ -113,5 +116,74 @@ extension ProjectDetailView {
         .padding(.leading, 38)
         .padding(.trailing, 24)
 
+    }
+    
+    private var contents: some View {
+        ZStack{
+            if projectViewModel.projects[index].toDos.count == 1 {
+                ScrollView {
+                    
+                }
+            } else {
+                VStack {
+                    Spacer()
+                    projectEmpty
+                    Spacer()
+                }
+            }
+        }
+        .padding(.leading, 38)
+        .padding(.trailing, 24)
+
+    }
+    
+    private var projectEmpty: some View {
+        VStack {
+            
+            Image("project_empty")
+                .frame(width: 67, height: 68.5)
+                .padding(.bottom, 10)
+            
+            HStack {
+                Text("할 일이")
+                    .font(.appleSDGothicNeo(.regular, size: 16))
+                    .foregroundColor(.theme.blackColor)
+                Text("텅!")
+                    .font(.appleSDGothicNeo(.semiBold, size: 18))
+                    .foregroundColor(.theme.mainPurpleColor)
+                Text("비었어요")
+                    .font(.appleSDGothicNeo(.regular, size: 16))
+                    .foregroundColor(.theme.blackColor)
+            }
+            .multilineTextAlignment(.center)
+            
+            
+            Text("얼른 할 일을 추가해보세요")
+                .font(.appleSDGothicNeo(.regular, size: 16))
+                .foregroundColor(.theme.blackColor)
+        }
+
+    }
+    
+    private var button: some View {
+        
+        VStack {
+            Divider()
+                .padding(.bottom, 13)
+                .shadow(color: Color.black.opacity(0.3), radius: 5, x: 0, y: 2)
+            
+            
+            Text("프로젝트 완료하기")
+                .foregroundColor(.white)
+                .frame(height: 48)
+                .frame(maxWidth: .infinity)
+                .background(Color.theme.greyColor)
+                .cornerRadius(8)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 16)
+                .onTapGesture {
+                    print("프로젝트 완료")
+                }
+        }
     }
 }
