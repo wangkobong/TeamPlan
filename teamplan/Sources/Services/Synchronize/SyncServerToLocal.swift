@@ -8,20 +8,20 @@
 
 import Foundation
 
-final class SynchronizeServer {
+final class SyncServerToLocal {
     
     //================================
     // MARK: - Parameter
     //================================
     // for service
-    let userFS = UserServicesFirestore()
-    let userCD = UserServicesCoredata()
-    let statFS = StatisticsServicesFirestore()
-    let statCD = StatisticsServicesCoredata()
-    let accessLogFS = AccessLogServicesFirestore()
-    let accessLogCD = AccessLogServicesCoredata()
-    let challengeLogFS = ChallengeLogServicesFirestore()
-    let challengeLogCD = ChallengeLogServicesCoredata()
+    private let userFS = UserServicesFirestore()
+    private let userCD = UserServicesCoredata()
+    private let statFS = StatisticsServicesFirestore()
+    private let statCD = StatisticsServicesCoredata()
+    private let accessLogFS = AccessLogServicesFirestore()
+    private let accessLogCD = AccessLogServicesCoredata()
+    private let challengeLogFS = ChallengeLogServicesFirestore()
+    private let challengeLogCD = ChallengeLogServicesCoredata()
     
     private var logManager = LogManager()
     private var userId: String
@@ -33,8 +33,8 @@ final class SynchronizeServer {
     private var rollbackStack: [() throws -> Void ] = []
     
     // for log
-    let util = Utilities()
-    let location = "ServerSynchronizer"
+    private let util = Utilities()
+    private let location = "SyncServerToLocal"
     
     //===============================
     // MARK: - Initialize
@@ -58,7 +58,7 @@ final class SynchronizeServer {
 //===============================
 // MARK: - Executor
 //===============================
-extension SynchronizeServer{
+extension SyncServerToLocal{
     
     func syncExecutor(with syncDate: Date) async throws {
         do {
@@ -93,7 +93,7 @@ extension SynchronizeServer{
 //===============================
 // MARK: - Element
 //===============================
-extension SynchronizeServer{
+extension SyncServerToLocal{
 
     private func syncStatistics(at syncDate: Date) async throws {
         // prepare sync
@@ -135,7 +135,7 @@ extension SynchronizeServer{
 //===============================
 // MARK: - SP1: Fetch Local Data
 //===============================
-extension SynchronizeServer{
+extension SyncServerToLocal{
     
     // Statistics
     private func getStatFromLocal() throws -> StatisticsObject {
@@ -166,7 +166,7 @@ extension SynchronizeServer{
 //===============================
 // MARK: - SP2: Update Local UploadAt
 //===============================
-extension SynchronizeServer{
+extension SyncServerToLocal{
     
     // Statistics
     private func applyStatisticsUploadAt(with newDate: Date) throws {
@@ -206,7 +206,7 @@ extension SynchronizeServer{
 //===============================
 // MARK: - SP3: Update Server
 //===============================
-extension SynchronizeServer{
+extension SyncServerToLocal{
     
     // Statistics
     private func updateServerStatistics(with object: StatisticsObject) async throws {
