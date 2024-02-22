@@ -11,27 +11,33 @@ import Foundation
 final class HomeService {
     
     //===============================
-    // MARK: - Parameter Setting
+    // MARK: - Properties
     //===============================
     // for service
-    let userCD = UserServicesCoredata()
-    let projectCD = ProjectServicesCoredata()
-    let challenge: ChallengeService
-    let phrase = UserPhrase()
-    let userId: String
-    
+    private let userCD = UserServicesCoredata()
+    private let projectCD = ProjectServicesCoredata()
+    private let phrase = UserPhrase()
+    private let userId: String
+
     // for log
-    let util = Utilities()
-    let location = "HomeService"
+    private let util = Utilities()
+    private let location = "HomeService"
+    
+    // shared
+    let challenge: ChallengeService
     
     //===============================
     // MARK: - Initializer
     //===============================
+    /// 사용자 ID를 기반으로 `HomeService` 및 `ChallengeService` 인스턴스를 생성합니다.
+    /// - Parameter userId: 사용자 ID입니다.
     init(with userId: String){
         self.userId = userId
         self.challenge = ChallengeService(with: userId)
     }
     
+    /// `HomeService`에서 사용되는 `ChallengeService` 인스턴스의 필수적인 추가 초기화 작업을 수행합니다,
+    /// - Throws: 서비스 초기화 중 예상치 못한 오류가 발생한 경우 `HomeServiceError.UnexpectedInitError`가 발생합니다.
     func readyService() throws {
         do {
             try self.challenge.readyService()
@@ -45,6 +51,10 @@ final class HomeService {
     //===============================
     // MARK: - Generate Sentence
     //===============================
+    // MARK: - Generate Sentence
+    /// 랜덤한 문장을 생성하여 반환합니다.
+    /// - Returns: 생성된 문장입니다.
+    /// - Throws: 문장 생성에 실패한 경우 `HomeServiceError.InternalError`가 발생합니다.
     func getSentences() throws -> String {
         if let phrase = self.phrase.stringAry.randomElement() {
             return phrase
@@ -57,6 +67,10 @@ final class HomeService {
     //===============================
     // MARK: - get ProjectCard
     //===============================
+    // MARK: - Get ProjectCard
+    /// 사용자의 목표(project) 조회 후, 마감일이 가장 가까운 3개를 내림차순으로 정렬하여 반환합니다.
+    /// - Returns: `[ProjectCardDTO]` 목표(Project) 정보들 중, Card에 표현될 정보만 포함되어 있습니다.
+    /// - Throws: 조회 중 예상치 못한 오류가 발생한 경우 `HomeServiceError.UnexpectedProjectCardGetError`가 발생합니다.
     func getProjectCard() throws -> [ProjectCardDTO] {
         do {
             // Get All Projects
@@ -76,17 +90,11 @@ final class HomeService {
 // MARK: - MyChallenge
 //===============================
 extension HomeService{
-    // Get MyChallenge
+    /// 사용자의 '나의 도전과제' 목록을 조회합니다'
+    /// - Returns: 조회된 '나의 도전과제' 정보를 '[MyChallengeDTO]' 형태로 반환합니다. 단, 사용자가 '나의 도전과제' 를 지정하지 않은경우 '[]' 가 반환됩니다.
+    /// - Throws: 챌린지 조회 중 오류가 발생한 경우 해당 오류를 던집니다.
     func getMyChallenge() throws -> [MyChallengeDTO] {
-        try challenge.getMyChallenges()
-    }
-    // Disable MyChallenge
-    func disableMyChallenge(from challengeId: Int) throws {
-        try challenge.disableMyChallenge(with: challengeId)
-    }
-    // Reward MyChallenge
-    func rewardMyChallenge(from challengeId: Int) throws -> ChallengeRewardDTO {
-        try challenge.rewardMyChallenge(with: challengeId)
+        challenge.getMyChallenges()
     }
 }
 
