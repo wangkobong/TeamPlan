@@ -8,23 +8,22 @@
 
 import Foundation
 
-final class SynchronizeLocal{
+final class SyncLocaltoServer{
     
     //================================
-    // MARK: - Parameter
+    // MARK: - Properties
     //================================
     // for service
-    let util = Utilities()
-    let userFS = UserServicesFirestore()
-    let userCD = UserServicesCoredata()
-    let statFS = StatisticsServicesFirestore()
-    let statCD = StatisticsServicesCoredata()
-    let challengeCD = ChallengeServicesCoredata()
-    let challengeManager = ChallengeManager()
-    var logManager = LogManager()
-    
-    var userId: String
-    var challengeStep: [Int:Int] =  [
+    private let util = Utilities()
+    private let userFS = UserServicesFirestore()
+    private let userCD = UserServicesCoredata()
+    private let statFS = StatisticsServicesFirestore()
+    private let statCD = StatisticsServicesCoredata()
+    private let challengeCD = ChallengeServicesCoredata()
+    private let challengeManager = ChallengeManager()
+    private var logManager = LogManager()
+    private var userId: String = "unknown"
+    private var challengeStep: [Int:Int] =  [
         ChallengeType.serviceTerm.rawValue : 1,
         ChallengeType.totalTodo.rawValue : 1,
         ChallengeType.projectAlert.rawValue : 1,
@@ -34,28 +33,17 @@ final class SynchronizeLocal{
     private var rollbackStack: [() throws -> Void ] = []
     
     // for log
-    private let location = "LocalSynchronizer"
-    
-    
-    //===============================
-    // MARK: - Initialize
-    //===============================
-    init(){
-        self.userId = "unknown"
-    }
-    
-    func readySync(with userId: String) {
-        self.userId = userId
-    }
+    private let location = "SyncLocaltoServer"
 }
 
 //===============================
 // MARK: - Main Function
 //===============================
-extension SynchronizeLocal{
+extension SyncLocaltoServer{
     
-    func syncExecutor(with syncDate: Date) async throws {
+    func syncExecutor(with syncDate: Date, by userId: String) async throws {
         do {
+            self.userId = userId
             util.log(LogLevel.info, location, "Start Local Synchronize Process", userId)
             
             // User
@@ -116,7 +104,7 @@ extension SynchronizeLocal{
         }
     }
     // Test Function
-    private func clearLocal() throws {
+    private func clearLocalData() throws {
         try userCD.deleteUser(with: userId)
         try statCD.deleteStatistics(with: userId)
         try logManager.deleteAllAccessLogAtLocal()
@@ -128,7 +116,7 @@ extension SynchronizeLocal{
 //===============================
 // MARK: - SP1: Fetch Server Data
 //===============================
-extension SynchronizeLocal{
+extension SyncLocaltoServer{
     
     // User
     private func getUserFromServer() async throws -> UserObject {
@@ -161,7 +149,7 @@ extension SynchronizeLocal{
 //===============================
 // MARK: - SP2: Apply Server To Local
 //===============================
-extension SynchronizeLocal{
+extension SyncLocaltoServer{
     
     // User
     private func resetLocalUser(with object: UserObject, and loginDate: Date) throws {
@@ -211,7 +199,7 @@ extension SynchronizeLocal{
 //===============================
 // MARK: - Restore Challenge
 //===============================
-extension SynchronizeLocal{
+extension SyncLocaltoServer{
     
     //-------------------------------
     // Executor
