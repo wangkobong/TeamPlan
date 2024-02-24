@@ -45,6 +45,9 @@ struct ProjectCardView: View {
                 } label: {
                     Image("project_menu_btn")
                 }
+                .onTapGesture {
+                    // onTapGesture를 추가해서 ProjectCardView의 onTapGesture와 중복 안되게 처리
+                }
             }
             .padding(.leading, 24)
             .padding(.trailing, 20)

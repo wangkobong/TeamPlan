@@ -57,6 +57,10 @@ final class ProjectViewModel: ObservableObject {
                         ToDo(name: "깃허브 작업 깃허브 작업 깃허브 작업 깃허브 작업 깃허브 작업", isDone: false),
                         ToDo(name: "서비스 트러블 슈팅 정리", isDone: false),
                      ]),
+        ProjectModel(name: "투두없는 프로젝트",
+                     startDate: 10,
+                     endDate: 5,
+                     toDos:  [])
     ]
 
     init() {
