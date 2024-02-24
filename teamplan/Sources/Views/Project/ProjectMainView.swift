@@ -23,35 +23,33 @@ struct ProjectMainView: View {
     @State var projectDetailViewIndex = 0
     
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack {
-                    NavigationLink(
-                        destination: ProjectDetailView(index: projectDetailViewIndex)
-                            .environmentObject(projectViewModel),
-                        isActive: $isPushProjectDetailView) {
-                        
-                    }
-                    .opacity(0)
+        ScrollView {
+            VStack {
+                NavigationLink(
+                    destination: ProjectDetailView(index: projectDetailViewIndex)
+                        .environmentObject(projectViewModel),
+                    isActive: $isPushProjectDetailView) {
                     
-                    userNameArea
-                    
-                    Spacer()
-                        .frame(height: 15)
-                    
-                    informationArea
-                    
-                    Spacer()
-                        .frame(height: 15)
-                    
-                    projectsArea
+                }
+                .opacity(0)
+                
+                userNameArea
+                
+                Spacer()
+                    .frame(height: 15)
+                
+                informationArea
+                
+                Spacer()
+                    .frame(height: 15)
+                
+                projectsArea
 
-                    Spacer()
-                }
-                .padding(.horizontal, 16)
-                .sheet(isPresented: $isAddProjectViewActive) {
-                    AddProjectView()
-                }
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .sheet(isPresented: $isAddProjectViewActive) {
+                AddProjectView()
             }
         }
 

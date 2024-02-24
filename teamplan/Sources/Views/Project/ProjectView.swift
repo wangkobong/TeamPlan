@@ -14,8 +14,9 @@ struct ProjectView: View {
     private var isEmpty = false
     
     var body: some View {
-        VStack {
+        NavigationStack {
             navigationArea
+                .padding(.bottom, 20)
             Spacer()
             ZStack {
                 if isEmpty {
