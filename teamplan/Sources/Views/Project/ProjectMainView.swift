@@ -8,29 +8,48 @@
 
 import SwiftUI
 
+enum ProjectViewType {
+    case projectDetail
+}
+
 struct ProjectMainView: View {
     
     @StateObject var projectViewModel = ProjectViewModel()
     
+    @State private var isAddProjectViewActive = false
+    @State private var isPushProjectDetailView = false
+    
+    @State var path: [ProjectViewType] = []
+    @State var projectDetailViewIndex = 0
+    
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack {
-                    userNameArea
+        ScrollView {
+            VStack {
+                NavigationLink(
+                    destination: ProjectDetailView(index: projectDetailViewIndex)
+                        .environmentObject(projectViewModel),
+                    isActive: $isPushProjectDetailView) {
                     
-                    Spacer()
-                        .frame(height: 15)
-                    
-                    informationArea
-                    
-                    Spacer()
-                        .frame(height: 15)
-                    
-                    projectsArea
-                    
-                    Spacer()
                 }
-                .padding(.horizontal, 16)
+                .opacity(0)
+                
+                userNameArea
+                
+                Spacer()
+                    .frame(height: 15)
+                
+                informationArea
+                
+                Spacer()
+                    .frame(height: 15)
+                
+                projectsArea
+
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .sheet(isPresented: $isAddProjectViewActive) {
+                AddProjectView()
             }
         }
 
@@ -71,7 +90,7 @@ extension ProjectMainView {
                 Image(systemName: "plus")
                     .foregroundColor(.theme.mainPurpleColor)
                     .imageScale(.small)
-                Text("프로젝트")
+                Text("목표")
                     .font(.appleSDGothicNeo(.semiBold, size: 14))
                     .foregroundColor(.theme.mainPurpleColor)
                     .offset(x: -3)
@@ -84,7 +103,7 @@ extension ProjectMainView {
             )
             .offset(x: 0)
             .onTapGesture {
-                print("프로젝트 생성하기")
+                isAddProjectViewActive.toggle()
             }
         }
 
@@ -163,11 +182,14 @@ extension ProjectMainView {
     private var projectsArea: some View {
         VStack {
             VStack {
-                ForEach(projectViewModel.projects, id: \.self) { project in
+                ForEach(Array(projectViewModel.projects.enumerated()), id: \.1.id) { index, project in
                     ProjectCardView(project: project)
-
+                        .onTapGesture {
+                            projectDetailViewIndex = index
+                            isPushProjectDetailView.toggle()
+                            print("Index: \(index)")
+                        }
                 }
-
             }
         }
     }

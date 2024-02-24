@@ -13,7 +13,7 @@ struct ProjectModel: Identifiable, Hashable {
     let name: String
     let startDate: Int
     let endDate: Int
-    let toDos: [ToDo]
+    var toDos: [ToDo]
 }
 
 struct ToDo: Identifiable, Hashable {
