@@ -120,9 +120,15 @@ extension ProjectDetailView {
     
     private var contents: some View {
         ZStack{
-            if projectViewModel.projects[index].toDos.count == 1 {
+            if projectViewModel.projects[index].toDos.count > 1 {
                 ScrollView {
-                    
+                    Spacer()
+                        .frame(height: 25)
+                    VStack(spacing: 8) {
+                        ForEach(Array(projectViewModel.projects[index].toDos.enumerated()), id: \.1.id) { index, toDo in
+                            ToDoView(toDo: toDo)
+                        }
+                    }
                 }
             } else {
                 VStack {
