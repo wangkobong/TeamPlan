@@ -77,6 +77,24 @@ struct MyPageView: View {
         .init(accomplishTitle: "완료한 할 일", accomplishCount: 12)
     ]
     
+    var savedBomb = 3
+    var disappearedBomb = 3
+    
+    var savedBombAttrString: AttributedString {
+        let targetString = "\(self.savedBomb)개"
+        var targetAttributed = AttributedString(targetString)
+        targetAttributed.foregroundColor = .black
+        return targetAttributed
+    }
+    
+    var disappearedBombAttrString: AttributedString {
+        let targetString = "\(self.disappearedBomb)개"
+        var targetAttributed = AttributedString(targetString)
+        targetAttributed.foregroundColor = .black
+        return targetAttributed
+    }
+    
+    
     var leftRightInset: CGFloat = 16
     var body: some View {
         NavigationStack {
@@ -90,9 +108,9 @@ struct MyPageView: View {
                             .frame(alignment: .leading)
                             .font(.appleSDGothicNeo(.bold, size: 20))
                         HStack {
-                            Text("지켜낸 폭탄맨 3개") // bind actual data
+                            Text(AttributedString("지켜낸 폭탄맨 ") + self.savedBombAttrString)
                                 .foregroundStyle(.purple)
-                            Text("사라진 폭탄맨 3개") // bind actual data
+                            Text("사라진 폭탄맨 " + self.disappearedBombAttrString)
                                 .foregroundStyle(.purple)
                         }
                     }
