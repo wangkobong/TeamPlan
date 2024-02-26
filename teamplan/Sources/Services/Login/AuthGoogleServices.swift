@@ -23,11 +23,11 @@ final class AuthGoogleServices{
     // MARK: Login
     //====================
     // login process
-    func login() async throws -> AuthSocialLoginResDTO {
+    @MainActor func login() async throws -> AuthSocialLoginResDTO {
         util.log(.info, location, "Initialize Google-Social-Login process", "LoginProcess")
         
         // prepare google parameter
-        guard let topVC = await GoogleLoginHelper.shared.topViewController() else {
+        guard let topVC = GoogleLoginHelper.shared.topViewController() else {
             throw AuthGoogleError.UnexpectedTopViewControllerError
         }
         util.log(.info, location, "TopView Controller Ready", "LoginProcess")
