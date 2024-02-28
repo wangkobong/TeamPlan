@@ -14,30 +14,31 @@ final class GoogleLoginHelper{
     private init(){}
     
     @MainActor
-    func topViewController(controller: UIViewController? = nil) -> UIViewController? {
-        
-        let controller = controller ?? primaryRootViewController()
-
-        if let navigationController = controller as? UINavigationController {
-            return topViewController(controller: navigationController.visibleViewController)
+    func topViewController() -> UIViewController? {
+        // get root view controller
+        guard let windowScene = UIApplication.shared.connectedScenes.first(where: { $0 is UIWindowScene }) as? UIWindowScene,
+              let rootViewController = windowScene.windows.first?.rootViewController
+        else {
+            return nil
         }
-        if let tabController = controller as? UITabBarController {
-            if let selected = tabController.selectedViewController {
-                return topViewController(controller: selected)
+        // get topViewController through the view controller hierarchy
+        var topController = rootViewController
+        while true {
+            if let presented = topController.presentedViewController {
+                topController = presented
+            } else if
+                let navigationController = topController as? UINavigationController,
+                let visibleViewController = navigationController.visibleViewController {
+                topController = visibleViewController
+            } else if
+                let tabBarController = topController as? UITabBarController,
+                let selectedViewController = tabBarController.selectedViewController {
+                topController = selectedViewController
+            } else {
+                break
             }
         }
-        if let presented = controller?.presentedViewController {
-            return topViewController(controller: presented)
-        }
-        return controller
+        return topController
     }
-    
-    func primaryRootViewController() -> UIViewController? {
-        // Get the first window scene
-        if let windowScene = UIApplication.shared.connectedScenes.first(where: { $0 is UIWindowScene }) as? UIWindowScene,
-           let window = windowScene.windows.first {
-            return window.rootViewController
-        }
-        return nil
-    }
+
 }

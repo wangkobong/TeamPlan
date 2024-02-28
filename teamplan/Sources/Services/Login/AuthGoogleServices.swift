@@ -28,7 +28,7 @@ final class AuthGoogleServices{
         util.log(.info, location, "Initialize Google-Social-Login process", "LoginProcess")
         
         // prepare google parameter
-        guard let topVC = GoogleLoginHelper.shared.newTopViewController() else {
+        guard let topVC = GoogleLoginHelper.shared.topViewController() else {
             throw AuthGoogleError.UnexpectedTopViewControllerError
         }
         util.log(.info, location, "TopView Controller Ready", "LoginProcess")
