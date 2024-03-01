@@ -16,26 +16,26 @@ struct MainTapView: View {
         NavigationView {
             TabView(selection: $selectedTab) {
                 ProjectView()
-                .tabItem {
-                  Image("document")
-                  Text("프로젝트")                                                                                                                                                                                                                              
-                }
-                .tag(0)
+                    .tabItem {
+                        Image("document")
+                        Text("프로젝트")
+                    }
+                    .tag(0)
                 
                 HomeView()
                     .transition(.asymmetric(insertion: .move(edge: .bottom), removal: .move(edge: .top)))
-                .tabItem {
-                  Image(systemName: "house")
-                  Text("홈")
-                }
-                .tag(1)
+                    .tabItem {
+                        Image(systemName: "house")
+                        Text("홈")
+                    }
+                    .tag(1)
                 
-              Text("The Last Tab")
-                .tabItem {
-                  Image("account")
-                  Text("마이페이지")
-                }
-                .tag(2)
+                MyPageView()
+                    .tabItem {
+                        Image("account")
+                        Text("마이페이지")
+                    }
+                    .tag(2)
             }
             .accentColor(.theme.mainPurpleColor)
         }

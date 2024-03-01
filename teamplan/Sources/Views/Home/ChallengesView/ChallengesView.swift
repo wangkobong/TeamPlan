@@ -59,10 +59,8 @@ struct ChallengesView: View {
             .navigationTitle("도전과제")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-
                     Button {
                         dismiss.callAsFunction()
-                        
                     } label: {
                         Image("left_arrow_home")
                     }
