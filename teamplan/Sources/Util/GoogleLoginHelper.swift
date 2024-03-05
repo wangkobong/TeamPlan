@@ -21,24 +21,20 @@ final class GoogleLoginHelper{
         else {
             return nil
         }
-        // get topViewController through the view controller hierarchy
-        var topController = rootViewController
-        while true {
-            if let presented = topController.presentedViewController {
-                topController = presented
-            } else if
-                let navigationController = topController as? UINavigationController,
-                let visibleViewController = navigationController.visibleViewController {
-                topController = visibleViewController
-            } else if
-                let tabBarController = topController as? UITabBarController,
-                let selectedViewController = tabBarController.selectedViewController {
-                topController = selectedViewController
-            } else {
-                break
-            }
-        }
-        return topController
+        // get topViewController in a recursive way from the view controller hierarchy
+        return findTopViewController(from: rootViewController)
     }
 
+    private func findTopViewController(from viewController: UIViewController) -> UIViewController {
+        if let presentedViewController = viewController.presentedViewController {
+            return findTopViewController(from: presentedViewController)
+        } else if let navigationController = viewController as? UINavigationController,
+                  let visibleViewController = navigationController.visibleViewController {
+            return findTopViewController(from: visibleViewController)
+        } else if let tabBarController = viewController as? UITabBarController,
+                  let selectedViewController = tabBarController.selectedViewController {
+            return findTopViewController(from: selectedViewController)
+        }
+        return viewController
+    }
 }
