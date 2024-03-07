@@ -14,30 +14,27 @@ final class GoogleLoginHelper{
     private init(){}
     
     @MainActor
-    func topViewController(controller: UIViewController? = nil) -> UIViewController? {
-        
-        let controller = controller ?? primaryRootViewController()
-
-        if let navigationController = controller as? UINavigationController {
-            return topViewController(controller: navigationController.visibleViewController)
+    func topViewController() -> UIViewController? {
+        // get root view controller
+        guard let windowScene = UIApplication.shared.connectedScenes.first(where: { $0 is UIWindowScene }) as? UIWindowScene,
+              let rootViewController = windowScene.windows.first?.rootViewController
+        else {
+            return nil
         }
-        if let tabController = controller as? UITabBarController {
-            if let selected = tabController.selectedViewController {
-                return topViewController(controller: selected)
-            }
-        }
-        if let presented = controller?.presentedViewController {
-            return topViewController(controller: presented)
-        }
-        return controller
+        // get topViewController in a recursive way from the view controller hierarchy
+        return findTopViewController(from: rootViewController)
     }
-    
-    func primaryRootViewController() -> UIViewController? {
-        // Get the first window scene
-        if let windowScene = UIApplication.shared.connectedScenes.first(where: { $0 is UIWindowScene }) as? UIWindowScene,
-           let window = windowScene.windows.first {
-            return window.rootViewController
+
+    private func findTopViewController(from viewController: UIViewController) -> UIViewController {
+        if let presentedViewController = viewController.presentedViewController {
+            return findTopViewController(from: presentedViewController)
+        } else if let navigationController = viewController as? UINavigationController,
+                  let visibleViewController = navigationController.visibleViewController {
+            return findTopViewController(from: visibleViewController)
+        } else if let tabBarController = viewController as? UITabBarController,
+                  let selectedViewController = tabBarController.selectedViewController {
+            return findTopViewController(from: selectedViewController)
         }
-        return nil
+        return viewController
     }
 }

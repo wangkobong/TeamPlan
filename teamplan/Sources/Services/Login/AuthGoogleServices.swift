@@ -23,7 +23,8 @@ final class AuthGoogleServices{
     // MARK: Login
     //====================
     // login process
-    @MainActor func login() async throws -> AuthSocialLoginResDTO {
+    @MainActor
+    func login() async throws -> AuthSocialLoginResDTO {
         util.log(.info, location, "Initialize Google-Social-Login process", "LoginProcess")
         
         // prepare google parameter
