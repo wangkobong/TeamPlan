@@ -29,6 +29,13 @@
         <attribute name="log_upload_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="log_user_id" optional="YES" attributeType="String"/>
     </entity>
+    <entity name="CoreValueEntity" representedClassName="CoreValueEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="drop_convert_ratio" optional="YES" attributeType="Float" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="project_regist_limit" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="sync_cycle" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="todo_regist_limit" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="user_id" optional="YES" attributeType="String"/>
+    </entity>
     <entity name="ProjectEntity" representedClassName="ProjectEntity" syncable="YES" codeGenerationType="class">
         <attribute name="proj_alerted" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="proj_changed_at" attributeType="Date" usesScalarValueType="NO"/>
