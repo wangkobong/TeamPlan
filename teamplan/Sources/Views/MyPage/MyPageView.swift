@@ -57,7 +57,8 @@ struct MyPageView: View {
                     .frame(height: 60)
                 
                 HStack(spacing: 20) {
-                    Image("project_empty")
+//                    Image("project_empty")
+                    Image(uiImage: Gen.Images.projectEmpty.image)
                     
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(alignment: .center, spacing: 4) {
