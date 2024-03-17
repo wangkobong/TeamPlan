@@ -27,6 +27,9 @@ let project = Project(
             infoPlist: "teamplan/Info.plist",
             sources: ["teamplan/Sources/**"],
             resources: ["teamplan/Resources/**"],
+            scripts: [
+                .pre(script: "${PROJECT_DIR}/teamplan/Tools/swiftgen config run --config \"${PROJECT_DIR}/teamplan/Resources/swiftgen.yml\"", name: "Gen")
+            ],
             dependencies: [
                 .package(product: "GoogleSignIn"),
                 .package(product: "GoogleSignInSwift"),
