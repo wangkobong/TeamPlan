@@ -71,9 +71,11 @@ struct LoginView: View {
     private var buttons: some View {
         VStack(spacing: 18) {
             SignInWithAppleButton(
-                onRequest: { request in
+                onRequest: {
+                    request in
+                    self.authViewModel.requestNonceSignInApple()
                     request.requestedScopes = [.fullName, .email]
-                    request.nonce = HashSHA256().hash(self.authViewModel.rawNonce)
+                    request.nonce = self.authViewModel.nonce
                 },
                 onCompletion: { result in
                     switch result {
@@ -88,11 +90,11 @@ struct LoginView: View {
                                 print("\(appleIDToken.debugDescription)")
                                 return
                             }
-
+                            
                             let credential = OAuthProvider.credential(
                                 withProviderID: "apple.com",
                                 idToken: idTokenString,
-                                rawNonce: self.authViewModel.rawNonce
+                                rawNonce: self.authViewModel.nonce
                             )
                             Auth.auth().signIn(with: credential) { (authResult, error) in
                                 if let error = error {
@@ -106,54 +108,54 @@ struct LoginView: View {
                             break
                         }
                     case .failure(let error):
-                         print("Apple 로그인 실패: \(error.localizedDescription)")
-                     }
-                 }
-             )
-             .padding(.horizontal)
-             .frame(height: 48)
-             .frame(maxWidth: .infinity)
-             .foregroundColor(Gen.Colors.blackColor.swiftUIColor)
-             .background(
-                 RoundedRectangle(cornerRadius: 4)
-                     .stroke(Gen.Colors.blackColor.swiftUIColor, lineWidth: 1)
-             )
-             
-             GoogleSignInButton(viewModel: self.signInViewModel) {
-                 Task {
-                     do {
-                         self.isLoading = true
-                         let user = try await authViewModel.signInGoogle()
-                         
-                         switch user.status {
-                         case .exist:
-                             if await authViewModel.tryLogin() {
-                                 self.isLoading = false
-                                 withAnimation(.spring()) {
-                                     self.mainViewState = .main
-                                 }
-                             } else {
-                                 self.isLoading = false
-                                 self.showAlert = true
-                             }
-                             
-                         case .new:
-                             self.isLoading = false
-                             withAnimation(.spring()) {
-                                 self.mainViewState = .signup
-                             }
-                         }
-                         
-                     } catch {
-                         print(error.localizedDescription)
-                         self.isLoading = false
-                     }
-                 }
-             }
-         }
-         .padding(.horizontal, 55)
-     }
- }
+                        print("Apple 로그인 실패: \(error.localizedDescription)")
+                    }
+                }
+            )
+            .padding(.horizontal)
+            .frame(height: 48)
+            .frame(maxWidth: .infinity)
+            .foregroundColor(Gen.Colors.blackColor.swiftUIColor)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(Gen.Colors.blackColor.swiftUIColor, lineWidth: 1)
+            )
+            
+            GoogleSignInButton(viewModel: self.signInViewModel) {
+                Task {
+                    do {
+                        self.isLoading = true
+                        let user = try await authViewModel.signInGoogle()
+                        
+                        switch user.status {
+                        case .exist:
+                            if await authViewModel.tryLogin() {
+                                self.isLoading = false
+                                withAnimation(.spring()) {
+                                    self.mainViewState = .main
+                                }
+                            } else {
+                                self.isLoading = false
+                                self.showAlert = true
+                            }
+                            
+                        case .new:
+                            self.isLoading = false
+                            withAnimation(.spring()) {
+                                self.mainViewState = .signup
+                            }
+                        }
+                        
+                    } catch {
+                        print(error.localizedDescription)
+                        self.isLoading = false
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 55)
+    }
+}
 
  struct LoginView_Previews: PreviewProvider {
      static var previews: some View {

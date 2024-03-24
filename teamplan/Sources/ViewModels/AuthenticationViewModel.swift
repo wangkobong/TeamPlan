@@ -6,34 +6,32 @@
 //  Copyright © 2023 team1os. All rights reserved.
 //
 import Foundation
-import GoogleSignIn
 import KeychainSwift
-import FirebaseAuth
 import AuthenticationServices
 
-enum SignupError: Error {
-    case invalidUser
-    case invalidAccountInfo
-    case signupFailed
-}
-
 final class AuthenticationViewModel: ObservableObject {
-    
+
     enum State {
         case signedIn
         case signedOut
     }
 
+    enum SignupError: Error {
+        case invalidUser
+        case invalidAccountInfo
+        case signupFailed
+    }
+    
     enum loginAction: Equatable {
         case loginGoogle
         case loginApple
     }
     
+    
     // MARK: - published properties
     @Published var nickName: String = ""
     @Published var signupUser: AuthSocialLoginResDTO?
-    @Published var rawNonce: String?
-    @Published var hashedNonce: String?
+    @Published var nonce: String?
 
     
     // MARK: - private properties
@@ -42,8 +40,8 @@ final class AuthenticationViewModel: ObservableObject {
     private let signupService = SignupService()
     
     private let loginService = LoginService(
-        authGoogleService: AuthGoogleServices(),
-        authAppleService: AuthAppleServices()
+        authGoogleService: AuthGoogleService(),
+        authAppleService: AuthAppleService()
     )
     
     
@@ -72,7 +70,7 @@ final class AuthenticationViewModel: ObservableObject {
     }
     
     func requestNonceSignInApple() {
-        self.rawNonce = self.loginService.requestRawNonceSignInApple()
+        self.nonce = self.loginService.requestNonceSignInApple()
     }
  
     func tryLogin() async -> Bool {
