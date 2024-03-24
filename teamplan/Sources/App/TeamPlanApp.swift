@@ -11,16 +11,15 @@ import FirebaseCore
 
 @main
 struct TeamPlanApp: App {
-    @State private var showIntroView: Bool = true
+    
     @StateObject var authViewModel = AuthenticationViewModel()
     @StateObject var termsViewModel = TermsViewModel()
   
-    //====================
     // MARK: Main
-    //====================
+    
     var body: some Scene {
         WindowGroup {
-            mainView
+            IntroView()
                 .environmentObject(authViewModel)
                 .environmentObject(termsViewModel)
                 .onAppear(perform: initializeApp)
@@ -28,24 +27,10 @@ struct TeamPlanApp: App {
         }
     }
     
-    private var mainView: some View {
-        ZStack {
-            if showIntroView {
-                SplashView(showIntroView: $showIntroView)
-                    .transition(.move(edge: .leading))
-            } else {
-                IntroView()
-            }
-        }
-    }
+    // MARK: - private method
     
-    
-    //====================
-    // MARK: Function
-    //====================
     private func initializeApp() {
         configureFirebase()
-        //restorePreviousGoogleSignIn()
     }
     
     private func configureFirebase(){
@@ -58,15 +43,12 @@ struct TeamPlanApp: App {
 }
 
 
-//====================
-// MARK: App Delegate
-//====================
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
         return true
     }
     
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-            return GIDSignIn.sharedInstance.handle(url)
-        }
+        return GIDSignIn.sharedInstance.handle(url)
+    }
 }

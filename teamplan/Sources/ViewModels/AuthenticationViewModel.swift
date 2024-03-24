@@ -2,9 +2,10 @@
 //  AuthenticationViewModel.swift
 //  teamplan
 //
-//  Created by 주찬혁 on 2023/07/04.
-//  Copyright © 2023 team1os. All rights reserved.
+//  Created by 송하민 on 3/24/24.
+//  Copyright © 2024 team1os. All rights reserved.
 //
+
 import Foundation
 import KeychainSwift
 import AuthenticationServices
@@ -56,7 +57,6 @@ final class AuthenticationViewModel: ObservableObject {
             case .new:
                 self.signupUser = user
             }
-
             guard let idToken = user.idToken else {
                 throw SignupError.invalidAccountInfo
             }
@@ -69,10 +69,10 @@ final class AuthenticationViewModel: ObservableObject {
         }
     }
     
-    func requestNonceSignInApple() {
-        self.nonce = self.loginService.requestNonceSignInApple()
+    func requestNonceSignInApple() -> String {
+        return self.loginService.requestNonceSignInApple()
     }
- 
+    
     func tryLogin() async -> Bool {
         if let loginUser = self.signupUser {
             do {
