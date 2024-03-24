@@ -34,14 +34,13 @@ final class AuthenticationViewModel: ObservableObject {
     @Published var signupUser: AuthSocialLoginResDTO?
     @Published var rawNonce: String?
     @Published var hashedNonce: String?
-    @Published var error: SignupError? // 에러타입 준수하는 어떤 것을 만들어서 값이 변경될 때마다 알럿 띄워줘야함. 지금은 아무거나(SignupError) 박아놓음
-    @Published var appleLoginStatus: UserType?
-    
+
     
     // MARK: - private properties
     private let keychain = KeychainSwift()
     private lazy var loginLoadingService = LoginLoadingService()
     private let signupService = SignupService()
+    
     private let loginService = LoginService(
         authGoogleService: AuthGoogleServices(),
         authAppleService: AuthAppleServices()
@@ -72,24 +71,8 @@ final class AuthenticationViewModel: ObservableObject {
         }
     }
     
-    func signInApple(providerID: String = "apple.com", idToken: String) {
-        let credential: OAuthCredential = {
-            return OAuthProvider.credential(withProviderID: providerID, idToken: idToken, rawNonce: self.rawNonce)
-        }()
-        self.loginService.loginApple(credential: credential, idToken: idToken) { [weak self] loginResult in
-            DispatchQueue.main.async {
-                switch loginResult {
-                case .success(let response):
-                    self?.appleLoginStatus = response.status
-                case .failure(let error):
-                    self?.error = error
-                }
-            }
-        }
-    }
-    
-    func requestRandomNonce() {
-        self.rawNonce = self.loginService.requestRandomNonce()
+    func requestNonceSignInApple() {
+        self.rawNonce = self.loginService.requestRawNonceSignInApple()
     }
  
     func tryLogin() async -> Bool {

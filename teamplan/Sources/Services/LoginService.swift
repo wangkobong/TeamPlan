@@ -57,12 +57,8 @@ final class LoginService{
         return try await google.login()
     }
     
-    func loginApple(credential: OAuthCredential, idToken: String, completion: @escaping (Result<AuthSocialLoginResDTO, SignupError>) -> Void) {
-        return self.apple.login(credential: credential, idToken: idToken, completion: completion)
-    }
-    
-    func requestRandomNonce() -> String {
-        return self.randomNonce()
+    func requestRawNonceSignInApple() -> String {
+        return self.apple.randomNonce()
     }
 }
 
