@@ -13,100 +13,98 @@ import FirebaseFirestoreSwift
 //================================
 // MARK: - Main Function
 //================================
-final class StatisticsServicesFirestore{
+final class StatisticsServicesFirestore: FullDocsManage {
+    typealias Object = StatisticsObject
+    typealias DTO = StatUpdateDTO
     
-    //--------------------
-    // Parameter
-    //--------------------
-    let util = Utilities()
-    let fs = Firestore.firestore()
-    
-    //--------------------
-    // Set
-    //--------------------
-    func setStatistics(with stat: StatisticsObject) async throws {
-        // Search & Set Data
-        let collection = fetchCollection()
-        try await collection.addDocument(data: stat.toDictionary())
+    func setDocs(with object: Object) async throws {
+        let collectionRef = fetchCollection(with: .stat)
+        try await collectionRef.addDocument(data: try convertToData(with: object))
     }
     
-    //--------------------
-    // Get
-    //--------------------
-    func getStatistics(from userId: String) async throws -> StatisticsObject {
-        // Fetch Data
-        let docs = try await fetchDocs(with: userId)
-        // Convert & Return
-        return try convertToStat(with: docs.data())
+    func getDocs(with userId: String) async throws -> Object {
+        guard let docs = try await fetchDocument(with: userId, and: .stat),
+              let data = docs.data() else {
+            throw FirestoreError.fetchFailure(serviceName: .stat)
+        }
+        return try convertToObject(with: data)
     }
-    
-    //--------------------
-    // Update
-    //--------------------
-    func updateStatistics(with updatedStat: StatisticsObject) async throws {
-        // Fetch Data
-        let docs = try await fetchDocs(with: updatedStat.stat_user_id)
-        //Update Data
-        try await docs.reference.updateData(updatedStat.toDictionary())
+
+    func updateDocs(with object: Object) async throws {
+        guard let docs = try await fetchDocument(with: object.userId, and: .stat) else {
+            throw FirestoreError.fetchFailure(serviceName: .stat)
+        }
+        try await docs.reference.updateData(try convertToData(with: object))
     }
-    
-    //--------------------
-    // Delete
-    //--------------------
-    func deleteStatistics(with userId: String) async throws {
-        // Fetch Data
-        let docs = try await fetchDocs(with: userId)
-        // Delete Data
+
+    func deleteDocs(with userId: String) async throws {
+        guard let docs = try await fetchDocument(with: userId, and: .stat) else {
+            throw FirestoreError.fetchFailure(serviceName: .stat)
+        }
         try await docs.reference.delete()
     }
 }
 
-//================================
-// MARK: - Support Function
-//================================
-extension StatisticsServicesFirestore{
-    
-    // Fetch: Collection
-    private func fetchCollection() -> CollectionReference {
-        return fs.collection("Stat")
-    }
-    
-    // Fetch: Document
-    private func fetchDocs(with userId: String) async throws -> QueryDocumentSnapshot {
-        // fetch reference
-        let docsRef = try await fetchCollection()
-            .whereField("stat_user_id", isEqualTo: userId)
-            .getDocuments()
+// MARK: - Converter
+extension StatisticsServicesFirestore {
+    private func convertToData(with object: Object) throws -> [String: Any] {
+        let stringSyncedAt = DateFormatter.standardFormatter.string(from: object.syncedAt)
+        let challengeStepStatus = try Utilities().convertToJSON(data: object.challengeStepStatus)
+        let myChallenges = try Utilities().convertToJSON(data: object.mychallenges)
         
-        // convert & return
-        guard let docs = docsRef.documents.first else {
-            throw StatErrorFS.UnexpectedSearchError
-        }
-        return docs
+        return [
+            "user_id": object.userId,
+            "term": object.term,
+            "drop": object.drop,
+            "total_registed_projects": object.totalRegistedProjects,
+            "total_finished_projects": object.totalFinishedProjects,
+            "total_failed_projects": object.totalFailedProjects,
+            "total_alerted_projects": object.totalAlertedProjects,
+            "total_extended_projects": object.totalExtendedProjects,
+            "total_registed_todos": object.totalRegistedTodos,
+            "total_finished_todos": object.totalFinishedTodos,
+            "challenge_step_status": challengeStepStatus,
+            "mychallenges": myChallenges,
+            "synced_at": stringSyncedAt
+        ]
     }
     
-    // Convert: to Object
-    private func convertToStat(with data: [String:Any]) throws -> StatisticsObject {
-        guard let stat = StatisticsObject(with: data) else {
-            throw StatErrorFS.UnexpectedConvertError
+    private func convertToObject(with data: [String: Any]) throws -> Object {
+        guard let userId = data["user_id"] as? String,
+              let term = data["term"] as? Int,
+              let drop = data["drop"] as? Int,
+              let totalRegistedProjects = data["total_registed_projects"] as? Int,
+              let totalFinishedProjects = data["total_finished_projects"] as? Int,
+              let totalFailedProjects = data["total_failed_projects"] as? Int,
+              let totalAlertedProjects = data["total_alerted_projects"] as? Int,
+              let totalExtendedProjects = data["total_extended_projects"] as? Int,
+              let totalRegistedTodos = data["total_registed_todos"] as? Int,
+              let totalFinishedTodos = data["total_finished_todos"] as? Int,
+              let challengeStepStatusString = data["challenge_step_status"] as? String,
+              let myChallengesString = data["mychallenges"] as? String,
+              let stringSyncedAt = data["synced_at"] as? String,
+              let syncedAt = DateFormatter.standardFormatter.date(from: stringSyncedAt)
+        else {
+            throw FirestoreError.convertFailure(serviceName: .stat)
         }
-        return stat
-    }
-}
-
-//================================
-// MARK: - Exception
-//================================
-enum StatErrorFS: LocalizedError {
-    case UnexpectedConvertError
-    case UnexpectedSearchError
-    
-    var errorDescription: String? {
-        switch self {
-        case .UnexpectedSearchError:
-            return "Firestore: There was an unexpected error while Search 'Statistics' details"
-        case .UnexpectedConvertError:
-            return "Firestore: There was an unexpected error while Convert 'Statistics' details"
-        }
+        
+        let challengeStepStatus = try Utilities().convertFromJSON(jsonString: challengeStepStatusString, type: [Int: Int].self)
+        let myChallenges = try Utilities().convertFromJSON(jsonString: myChallengesString, type: [Int].self)
+        
+        return Object(
+            userId: userId,
+            term: term,
+            drop: drop,
+            totalRegistedProjects: totalRegistedProjects,
+            totalFinishedProjects: totalFinishedProjects,
+            totalFailedProjects: totalFailedProjects,
+            totalAlertedProjects: totalAlertedProjects,
+            totalExtendedProjects: totalExtendedProjects,
+            totalRegistedTodos: totalRegistedTodos,
+            totalFinishedTodos: totalFinishedTodos,
+            challengeStepStatus: challengeStepStatus,
+            mychallenges: myChallenges,
+            syncedAt: syncedAt
+        )
     }
 }

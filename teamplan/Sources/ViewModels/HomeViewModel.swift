@@ -17,7 +17,6 @@ final class HomeViewModel: ObservableObject {
     @Published var statistics: StatChallengeDTO?
     let identifier: String
     lazy var homeService = HomeService(with: self.identifier)
-    let challengeManager = ChallengeManager()
     private var cancellables = Set<AnyCancellable>()
     
     init() {

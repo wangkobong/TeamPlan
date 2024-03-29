@@ -61,7 +61,7 @@ final class AuthenticationViewModel: ObservableObject{
             do {
                 let user = try await self.loginLoadingService.executor(with: loginUser)
                 let userDefaultManager = UserDefaultManager.loadWith(key: "user")
-                userDefaultManager?.userName = user.nickNname
+                userDefaultManager?.userName = user.nickName
                 userDefaultManager?.identifier = user.userId
                 return true
             } catch {
@@ -95,7 +95,7 @@ final class AuthenticationViewModel: ObservableObject{
         let signupService = SignupLoadingService(newUser: finalUserInfo)
         let signedUser = try await signupService.executor()
         let userDefaultManager = UserDefaultManager.loadWith(key: "user")
-        userDefaultManager?.userName = signedUser.nickNname
+        userDefaultManager?.userName = signedUser.nickName
         userDefaultManager?.identifier = signedUser.userId
         return signedUser
     }

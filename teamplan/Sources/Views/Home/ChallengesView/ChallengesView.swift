@@ -76,7 +76,7 @@ struct ChallengesView: View {
                     case .willChallenge:
                         self.type = .didChallenge
                         self.isPresented = true
-                        homeViewModel.tryChallenge(with: $homeViewModel.challengeArray[self.indexForAlert].chlg_id.wrappedValue)
+                        homeViewModel.tryChallenge(with: $homeViewModel.challengeArray[self.indexForAlert].challengeId.wrappedValue)
                     case .lock:
                         break
                     case .quit:
@@ -90,14 +90,14 @@ struct ChallengesView: View {
             .onAppear {
                 homeViewModel.challengeArray.forEach {
                     print("-------")
-                    print("desc: \($0.chlg_desc)")
-                    print("id: \($0.chlg_id)")
-                    print("desc2: \($0.chlg_title)")
-                    print("isSelected: \($0.chlg_selected)")
-                    print("lock: \($0.chlg_lock)")
-                    print("isComplete: \($0.chlg_status)")
-                    print("prevGoal: \($0.chlg_goal)")
-                    print("prevTitle: \($0.chlg_title)")
+                    print("desc: \($0.desc)")
+                    print("id: \($0.challengeId)")
+                    print("desc2: \($0.title)")
+                    print("isSelected: \($0.selectStatus)")
+                    print("lock: \($0.lock)")
+                    print("isComplete: \($0.status)")
+                    print("prevGoal: \($0.goal)")
+                    print("prevTitle: \($0.title)")
                     
                 }
                 print("$homeViewModel.challengeArray: \($homeViewModel.challengeArray.count)")
@@ -172,7 +172,7 @@ extension ChallengesView {
                     .onTapGesture {
                         withAnimation(.linear) {
                             self.selectedCardIndex = (self.selectedCardIndex == index) ? nil : index
-                            if let index = homeViewModel.challengeArray.firstIndex(where: { $0.chlg_id == self.homeViewModel.myChallenges[index].challengeID }) {
+                            if let index = homeViewModel.challengeArray.firstIndex(where: { $0.challengeId == self.homeViewModel.myChallenges[index].challengeID }) {
                                 // index를 사용하여 작업 수행
                                 print("해당 요소의 인덱스: \(index)")
                                 self.indexForAlert = index
@@ -269,15 +269,15 @@ extension ChallengesView {
     private func setAlert(challenge: ChallengeObject) {
         
         // 완료한 도전과제
-        if challenge.chlg_status == true && challenge.chlg_selected == false && challenge.chlg_lock == false {
+        if challenge.status == true && challenge.selectStatus == false && challenge.lock == false {
             self.type = .didComplete
             self.isPresented.toggle()
         // 등록된 도전과제
-        } else if challenge.chlg_status == false && challenge.chlg_selected == true && challenge.chlg_lock == false {
+        } else if challenge.status == false && challenge.selectStatus == true && challenge.lock == false {
             self.type = .didSelected
             self.isPresented.toggle()
         // 도전하기
-        } else if challenge.chlg_status == false && challenge.chlg_selected == false && challenge.chlg_lock == false {
+        } else if challenge.status == false && challenge.selectStatus == false && challenge.lock == false {
             if homeViewModel.myChallenges.count == 3 {
                 toast = Toast(style: .error, message: "나의 도전과제는 3개까지만 등록이 가능합니다.", width: 300)
             } else {
@@ -285,7 +285,7 @@ extension ChallengesView {
                 self.isPresented.toggle()
             }
         // 잠금해제 안됨
-        } else if challenge.chlg_status == false && challenge.chlg_selected == false && challenge.chlg_lock == true {
+        } else if challenge.status == false && challenge.selectStatus == false && challenge.lock == true {
             self.type = .lock
             self.isPresented.toggle()
         }

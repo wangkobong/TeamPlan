@@ -20,7 +20,7 @@ struct ChallengeDetailView: View {
                     .fill(Color.white)
                     .frame(width: 57, height: 57)
            
-                Image(ChallengeIconHelper.setIcon(type: challenge.chlg_type, isLock: challenge.chlg_lock, isComplete: challenge.chlg_status))
+                Image(ChallengeIconHelper.setIcon(type: challenge.type, isLock: challenge.lock, isComplete: challenge.status))
                     .resizable()
                     .scaledToFit()
                     .frame(width: 57, height: 57)
@@ -29,7 +29,7 @@ struct ChallengeDetailView: View {
             Spacer()
                 .frame(height: 10)
             
-            Text(challenge.chlg_title)
+            Text(challenge.title)
                 .font(.appleSDGothicNeo(.regular, size: 12))
                 .multilineTextAlignment(.center)
                 .foregroundColor(Color(red: 0.7, green: 0.7, blue: 0.7))

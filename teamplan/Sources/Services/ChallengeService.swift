@@ -10,20 +10,12 @@ import Foundation
 
 final class ChallengeService {
     
-    //===============================
-    // MARK: - Properties
-    //===============================
-    // for service
-    private let challengeCD = ChallengeServicesCoredata()
-    private let challengeLogCD = ChallengeLogServicesCoredata()
-    private let statCD = StatisticsServicesCoredata()
-    private let statCenter: StatisticsCenter
-    private var userId: String
+    private let controller = CoredataController()
     
-    // for log
-    private let util = Utilities()
-    private let logManager = LogManager()
-    private let location = "ChallengeService"
+    private let statCD: StatisticsServicesCoredata
+    private let challengeCD: ChallengeServicesCoredata
+    
+    private var userId: String
     
     // shared
     @Published var myChallenges: [MyChallengeDTO] = []
@@ -43,10 +35,10 @@ final class ChallengeService {
     /// 이 과정은 앱 내에서 도전과제 기능을 수행하기 위한 기본 설정을 제공합니다.
     init(with userId: String) {
         self.userId = userId
-        self.statCenter = StatisticsCenter(with: userId)
+        self.statCD = StatisticsServicesCoredata(coredataController: controller)
+        self.challengeCD = ChallengeServicesCoredata(coredataController: controller)
+        
         self.statDTO = StatChallengeDTO()
-        self.logManager.readyParameter(userId: userId, caller: "ChallengeService")
-        util.log(.info, location, "Successfully initialize service", userId)
     }
     
     /// `ChallengeService` 클래스 인스턴스의 추가 준비과정을 수행합니다.
@@ -58,117 +50,165 @@ final class ChallengeService {
     ///
     /// 이 과정은 앱 내에서 도전과제 기능을 수행하기 위한 기본 설정을 제공합니다.
     func readyService() throws {
-        try readyStatistics()
-        challengeArray = try challengeCD.getChallenges(onwer: userId)
+        challengeArray = try challengeCD.getObjects(with: userId)
+        try initStatistics()
         try readyMyChallenge()
-        try logManager.readyManager()
-        util.log(.info, location, "Successfully ready service", userId)
     }
     
-    //--------------------
-    // Private Helper
-    //--------------------
     // statistics
-    private func readyStatistics() throws {
-        guard let dto = try statCD.getStatisticsForDTO(with: userId, type: .challenge) as? StatChallengeDTO else {
-            throw ChallengeError.UnexpectedGetStatDTOError
-        }
-        self.statDTO = dto
-        try self.statCenter.readyCenter()
+    private func initStatistics() throws {
+        self.statDTO = StatChallengeDTO(with: try statCD.getObject(with: userId))
     }
 
     // myChallenge
     private func readyMyChallenge() throws {
-        if !statDTO.myChallenge.isEmpty{
-            for idx in statDTO.myChallenge {
-                try setMyChallenges(with: idx)
-            }
+        if !statDTO.myChallenges.isEmpty{
+            self.myChallenges = getMyChallenges()
         }
     }
 }
 
-//===============================
-// MARK: MyChallenge: Main
-//===============================
+struct StatChallengeDTO {
+    
+    let type: DTOType = .challenge
+    let userId: String
+    var drop: Int
+    var challengeStepStatus: [Int : Int]
+    var myChallenges: [Int]
+    
+    init(){
+        self.userId = ""
+        self.drop = 0
+        self.challengeStepStatus = [ : ]
+        self.myChallenges = []
+    }
+    init(with object: StatisticsObject){
+        self.userId = object.userId
+        self.drop = object.drop
+        self.challengeStepStatus = object.challengeStepStatus
+        self.myChallenges = object.mychallenges
+    }
+    init(with userId: String,
+         ans drop: Int,
+         chlgStep challengeStepStatus: [Int:Int],
+         mychlg myChallenges: [Int]
+    ){
+        self.userId = userId
+        self.drop = drop
+        self.challengeStepStatus = challengeStepStatus
+        self.myChallenges = myChallenges
+    }
+}
+
+// MARK: MyChallenge
+struct MyChallengeDTO: Hashable, Identifiable {
+
+    let id = UUID().uuidString
+    var challengeID: Int
+    let type: ChallengeType
+    let title: String
+    let desc: String
+    let goal: Int
+    let progress: Int
+    
+    init(with object: ChallengeObject){
+        self.challengeID = object.challengeId
+        self.type = object.type
+        self.title = object.title
+        self.desc = object.desc
+        self.goal = object.goal
+        self.progress = object.progress
+    }
+}
+
+struct ChallengeRewardDTO {
+
+    let title: String
+    let desc: String
+    let type: ChallengeType
+    let reward: Int
+    let setMyChallengeAt: Date
+    let completeAt: Date
+    
+    init(with object: ChallengeObject, and nextObject: ChallengeObject) {
+        self.title = nextObject.title
+        self.desc = nextObject.desc
+        self.type = nextObject.type
+        self.reward = object.reward
+        self.setMyChallengeAt = object.selectedAt
+        self.completeAt = object.finishedAt
+    }
+}
+
 extension ChallengeService {
     
-    //--------------------
+    private func getUserProgress(with type: ChallengeType) throws -> Int {
+        let stat = try statCD.getObject(with: userId)
+        switch type {
+        case .onboarding:
+            return 1
+        case .serviceTerm:
+            return stat.term
+        case .totalTodo:
+            return stat.totalRegistedTodos
+        case .projectAlert:
+            return stat.totalAlertedProjects
+        case .projectFinish:
+            return stat.totalFinishedProjects
+        case .waterDrop:
+            return stat.drop
+        case .unknownType:
+            return 0
+        }
+    }
+    
     // Get
-    //--------------------
     /// 사용자의 '나의 도전과제' 목록을 반환합니다.
     /// - Returns:사용자의 챌린지 목록을 `MyChallengeDTO` 배열로 반환합니다.
     /// - 단, '나의 도전과제'를 지정하지 않은경우 '[]' 형태로 반환됩니다.
     func getMyChallenges() -> [MyChallengeDTO] {
-        return self.myChallenges
+        var myChallenges: [MyChallengeDTO] = []
+        for object in challengeArray {
+            if object.selectStatus == true {
+                myChallenges.append(MyChallengeDTO(with: object))
+            }
+        }
+        return myChallenges
     }
     
-    //--------------------
-    // Set
-    //--------------------
     /// 특정 도전과제를 '나의 도전과제'로 등록합니다.
     /// - Parameter challengeId: '나의 도전과제'에 등록할 도전과제의 ID입니다.
     /// - Throws: 중복 도전과제, 최대 도전과제 수 초과 등으로 인한 오류를 던집니다.
     /// - 이 함수는 중복 검사를 수행하고, 도전과제를 'myChallenges'에 추가하며, 해당 도전과제의 상태를 업데이트합니다.
     /// - 또한 관련 통계 정보를 갱신하고, 모든 변경 사항을 로그로 출력합니다.
     func setMyChallenges(with challengeId: Int) throws {
-        util.log(.info, location, "Check MyChallenge Duplication", userId)
         
-        // check duplication
         let isDuplicated = try checkMyChallengeArray(with: challengeId)
         
         if !isDuplicated {
-            util.log(.info, location, "MyChallenge duplication not detected, Proceed set process", userId)
+            let challengeData = try fetchChallenge(with: challengeId)
+            let userProgress = try getUserProgress(with: challengeData.type)
+            try updateChallengeObject(with: challengeId, and: userProgress, type: .set)
             
-            // core function
-            try setCoreFunction(with: challengeId)
-            util.log(.info, location, "Set core function - Complete", userId)
-            
-            // update & apply: challenge object
-            try updateChallengeObject(with: challengeId, type: .set)
-            util.log(.info, location, "Update challenge object - Complete", userId)
-            
-            // update & apply: statistics object
+            statDTO.myChallenges.append(challengeId)
             try updateStatObject(type: .set)
-            util.log(.info, location, "Update mychallenge at statistics - Complete", userId)
-            
-            // check: data inspection
-            myChallengeDataInspection()
-            util.log(.info, location, "Set MyChallenge - Complete", userId)
         }
-        util.log(.info, location, "MyChallenge duplication detected", userId)
     }
     
-    //-------------------------------
-    // Disable
-    //-------------------------------
     /// '나의 도전과제'로 등록된 특정 도전과제를 해제합니다.
     /// - Parameter challengeId: '나의 도전과제'에서 해제할 도전과제의 ID입니다.
     /// - Throws: 도전과제 해제 및 상태 업데이트에서 발생한 오류들을 던집니다.
     /// - 이 함수는 도전과제를 'myChallenges'에 제거하며, 해당 도전과제의 상태를 업데이트합니다.
     /// - 또한 관련 통계 정보를 갱신하고, 모든 변경 사항을 로그로 출력합니다.
     func disableMyChallenge(with challengeId: Int) throws {
-        util.log(.info, location, "Disable MyChallenge - Start", userId)
         
-        // core function
-        disableCoreFunction(with: challengeId)
-        util.log(.info, location, "Disable core function - Complete", userId)
-        
-        // apply: challenge object
+        myChallenges.removeAll { $0.challengeID == challengeId }
         try updateChallengeObject(with: challengeId, type: .disable)
-        util.log(.info, location, "Update challenge object - Complete", userId)
         
-        // apply: statistics object
+        statDTO.myChallenges.removeAll { $0 == challengeId }
         try updateStatObject(type: .disable)
-        util.log(.info, location, "Update mychallenge at statistics - Complete", userId)
-        
-        // check: data inspection
-        myChallengeDataInspection()
-        util.log(.info, location, "Disable MyChallenge - Complete", userId)
     }
 
-    //-------------------------------
-    // Reward
-    //-------------------------------
     /// 완료한 도전과제에 대한 보상을 처리합니다.
     /// - Parameter challengeId: 보상을 받을 도전과제의 ID입니다.
     /// - Returns: 챌린지 완료에 따른 보상 정보를 `ChallengeRewardDTO`형태로 반환합니다.
@@ -177,39 +217,111 @@ extension ChallengeService {
     /// - 또한 관련 통계 정보를 갱신하고, '나의 도전과제'에서 해당 도전과제를 해제합니다.
     /// - 모든 변경 사항 및 보상정보를 로그로 출력합니다.
     func rewardMyChallenge(with challengeId: Int) throws -> ChallengeRewardDTO {
-        util.log(.info, location, "Reward MyChallenge - Start", userId)
         
-        // update: local parameter
         let rewardDTO = try rewardCoreFunction(with: challengeId)
-        util.log(.info, location, "Reward core function - Complete", userId)
         
-        // apply: challenge object
         try updateChallengeObject(with: challengeId, type: .reward)
-        util.log(.info, location, "Update challenge object - Complete", userId)
-        
-        // apply: statistics object
         try updateStatObject(type: .reward)
-        util.log(.info, location, "Update mychallenge at statistics - Complete", userId)
-        
-        // disable: mychallenge
         try disableMyChallenge(with: challengeId)
-        
-        // check: data inspection
-        rewardDataInsepction(with: rewardDTO)
-        util.log(.info, location, "Reward MyChallenge - Complete", userId)
         
         return rewardDTO
     }
+    private func rewardCoreFunction(with challengeId: Int) throws  -> ChallengeRewardDTO {
+        
+        let challengeData = try fetchChallenge(with: challengeId)
+        let nextChallengeData = try fetchNextChallenge(currentChallenge: challengeData, challengeId: challengeId)
+        try updateChallengeObject(with: nextChallengeData.challengeId, type: .next)
+        
+        // update drop & step
+        statDTO.drop += challengeData.reward
+        if let currentStep = statDTO.challengeStepStatus[challengeData.type.rawValue] {
+            statDTO.challengeStepStatus[challengeData.type.rawValue] = currentStep + 1
+        } else {
+            throw ChallengeError.UnexpectedStepUpdateError
+        }
+        return ChallengeRewardDTO(with: challengeData, and: nextChallengeData)
+    }
 }
 
-//===============================
-// MARK: Challenge: Main
-//===============================
+
+// MARK: Challenge
+struct ChallengeDTO{
+
+    // for index (essential)
+    let id: Int
+    let type: ChallengeType
+    let title: String
+    let isComplete: Bool
+    let isSelected: Bool
+    let isUnlock: Bool
+    
+    // for detail (optional)
+    let desc: String?
+    let goal: Int?
+    let reward: Int?
+    let step: Int?
+    let completeAt: Date?
+    
+    let prevId: Int?
+    let prevTitle: String?
+    let prevDesc: String?
+    let prevGoal: Int?
+    
+    // for log (optional)
+    let setMyChallengeAt: Date?
+    let disableMyChallengeAt: Date?
+    
+    // for index
+    init(forIndex object: ChallengeObject){
+        self.id = object.challengeId
+        self.type = object.type
+        self.title = object.title
+        self.isComplete = object.status
+        self.isSelected = object.selectStatus
+        self.isUnlock = object.lock
+        
+        self.desc = nil
+        self.goal = nil
+        self.reward = nil
+        self.step = nil
+        self.completeAt = nil
+        
+        self.prevId = nil
+        self.prevTitle = nil
+        self.prevDesc = nil
+        self.prevGoal = nil
+        
+        self.setMyChallengeAt = nil
+        self.disableMyChallengeAt = nil
+    }
+    
+    // for detail
+    init(forDetail object: ChallengeObject, previous prevObject: ChallengeObject? = nil){
+        self.id = object.challengeId
+        self.type = object.type
+        self.title = object.title
+        self.isComplete = object.status
+        self.isSelected = object.selectStatus
+        self.isUnlock = object.lock
+        
+        self.desc = object.desc
+        self.goal = Int(object.goal)
+        self.reward = Int(object.reward)
+        self.step = object.step
+        self.completeAt = object.finishedAt
+        
+        self.prevId = prevObject?.challengeId
+        self.prevTitle = prevObject?.title
+        self.prevDesc = prevObject?.desc
+        self.prevGoal = prevObject?.goal
+        
+        self.setMyChallengeAt = object.selectedAt
+        self.disableMyChallengeAt = object.unselectedAt
+    }
+}
+
 extension ChallengeService {
     
-    //-------------------------------
-    // Get challenge index
-    //-------------------------------
     /// 전체 도전과제 목록 정보를 제공합니다.
     /// - Returns: 도전과제 목록관련 정보들이 담긴 `ChallengeDTO` 타입의 배열을 반환합니다.
     /// - 이 함수는 도전과제 화면에서 도전과제 목록를 표시할 때 사용됩니다.
@@ -218,9 +330,6 @@ extension ChallengeService {
         return challengeArray.map { ChallengeDTO(forIndex: $0) }
     }
      
-    //-------------------------------
-    // Get challenge detail
-    //-------------------------------
     /// 특정 도전과제의 상세 정보를 제공합니다.
     /// - Parameter challengeId: 상세 정보를 조회할 도전과제 ID입니다.₩택했을 때, 해당 도전과제의 상세 정보를 표시하기 위해 사용됩니다.
     /// - 만약 해당 챌린지가 잠겨 있으면(`chlg_lock`), 이전 챌린지 정보도 함께 조회하여 반환합니다.
@@ -230,118 +339,106 @@ extension ChallengeService {
         let challengeData = try fetchChallenge(with: challengeId)
         
         // get: previous challenge data (lock case)
-        let prevChallenge: ChallengeObject? = challengeData.chlg_lock ?
-        try? getPrevChallenge(challengeType: challengeData.chlg_type, currentStep: challengeData.chlg_step) : nil
+        let prevChallenge: ChallengeObject? = challengeData.lock ?
+        try? getPrevChallenge(challengeType: challengeData.type, currentStep: challengeData.step) : nil
         
-        // set: challengeDTO
         let challengeDTO = ChallengeDTO(forDetail: challengeData, previous: prevChallenge)
         
-        // data inspection
-        try challengeDataInspection(with: challengeDTO, needPrevious: challengeData.chlg_lock)
         return challengeDTO
     }
 }
 
-//===============================
-// MARK: MyChallenge: Element
-//===============================
+
+// MARK: Update
 extension ChallengeService {
-    
-    //-------------------------------
-    // Set core function
-    //-------------------------------
-    /// 요청받은 도전과제를 '나의 도전과제' 에 추가하는 핵심기능 함수입니다.
-    /// - Parameter challengeId: 추가할 도전과제의 ID입니다.
-    /// - Throws: 도전과제 조회 실패할 경우 발생하는 오류를 던집니다.
-    /// - 이 함수는 입력받은 ID를 기반으로 도전과제 상세정보와 관련 사용자 진행정보를 조회합니다.
-    /// - 이후 조회한 정보를 기반으로 'MyChallengeDTO' 객체를 만들어 배열에 추가하고 관련 통계정보를 업데이트 합니다
-    private func setCoreFunction(with challengeId: Int) throws {
-        // get: challenge data
-        let challengeData = try fetchChallenge(with: challengeId)
-        // get: related user progress
-        let userProgress = statCenter.getUserProgress(type: challengeData.chlg_type)
-        // set: dto
-        let dto = MyChallengeDTO(with: challengeData, and: userProgress)
-        // apply: local parameter
-        myChallenges.append(dto)
-        statDTO.myChallenge.append(challengeId)
-    }
-    
-    //-------------------------------
-    // Disable core fuction
-    //-------------------------------
-    /// 요청받은 도전과제를 '나의 도전과제' 목록에서 제거하는 핵심기능 함수입니다.
-    /// - Parameter challengeId: 제거할 도전과제의 ID입니다.
-    /// - 이 함수는 입력받은 ID를 기반으로 '나의 챌린지' 목록에서 해당 도전과제를 탐색하고 제거합니다.
-    private func disableCoreFunction(with challengeId: Int) {
-        myChallenges.removeAll { $0.challengeID == challengeId }
-        statDTO.myChallenge.removeAll { $0 == challengeId }
-    }
-    
-    //-------------------------------
-    // Reward core fuction
-    //-------------------------------
-    /// 요청받은 도전과제에 대한 보상을 처리하고 다음 도전과제를 잠금 해제합니다.
-    /// - Parameter challengeId: 보상을 받을 도전과제의 ID입니다.
-    /// - Returns: 보상 정보를 포함하는 `ChallengeRewardDTO` 객체를 반환합니다.
-    /// - Throws: 도전과제 조회 및 다음 도전과제 조회 실패, 보상 처리 중 발생하는 오류를 던집니다.
-    /// - 이 함수는 요청받은 도전과제와 다음 도전과제와 관련된 상세 정보를 조회합니다.
-    /// - 조회한 정보를 기반으로 해당되는 보상을 처리하고, 도전과제 로그에 기록하며, 다음 도전과제를 잠금해제합니다.
-    private func rewardCoreFunction(with challengeId: Int) throws  -> ChallengeRewardDTO {
-        // get: extra challenge data
-        let challengeData = try fetchChallenge(with: challengeId)
-        let challengeType = challengeData.chlg_type.rawValue
-        let nextChallengeData = try fetchNextChallenge(currentChallenge: challengeData, challengeId: challengeId)
-        util.log(.info, location, "(reward core function) get related parameter - Compelete", userId)
+    private func updateChallengeObject(with challengeId: Int, and userProgress: Int? = nil, type: FunctionType) throws {
+        let updatedDate = Date()
         
-        // update: statDTO (reward & challengeStep)
-        statDTO.drop += challengeData.chlg_reward
-        if let currentStep = statDTO.challengeStep[challengeType] {
-            statDTO.challengeStep[challengeType] = currentStep + 1
-        } else {
-            throw ChallengeError.UnexpectedStepUpdateError
+        switch type{
+        case .set:
+            let updated = ChallengeUpdateDTO(
+                challengeId: challengeId,
+                userId: userId,
+                newProgress: userProgress,
+                newSelectStatus: true,
+                newSelectedAt: updatedDate
+            )
+            try challengeCD.updateObject(with: updated)
+            
+        case .disable:
+            let updated = ChallengeUpdateDTO(
+                challengeId: challengeId,
+                userId: userId,
+                newSelectStatus: false,
+                newUnSelectedAt: updatedDate
+            )
+            try challengeCD.updateObject(with: updated)
+            
+        case .reward:
+            let updated = ChallengeUpdateDTO(
+                challengeId: challengeId,
+                userId: userId,
+                newStatus: true,
+                newSelectStatus: false,
+                newFinishedAt: updatedDate
+            )
+            try challengeCD.updateObject(with: updated)
+            
+        case .next:
+            let updated = ChallengeUpdateDTO(
+                challengeId: challengeId,
+                userId: userId,
+                newLock: false
+            )
+            try challengeCD.updateObject(with: updated)
         }
-        util.log(.info, location, "(reward core function) update statDTO - Compelete", userId)
+        challengeArray = try challengeCD.getObjects(with: userId)
+    }
+    
+    private func updateStatObject(type: FunctionType) throws {
         
-        // update: challenge log
-        try logManager.appendChallengeLog(with: challengeId, and: Date())
-        util.log(.info, location, "(reward core function) update challengeLog - Compelete", userId)
-        
-        // update: challenge object (unlock next challenge)
-        try updateChallengeObject(with: nextChallengeData.chlg_id, type: .next)
-        util.log(.info, location, "(reward core function) update next challengeObject - Compelete", userId)
-        
-        return ChallengeRewardDTO(with: challengeData, and: nextChallengeData)
+        // update: local storage
+        switch type{
+        case .reward:
+            let updated = StatUpdateDTO(
+                userId: userId,
+                newDrop: statDTO.drop,
+                newChallengeStepStatus: statDTO.challengeStepStatus,
+                newMyChallenges: statDTO.myChallenges
+            )
+            try statCD.updateObject(with: updated)
+        default:
+            let updated = StatUpdateDTO(
+                userId: userId,
+                newMyChallenges: statDTO.myChallenges
+            )
+            try statCD.updateObject(with: updated)
+        }
+        try initStatistics()
     }
 }
 
-//===============================
-// MARK: Support
-//===============================
+
+// MARK: Util
 extension ChallengeService {
     
-    //-------------------------------
-    // Fetch challenge object
-    //-------------------------------
     private func fetchChallenge(with challengeId: Int) throws -> ChallengeObject {
-        guard let challenge = challengeArray.first(where: { $0.chlg_id == challengeId }) else {
+        guard let challenge = challengeArray.first(where: { $0.challengeId == challengeId }) else {
             throw ChallengeError.UnexpectedChallengeArrayError
         }
         return challenge
     }
+    
     private func fetchNextChallenge(currentChallenge: ChallengeObject,challengeId: Int) throws -> ChallengeObject {
         if let nextChallenge = challengeArray.first(where: {
-            ( $0.chlg_type == currentChallenge.chlg_type ) && ( $0.chlg_step == currentChallenge.chlg_step + 1 )
+            ( $0.type == currentChallenge.type ) && ( $0.step == currentChallenge.step + 1 )
         }) {
             return nextChallenge
         } else {
             throw ChallengeError.NoMoreNextChallenge
         }
     }
-    
-    //-------------------------------
-    // Check myChallenge array
-    //-------------------------------
+
     private func checkMyChallengeArray(with challengeId: Int) throws -> Bool {
         // check: size
         guard myChallenges.count < 3 else {
@@ -354,152 +451,17 @@ extension ChallengeService {
             return false
         }
     }
-    
-    //-------------------------------
-    // Update challenge object
-    //-------------------------------
-    private func updateChallengeObject(with challengeId: Int, type: FunctionType) throws {
-        let updatedDate = Date()
-        
-        // update: local storage
-        switch type{
-            
-        case .set:
-            let updated = ChallengeUpdateDTO(
-                challengeId: challengeId, 
-                userId: userId,
-                newSelected: true,
-                newSelectedAt: updatedDate
-            )
-            try challengeCD.updateChallenge(with: updated)
-            
-        case .disable:
-            let updated = ChallengeUpdateDTO(
-                challengeId: challengeId, 
-                userId: userId,
-                newSelected: false,
-                newUnSelectedAt: updatedDate
-            )
-            try challengeCD.updateChallenge(with: updated)
-            
-        case .reward:
-            let updated = ChallengeUpdateDTO(
-                challengeId: challengeId, 
-                userId: userId,
-                newStatus: true,
-                newFinishedAt: updatedDate
-            )
-            try challengeCD.updateChallenge(with: updated)
-            
-        case .next:
-            let updated = ChallengeUpdateDTO(
-                challengeId: challengeId, 
-                userId: userId,
-                newLock: false
-            )
-            try challengeCD.updateChallenge(with: updated)
-        }
-        // apply: service parameter
-        challengeArray = try challengeCD.getChallenges(onwer: userId)
-    }
-    
-    //-------------------------------
-    // Update statistics object
-    //-------------------------------
-    private func updateStatObject(type: FunctionType) throws {
-        
-        // update: local storage
-        switch type{
-        case .reward:
-            let updated = StatUpdateDTO(
-                userId: userId,
-                newDrop: statDTO.drop,
-                newChallengeStep: statDTO.challengeStep
-            )
-            try statCD.updateStatistics(with: updated)
-        default:
-            let updated = StatUpdateDTO(
-                userId: userId,
-                newMyChallenge: statDTO.myChallenge
-            )
-            try statCD.updateStatistics(with: updated)
-        }
-        // apply: service parameter
-        guard let dto = try statCD.getStatisticsForDTO(with: userId, type: .challenge) as? StatChallengeDTO else {
-            throw ChallengeError.UnexpectedGetStatDTOError
-        }
-        self.statDTO = dto
-    }
-    
-    //-------------------------------
-    // Get previous challenge
-    //-------------------------------
+
     func getPrevChallenge(challengeType: ChallengeType, currentStep: Int) throws -> ChallengeObject? {
         if currentStep <= 1 {
             return nil
         } else if let prevChallenge = challengeArray.first(
-            where: { $0.chlg_type == challengeType && $0.chlg_step == currentStep - 1 }
+            where: { $0.type == challengeType && $0.step == currentStep - 1 }
         ) {
             return prevChallenge
         } else {
             throw ChallengeError.UnexpectedPrevChallengeSearchError
         }
-    }
-    
-    //-------------------------------
-    // Data inspection
-    //-------------------------------
-    // mychallenge
-    private func myChallengeDataInspection() {
-        util.log(.info, location, "Initialize myChallenge data inspection", userId)
-        let log = """
-            * ID: \(statDTO.userId)
-            * WaterDrop: \(statDTO.drop)
-            * ChallengeStep: \(statDTO.challengeStep)
-            * MyChallengeID: \(statDTO.myChallenge)
-            * MyChallengeCount: \(myChallenges.count)
-            * ChallengeCount: \(challengeArray.count)
-            """
-        print(log)
-    }
-    
-    // rewardDTO
-    private func rewardDataInsepction(with dto: ChallengeRewardDTO) {
-        util.log(.info, location, "Initialize rewardDTO data inspection", userId)
-        let log = """
-            * title: \(dto.title)
-            * type: \(dto.type)
-            * reward: \(dto.reward)
-            * startAt: \(dto.setMyChallengeAt)
-            * completeAt: \(dto.completeAt)
-        """
-        print(log)
-    }
-    
-    // challengeDTO
-    private func challengeDataInspection(with dto: ChallengeDTO, needPrevious: Bool) throws {
-        util.log(.info, location, "Initialize challengeDTO data inspection", userId)
-        var log = """
-            * title: \(dto.title)
-            * desc: \(dto.desc ?? "Nil detected")
-            * goal: \(dto.goal ?? 0)
-            * reward: \(dto.reward ?? 0)
-            * step: \(dto.step ?? 0)
-            * isUnlock: \(dto.isUnlock)
-            * isSelected: \(dto.isSelected)
-            * isComplete: \(dto.isComplete)
-        """
-        if needPrevious {
-            let prevTitle = dto.prevTitle
-            let prevDesc = dto.prevDesc
-            let prevGoal = dto.prevGoal
-            log += """
-            * previousTitle: \(prevTitle ?? "Nil detected")
-            * previousDesc: \(prevDesc ?? "Nil detected")
-            * previousGoal: \(prevGoal ?? 0)
-            """
-        }
-        print(log)
     }
 }
 

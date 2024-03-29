@@ -18,9 +18,7 @@ final class AuthAppleServices{
         self.nonceGen = AppleLoginSupport.shared.randomNonceString()
     }
     
-    //====================
     // MARK: Login
-    //====================
     func login(appleCredential: ASAuthorizationAppleIDCredential ,
                completion: @escaping(Result<AuthSocialLoginResDTO, Error>) -> Void) async {
         
