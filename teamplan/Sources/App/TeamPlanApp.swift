@@ -63,9 +63,6 @@ struct TeamPlanApp: App {
 //====================
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-        
-        // Add delay at startup
-        Thread.sleep(forTimeInterval: 1.5)
         return true
     }
     

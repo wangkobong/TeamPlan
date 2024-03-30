@@ -10,20 +10,9 @@ import Foundation
 
 final class HomeService {
     
-    //===============================
-    // MARK: - Properties
-    //===============================
-    // for service
-    private let userCD = UserServicesCoredata()
-    private let projectCD = ProjectServicesCoredata()
-    private let phrase = UserPhrase()
+    private let userCD: UserServicesCoredata
+    private let projectCD: ProjectServicesCoredata
     private let userId: String
-
-    // for log
-    private let util = Utilities()
-    private let location = "HomeService"
-    
-    // shared
     let challenge: ChallengeService
     
     //===============================
@@ -31,9 +20,11 @@ final class HomeService {
     //===============================
     /// 사용자 ID를 기반으로 `HomeService` 및 `ChallengeService` 인스턴스를 생성합니다.
     /// - Parameter userId: 사용자 ID입니다.
-    init(with userId: String){
+    init(with userId: String, controller: CoredataController = CoredataController()){
         self.userId = userId
         self.challenge = ChallengeService(with: userId)
+        self.userCD = UserServicesCoredata(coredataController: controller)
+        self.projectCD = ProjectServicesCoredata(coredataController: controller)
     }
     
     /// `HomeService`에서 사용되는 `ChallengeService` 인스턴스의 필수적인 추가 초기화 작업을 수행합니다,
@@ -41,9 +32,7 @@ final class HomeService {
     func readyService() throws {
         do {
             try self.challenge.readyService()
-            util.log(.info, location, "Service Ready", userId)
         } catch {
-            print("(Service) Error while Init in HomeService : \(error)")
             throw HomeServiceError.UnexpectedInitError
         }
     }
@@ -56,10 +45,9 @@ final class HomeService {
     /// - Returns: 생성된 문장입니다.
     /// - Throws: 문장 생성에 실패한 경우 `HomeServiceError.InternalError`가 발생합니다.
     func getSentences() throws -> String {
-        if let phrase = self.phrase.stringAry.randomElement() {
+        if let phrase = UserPhrase().stringAry.randomElement() {
             return phrase
         } else {
-            print("(Service) Error while Generate Sentence in HomeService")
             throw HomeServiceError.InternalError
         }
     }
@@ -74,8 +62,7 @@ final class HomeService {
     func getProjectCard() throws -> [ProjectCardDTO] {
         do {
             // Get All Projects
-            let projects = try self.projectCD.getProjectCards(by: userId)
-            // Sort by deadline
+            let projects = try self.projectCD.getDTO(with: userId)
             let sortedProjects = projects.sorted { $0.deadline < $1.deadline }
             // Return top 3 projects
             return Array(sortedProjects.prefix(upTo: 3))
@@ -96,6 +83,16 @@ extension HomeService{
     func getMyChallenge() throws -> [MyChallengeDTO] {
         challenge.getMyChallenges()
     }
+}
+
+struct UserPhrase {
+    let stringAry = [
+        "오늘의 목표를 향해 달려볼까요?",
+        "훗, 어딜 보시는거죠? 거긴 제 잔상입니다만!",
+        "폭탄맨 버려? 동료 버려? 어시스턴트 버려?!",
+        "역시 자네야!",
+        "마감을 지킨다면 유혈사태는 일어나지 않을것입니다"
+    ]
 }
 
 //===============================

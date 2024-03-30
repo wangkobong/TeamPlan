@@ -10,136 +10,53 @@ import Foundation
 import FirebaseFirestore
 import FirebaseFirestoreSwift
 
-//================================
-// MARK: - Main Function
-//================================
-final class AccessLogServicesFirestore{
-
-    //--------------------
-    // Parameter
-    //--------------------
-    let fs = Firestore.firestore()
+final class AccessLogServicesFirestore: LogDocsManage {
+    typealias Object = AccessLog
     
-    //--------------------
-    // Set
-    //--------------------
-    func setLog(with log: AccessLog) async throws {
+    func setDocs(with userId: String, and logHead: Int, and objects: [AccessLog]) async throws {
+        let batch = Firestore.firestore().batch()
+        let collectionRef = fetchCollection(with: .accessLog).document(userId).collection(String(logHead))
         
-        // Search & Set Data
-        let collectionRef = fs.collection("AccessLog")
-        try await collectionRef.addDocument(data: log.toDictionary())
-    }
-    
-    //--------------------
-    // Get
-    //--------------------
-    // Single
-    func getLog(with userId: String, and logId: Int) async throws -> AccessLog {
-        // Fetch Document
-        let docs = try await fetchDocument(with: userId, and: logId)
-        // Convert & Return
-        return try convertToLog(with: docs.data())
-    }
-    
-    // List
-    func getLogList(with userId: String) async throws -> [AccessLog] {
-        // Fetch Documents
-        let docsList = try await fetchDocuments(with: userId)
-        // Convert & Return
-        return try docsList.compactMap { doc in
-            try convertToLog(with: doc.data())
+        for object in objects {
+            let docsRef = collectionRef.document()
+            batch.setData(convertToData(with: object), forDocument: docsRef)
         }
+        try await batch.commit()
     }
     
-    //--------------------
-    // Update
-    //--------------------
-    func updateLog(to updated: AccessLog) async throws {
-        // Fetch Document
-        let docs = try await fetchDocument(with: updated.log_user_id, and: updated.log_id)
-        // Apply Update
-        try await docs.reference.updateData(updated.toDictionary())
+    func getDocs(with userId: String, and logHead: Int) async throws -> [AccessLog] {
+        let docs = try await fetchLogDocs(with: userId, and: .accessLog, and: logHead)
+        return try docs.map { try convertToObject(with: $0.data()) }
     }
     
-    //--------------------
-    // Delete
-    //--------------------
-    // Single
-    func deleteLog(with userId: String, and logId: Int) async throws {
-        // Fetch Document
-        let docs = try await fetchDocument(with: userId, and: logId)
-        // Delete Document
-        try await docs.reference.delete()
-    }
-    
-    // List
-    func deleteLogList(with userId: String) async throws {
-        // Fetch Documents
-        let docsList = try await fetchDocuments(with: userId)
-        // Delete Documents
-        for docs in docsList {
-            try await docs.reference.delete()
+    func deleteDocs(with userId: String) async throws {
+        let batch = Firestore.firestore().batch()
+        let docs = try await fetchDocuments(with: userId, and: .accessLog)
+        
+        for doc in docs {
+            batch.deleteDocument(doc.reference)
         }
+        try await batch.commit()
     }
 }
 
-//================================
-// MARK: - Main Function
-//================================
+// MARK: - Converter
 extension AccessLogServicesFirestore {
-    
-    // fetch collection
-    private func fetchCollection() -> CollectionReference {
-        return fs.collection("AccessLog")
-    }
-    
-    // fetch document
-    private func fetchDocument(with userId: String, and logId: Int) async throws -> QueryDocumentSnapshot {
-        // Fetch Reference
-        let docsRef = try await fetchCollection()
-            .whereField("log_user_id", isEqualTo: userId)
-            .whereField("log_id", isEqualTo: logId)
-            .getDocuments()
-        // Check & Return
-        guard let docs = docsRef.documents.first else {
-            throw AccessLogErrorFS.UnexpectedFetchError
+    private func convertToObject(with data: [String:Any]) throws -> AccessLog {
+        guard let userId = data["user_id"] as? String,
+              let stringAccessRecord = data["access_record"] as? String,
+              let accessRecord = DateFormatter.standardFormatter.date(from: stringAccessRecord)
+        else {
+            throw FirestoreError.convertFailure(serviceName: .log)
         }
-        return docs
+        return AccessLog(userId: userId, accessDate: accessRecord)
     }
     
-    // fetch documents
-    private func fetchDocuments(with userId: String) async throws -> [QueryDocumentSnapshot] {
-        // Fetch Reference
-        let docsRef = try await fetchCollection()
-            .whereField("log_user_id", isEqualTo: userId)
-            .getDocuments()
-        // Check & Return
-        return docsRef.documents
-    }
-    
-    // Convert: to Object
-    private func convertToLog(with data: [String : Any]) throws -> AccessLog {
-        guard let log = AccessLog(data: data) else {
-            throw AccessLogErrorFS.UnexpectedConvertError
-        }
-        return log
+    private func convertToData(with object: AccessLog) -> [String:Any] {
+        return [
+            "user_id": object.userId,
+            "access_record": DateFormatter.standardFormatter.string(from: object.accessRecord)
+        ]
     }
 }
 
-
-//================================
-// MARK: - Exception
-//================================
-enum AccessLogErrorFS: LocalizedError {
-    case UnexpectedFetchError
-    case UnexpectedConvertError
-    
-    var errorDescription: String? {
-        switch self {
-        case .UnexpectedFetchError:
-            return "Firestore: There was an unexpected error while Fetch 'Accesslog' details"
-        case .UnexpectedConvertError:
-            return "Firestore: There was an unexpected error while Convert 'Accesslog' details"
-        }
-    }
-}

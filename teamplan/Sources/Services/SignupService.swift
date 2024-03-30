@@ -12,11 +12,29 @@ final class SignupService{
     
     let util = Utilities()
     
-    //===============================
-    // MARK: - Get AccountInfo
-    //===============================
     func getAccountInfo(newUser: AuthSocialLoginResDTO) throws -> UserSignupDTO {
         
         return UserSignupDTO(with: try util.getIdentifier(from: newUser), and: newUser)
+    }
+}
+
+struct UserSignupDTO{
+    
+    let userId: String
+    let email: String
+    let provider: Providers
+    let logHead : Int
+    var nickName: String
+    
+    init(with userId: String, and dto: AuthSocialLoginResDTO) {
+        self.userId = userId
+        self.email = dto.email
+        self.provider = dto.provider
+        self.logHead = 1
+        self.nickName = ""
+    }
+
+    mutating func updateNickName(with newVal: String){
+        self.nickName = newVal
     }
 }

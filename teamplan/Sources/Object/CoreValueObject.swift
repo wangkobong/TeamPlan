@@ -16,7 +16,12 @@ struct CoreValueObject {
     let dropConvertRatio: Float
     let syncCycle: Int
     
-    init(userId: String, projectRegistLimit: Int, todoRegistLimit: Int, dropConvertRatio: Float, syncCycle: Int) {
+    init(userId: String, 
+         projectRegistLimit: Int,
+         todoRegistLimit: Int,
+         dropConvertRatio: Float,
+         syncCycle: Int) 
+    {
         self.userId = userId
         self.projectRegistLimit = projectRegistLimit
         self.todoRegistLimit = todoRegistLimit
@@ -24,13 +29,11 @@ struct CoreValueObject {
         self.syncCycle = syncCycle
     }
     
-    init?(entity: CoreValueEntity) {
-        guard let userId = entity.user_id else { return nil
-        }
-        self.userId = userId
-        self.projectRegistLimit = Int(entity.project_regist_limit)
-        self.todoRegistLimit = Int(entity.todo_regist_limit)
-        self.dropConvertRatio = entity.drop_convert_ratio
-        self.syncCycle = Int(entity.sync_cycle)
+    init(){
+        self.userId = ""
+        self.projectRegistLimit = 0
+        self.todoRegistLimit = 0
+        self.dropConvertRatio = 0
+        self.syncCycle = 0
     }
 }

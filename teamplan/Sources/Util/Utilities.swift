@@ -10,16 +10,12 @@ import Foundation
 
 final class Utilities {
     
-    //============================
-    // MARK: Account Helper
-    //============================
-    // Identifier
+    // MARK: Extract Identifier
     func getIdentifier(from authRes: AuthSocialLoginResDTO) throws -> String {
         
         let accountName = try getAccountName(from: authRes.email)
         return "\(accountName)_\(authRes.provider.rawValue)"
     }
-    
     // Account Name
     private func getAccountName(from userEmail: String) throws -> String {
         
@@ -29,9 +25,8 @@ final class Utilities {
         return (String(userEmail.prefix(upTo: atIndex)))
     }
 
-    //============================
-    // MARK: Time Helper
-    //============================
+    
+    // MARK: Time Calculator
     // Compare
     func compareTime(currentTime: Date, lastTime: Date) -> Bool {
         
@@ -43,7 +38,6 @@ final class Utilities {
                lastTimeComp.month == currentTimeComp.month &&
                lastTimeComp.day == currentTimeComp.day
     }
-    
     // D-Day
     func calculateDatePeroid(with start: Date, and end: Date) throws -> Int {
         
@@ -55,24 +49,18 @@ final class Utilities {
         guard let period = components.day else {
             throw UtilError.UnexpectedTimeCalculateError
         }
-        return period
+        return period + 1
     }
     
-    //============================
-    // MARK: Update Helper
-    //============================
-    // Check
-    func updateFieldIfNeeded<T: Equatable>(_ currentValue: inout T, newValue: T) -> Bool {
-        if currentValue != newValue {
-            currentValue = newValue
-            return true
-        }
-        return false
+    // Update Check
+    func updateIfNeeded<T: Equatable>(_ currentValue: inout T, newValue: T?) -> Bool {
+        guard let newValue = newValue, currentValue != newValue else { return false }
+        currentValue = newValue
+        return true
     }
     
-    //============================
+    
     // MARK: JSON Converter
-    //============================
     // Data to JSON
     func convertToJSON<T: Codable>(data: T) throws -> String {
         do {
@@ -106,10 +94,8 @@ final class Utilities {
     }
 }
 
-//============================
+
 // MARK: Extension
-//============================
-// Dictionary
 extension Dictionary {
     func mapKeys<T: Hashable>(transform: (Key) -> T) -> [T: Value] {
         var newDict: [T: Value] = [:]
@@ -130,28 +116,12 @@ extension Dictionary {
     }
 }
 
-// DateFormatter
 extension DateFormatter {
     static let standardFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
         return formatter
     }()
-}
-
-//================================
-// MARK: - Exception
-//================================
-extension Utilities{
-    func log(_ level: LogLevel, _ service: String, _ message: String, _ userId: String) {
-        print("[\(level.rawValue)]\(service) - \(userId): \(message)")
-    }
-}
-
-enum LogLevel: String {
-    case info = "Info"
-    case warning = "Warning"
-    case critical = "Critical"
 }
 
 //================================

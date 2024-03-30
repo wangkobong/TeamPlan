@@ -10,30 +10,30 @@ import Foundation
 
 final class SignupLoadingService{
     
-    //================================
-    // MARK: - Properties
-    //================================
-    // for service
     private let util = Utilities()
+    private let controller = CoredataController()
+    
+    private let userCD: UserServicesCoredata
+    private let statCD: StatisticsServicesCoredata
+    private let challengeCD: ChallengeServicesCoredata
+    private let accessLogCD: AccessLogServicesCoredata
+    
     private let userFS = UserServicesFirestore()
-    private let userCD = UserServicesCoredata()
     private let statFS = StatisticsServicesFirestore()
-    private let statCD = StatisticsServicesCoredata()
-    private let logManager = LogManager()
-    private let challengeManager = ChallengeManager()
-    private let onboardingChallenge: Int = 100
+    private let challengeFS = ChallengeServicesFirestore()
+    private let accessLogFS = AccessLogServicesFirestore()
+    
+    private let logHead: Int
     private let userId: String
     private let signupDate: Date
-    private var newProfile: UserObject
-    private var newStat: StatisticsObject
+    
+    private let newProfile: UserObject
+    private let newStat: StatisticsObject
+    private let newLog: AccessLog
+    
     private var rollbackStack: [() async throws -> Void ] = []
     
-    // for log
-    private let location = "SignupLoading"
     
-    //===============================
-    // MARK: - Initializer
-    //===============================
     /// `SignupLoadingService` 클래스의 인스턴스를 초기화합니다.
     ///
     /// 이 초기화 과정에서는 다음과 같은 작업이 수행됩니다:
@@ -44,19 +44,19 @@ final class SignupLoadingService{
     ///
     /// 이 과정은 사용자가 앱에 가입할 때 필요한 기능들의 기본 설정을 제공합니다.
     init(newUser: UserSignupDTO){
+        self.userCD = UserServicesCoredata(coredataController: self.controller)
+        self.statCD = StatisticsServicesCoredata(coredataController: self.controller)
+        self.challengeCD = ChallengeServicesCoredata(coredataController: self.controller)
+        self.accessLogCD = AccessLogServicesCoredata(coredataController: self.controller)
+        
+        self.logHead = newUser.logHead
         self.userId = newUser.userId
         self.signupDate = Date()
-        self.newProfile = UserObject(newUser: newUser, signupDate: signupDate)
-        self.newStat = StatisticsObject(userId: userId, setDate: signupDate)
-        self.logManager.readyParameter(userId: self.userId, caller: location)
-        util.log(.info, location, "Ready for Signup Process", self.userId)
+        
+        self.newProfile = UserObject(with: newUser, and: self.signupDate)
+        self.newStat = StatisticsObject(with: newUser.userId, and: self.signupDate)
+        self.newLog = AccessLog(with: newUser.userId, and: self.signupDate)
     }
-}
-
-//===============================
-// MARK: - Main Executor
-//===============================
-extension SignupLoadingService{
     
     /// 신규 사용자 가입과정의 메인 실행 함수입니다.
     /// - Returns: 가입이 완료된 사용자 정보를 담고 있는 `UserInfoDTO` 객체를 반환합니다.
@@ -64,42 +64,24 @@ extension SignupLoadingService{
     /// - 이 함수는 가입 과정을 여러 단계(로컬 저장, 서버 저장)별로 순차적으로 진행합니다.
     /// - 모든 단계가 성공적으로 완료되면 사용자 정보 DTO를 반환합니다. 실패 시 모든 변경 사항을 롤백합니다.
     func executor() async throws -> UserInfoDTO {
-        // Ready Parameter
-        let localSetResult: Bool
-        let serverSetResult: Bool
         
-        // Pre-DataInspection
-        util.log(.info, location, "Proceed Pre-DataInspection", userId)
-        dataInspection(with: self.newProfile)
+        let localResult: Bool
+        let serverResult: Bool
     
-        // Local Execute Result
-        localSetResult = try localExecutor()
-        util.log(.info, location, "Proceed Local DataInspection", userId)
-        dataInspection(with: try userCD.getUser(with: userId))
-        
-        // Server Execute Result
-        serverSetResult = try await serverExecutor()
-        util.log(.info, location, "Proceed Server DataInspection", userId)
-        dataInspection(with: try await userFS.getUser(from: userId))
+        localResult = try localExecutor()
+        serverResult = try await serverExecutor()
         
         // Apply Execute
-        switch (localSetResult, serverSetResult) {
+        switch (localResult, serverResult) {
             
         case (true, true):
-            util.log(.info, location, "Successfully set new-userdata at local & server", userId)
             return UserInfoDTO(with: newProfile)
             
         default:
             try await rollbackAll()
-            throw SignupLoadingError.UnexpectedSignupError
+            throw SignupLoadingError.signupFailure(serviceName: .signup)
         }
     }
-}
-
-//===============================
-// MARK: - Support Executor
-//===============================
-extension SignupLoadingService{
     
     /// 로컬 디바이스에 신규 사용자 데이터를 저장하는 핵심 기능 함수입니다.
     /// - Returns: 데이터 저장 성공 여부를 나타내는 Bool 값입니다.
@@ -107,36 +89,20 @@ extension SignupLoadingService{
     /// - 이 함수는 사용자 프로필, 통계정보, 접속 로그, 도전과제 로그를 로컬(Coredata)에 저장합니다.
     /// - 실패 시, 각 단계를 롤백할 수 있는 함수를 롤백 스택에 추가하며, 성공 시 스택을 비웁니다.
     private func localExecutor() throws -> Bool {
-        util.log(.info, location, "Proceed storage new-userdata at local device", userId)
         do {
-            // 1. User
             try setNewUserProfileAtLocal()
             rollbackStack.append(rollbackSetNewUserProfileAtLocal)
-            util.log(.info, location, "Successfully set profile at local", userId)
             
-            // 2. Statistics
             try setNewStatAtLocal()
             rollbackStack.append(rollbackSetNewStatAtLocal)
-            util.log(.info, location, "Successfully set statistics at local", userId)
             
-            // Init Log Manager
-            try logManager.readyManager()
-            
-            // 3. AccessLog
             try setNewAccessLogAtLocal()
             rollbackStack.append(rollbackSetNewAccessLogAtLocal)
-            util.log(.info, location, "Successfully set access-log at local", userId)
-            
-            // 4. ChallengeLog
-            try setNewChallengeLogAtLocal()
-            rollbackStack.append(rollbackSetNewChallengeLogAtLocal)
-            util.log(.info, location, "Successfully set challenge-log at local", userId)
             
             rollbackStack.removeAll()
             return true
             
         } catch {
-            util.log(.critical, location, "Unexpected error while processing storage new user data at local device", userId)
             return false
         }
     }
@@ -148,38 +114,26 @@ extension SignupLoadingService{
     /// - 서버에 저장된 도전과제 정보를 조회하고, 로컬에 저장합니다.
     /// - 실패 시, 각 단계를 롤백할 수 있는 함수를 롤백 스택에 추가하며, 성공 시 스택을 비웁니다.
     private func serverExecutor() async throws -> Bool {
-        util.log(.info, location, "Proceed storage new-userdata at server", userId)
         do {
-            // 1. User
             try await setNewUserProfileAtServer()
             rollbackStack.append(rollbackSetNewUserProfileAtServer)
-            util.log(.info, location, "Successfully set profile at server", userId)
             
-            // 2. Statistics
             try await setNewStatAtServer()
             rollbackStack.append(rollbackSetNewStatAtServer)
-            util.log(.info, location, "Successfully set statistics at server", userId)
             
-            // 3. AccessLog
             try await setNewAccessLogAtServer()
             rollbackStack.append(rollbackSetNewAccessLogAtServer)
-            util.log(.info, location, "Successfully set access-log at server", userId)
-            
-            // 4. ChallengeLog
-            try await setNewChallengeLogAtServer()
-            rollbackStack.append(rollbackSetNewChallengeLogAtServer)
-            util.log(.info, location, "Successfully set challenge-log at server", userId)
-            
-            // 5. Challenge
+        
             try await setNewChallengeAtLocal()
             rollbackStack.append(rollbackSetNewChallengeAtLocal)
-            util.log(.info, location, "Successfully set challenge-data from server", userId)
+            
+            try await setNewChallengeStatusAtServer()
+            rollbackStack.append(rollbackSetNewChallengeStatusAtServer)
             
             rollbackStack.removeAll()
             return true
             
         } catch {
-            util.log(.critical, location, "Unexpected error while processing storage new user data at server", userId)
             return false
         }
     }
@@ -188,152 +142,167 @@ extension SignupLoadingService{
     /// - Throws: 롤백 과정에서 오류가 발생하면 예외를 던집니다.
     /// - 이 함수는 롤백 스택에 추가된 작업을 역순으로 실행하여 누적된 변경 사항을 되돌립니다.
     private func rollbackAll() async throws {
-        do {
-            for rollback in rollbackStack.reversed() {
-                try await rollback()
-            }
-            rollbackStack.removeAll()
-            
-        } catch {
-            throw error
+        for rollback in rollbackStack.reversed() {
+            try await rollback()
         }
+        rollbackStack.removeAll()
     }
 }
 
-//===============================
+
 // MARK: - User
-//===============================
 extension SignupLoadingService{
     
     // : Coredata
     private func setNewUserProfileAtLocal() throws {
-        try userCD.setUser(with: newProfile, and: signupDate)
+        try userCD.setObject(with: newProfile)
     }
     private func rollbackSetNewUserProfileAtLocal() throws {
-        try userCD.deleteUser(with: userId)
+        try userCD.deleteObject(with: userId)
     }
     
     // : Firestore
     private func setNewUserProfileAtServer() async throws {
-        try await userFS.setUser(with: newProfile)
+        try await userFS.setDocs(with: newProfile)
     }
     private func rollbackSetNewUserProfileAtServer() async throws {
-        try await userFS.deleteUser(with: userId)
+        try await userFS.deleteDocs(with: userId)
     }
 }
 
-//===============================
+
 // MARK: - Statisticcs
-//===============================
 extension SignupLoadingService{
     
     // : Coredata
     private func setNewStatAtLocal() throws {
-        try statCD.setStatistics(with: newStat)
+        try statCD.setObject(with: newStat)
     }
     private func rollbackSetNewStatAtLocal() throws {
-        try statCD.deleteStatistics(with: userId)
+        try statCD.deleteObject(with: userId)
     }
     
     // : Firestore
     private func setNewStatAtServer() async throws {
-        try await statFS.setStatistics(with: newStat)
+        try await statFS.setDocs(with: newStat)
     }
     private func rollbackSetNewStatAtServer() async throws {
-        try await statFS.deleteStatistics(with: userId)
+        try await statFS.deleteDocs(with: userId)
     }
 }
 
-//===============================
+
 // MARK: - AccessLog
-//===============================
 extension SignupLoadingService{
     
     // : CoreData
     private func setNewAccessLogAtLocal() throws {
-        try logManager.setNewAccessLogAtLocal(with: signupDate)
+        try accessLogCD.setObject(with: newLog)
     }
     private func rollbackSetNewAccessLogAtLocal() throws {
-        try logManager.deleteAllAccessLogAtLocal()
+        try accessLogCD.deleteObject(with: userId)
     }
     
     // : Firestore
     private func setNewAccessLogAtServer() async throws {
-        try await logManager.setNewAccessLogAtServer()
+        try await accessLogFS.setDocs(with: userId, and: logHead, and: [newLog])
     }
     private func rollbackSetNewAccessLogAtServer() async throws {
-        try await logManager.deleteAllAccessLogAtServer()
+        try await accessLogFS.deleteDocs(with: userId)
     }
 }
 
-//===============================
-// MARK: - ChallengeLog
-//===============================
+// MARK: - Challenge
 extension SignupLoadingService{
-    
+
     // : Coredata
-    private func setNewChallengeLogAtLocal() throws {
-        try logManager.setNewChallengeLogAtLocal(with: onboardingChallenge, and: signupDate)
+    private func setNewChallengeAtLocal() async throws {
+        
+        let challengeInfo = try await challengeFS.getInfoDocsList()
+        for challenge in challengeInfo {
+            let object = prepareNewChallengeStatus(with: challenge)
+            try challengeCD.setObject(with: object)
+        }
     }
-    private func rollbackSetNewChallengeLogAtLocal() throws {
-        try logManager.deleteAllChallengeLogAtLocal()
+    private func rollbackSetNewChallengeAtLocal() throws {
+        try challengeCD.deleteObject(with: userId)
     }
     
     // : Firestore
-    private func setNewChallengeLogAtServer() async throws {
-        try await logManager.setNewChallengeLogAtServer()
+    private func setNewChallengeStatusAtServer() async throws {
+        let challenges = try challengeCD.getObjects(with: userId)
+        try await challengeFS.setDocs(with: challenges, and: userId)
     }
-    private func rollbackSetNewChallengeLogAtServer() async throws {
-        try await logManager.deleteAllChallengeLogAtServer()
-    }
-}
-
-//===============================
-// MARK: - Challenge
-//===============================
-extension SignupLoadingService{
-
-    // Sync: Server to Local
-    private func setNewChallengeAtLocal() async throws {
-        try await challengeManager.getChallengesFromServer()
-        challengeManager.configChallenge(with: newProfile.user_id)
-        try challengeManager.setChallenge()
-    }
-    private func rollbackSetNewChallengeAtLocal() throws {
-        try challengeManager.delChallenge(with: newProfile.user_id)
+    private func rollbackSetNewChallengeStatusAtServer() async throws {
+        try await challengeFS.deleteDocs(with: userId)
     }
 }
 
-//===============================
-// MARK: - Inspection
-//===============================
-extension SignupLoadingService{
-    
-    private func dataInspection(with profile: UserObject) {
-        let log = """
-            * ID: \(profile.user_id)
-            * Email: \(profile.user_email)
-            * NickName: \(profile.user_name)
-            * Status: \(profile.user_status)
-            * CreateAt: \(profile.user_created_at)
-            * LoginAt: \(profile.user_login_at)
-            * UpdateAt: \(profile.user_updated_at)
-            """
-        print(log)
+//MARK: - New User Info
+extension UserObject {
+    init(with dto: UserSignupDTO, and signupDate: Date) {
+        self.userId = dto.userId
+        self.email = dto.email
+        self.name = dto.nickName
+        self.socialType = dto.provider
+        self.status = .active
+        self.accessLogHead = dto.logHead
+        self.createdAt = signupDate
+        self.changedAt = signupDate
+        self.syncedAt = signupDate
     }
 }
 
-//===============================
-// MARK: - Exception
-//===============================
-enum SignupLoadingError: LocalizedError {
-    case UnexpectedSignupError
-    
-    var errorDescription: String?{
-        switch self {
-        case .UnexpectedSignupError:
-            return "Service: There was an unexpected error while Processing Set NewUser at 'SignupLoadingService'"
-        }
+extension StatisticsObject {
+    init(with userId: String, and signupDate: Date) {
+        self.userId = userId
+        self.term = 1
+        self.drop = 0
+        self.totalRegistedProjects = 0
+        self.totalFinishedProjects = 0
+        self.totalFailedProjects = 0
+        self.totalAlertedProjects = 0
+        self.totalExtendedProjects = 0
+        self.totalRegistedTodos = 0
+        self.totalFinishedTodos = 0
+        self.challengeStepStatus = [
+            ChallengeType.serviceTerm.rawValue : 1,
+            ChallengeType.totalTodo.rawValue : 1,
+            ChallengeType.projectAlert.rawValue : 1,
+            ChallengeType.projectFinish.rawValue : 1,
+            ChallengeType.waterDrop.rawValue : 1
+        ]
+        self.mychallenges = []
+        self.syncedAt = signupDate
     }
 }
 
+extension AccessLog {
+    init(with userId: String, and signupDate: Date) {
+        self.userId = userId
+        self.accessRecord = signupDate
+    }
+}
+
+extension SignupLoadingService {
+    private func prepareNewChallengeStatus(with dto: ChallengeInfoDTO) -> ChallengeObject{
+        return ChallengeObject(
+            challengeId: dto.challengeId,
+            userId: userId,
+            title: dto.title,
+            desc: dto.desc,
+            goal: dto.goal,
+            type: dto.type,
+            reward: dto.reward,
+            step: dto.step,
+            version: dto.version,
+            status: false,            // false(inComplete), true(complete)
+            lock: dto.step != 1,      // false(unlock), true(locked)
+            progress: 0,
+            selectStatus: false,      // false(notSelected), true(selected)
+            selectedAt: signupDate,
+            unselectedAt: signupDate,
+            finishedAt: signupDate
+        )
+    }
+}

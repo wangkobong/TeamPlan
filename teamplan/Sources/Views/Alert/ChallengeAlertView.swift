@@ -82,7 +82,7 @@ public struct ChallengeAlertView: View {
 extension ChallengeAlertView {
     private var didCompleteAlert: some View {
         VStack {
-            Text("\(allChallenge[self.index].chlg_finished_at)")
+            Text("\(allChallenge[self.index].finishedAt)")
                 .font(.appleSDGothicNeo(.regular, size: 12))
                 .multilineTextAlignment(.center)
                 .foregroundColor(.theme.greyColor)
@@ -90,16 +90,16 @@ extension ChallengeAlertView {
             
             Spacer()
             
-            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].chlg_type, isLock: self.allChallenge[index].chlg_lock, isComplete: self.allChallenge[index].chlg_status))
+            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].lock, isComplete: self.allChallenge[index].status))
                 .frame(width: 82, height: 82)
             
-            Text("\(allChallenge[self.index].chlg_desc)")
+            Text("\(allChallenge[self.index].desc)")
                 .font(.appleSDGothicNeo(.bold, size: 24))
                 .multilineTextAlignment(.center)
                 .foregroundColor(.theme.mainPurpleColor)
     
             
-            Text("\(getChallenge(index: self.index).chlg_title)\n이 배찌를 획득하였어요.")
+            Text("\(getChallenge(index: self.index).title)\n이 배찌를 획득하였어요.")
                 .font(.appleSDGothicNeo(.regular, size: 17))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
@@ -128,16 +128,16 @@ extension ChallengeAlertView {
 
             Spacer()
             
-            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].chlg_type, isLock: self.allChallenge[index].chlg_lock, isComplete: self.allChallenge[index].chlg_status))
+            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].lock, isComplete: self.allChallenge[index].status))
                 .frame(width: 82, height: 82)
             
-            Text("\(getChallenge(index: self.index).chlg_title)")
+            Text("\(getChallenge(index: self.index).title)")
                 .font(.appleSDGothicNeo(.bold, size: 24))
                 .multilineTextAlignment(.center)
                 .foregroundColor(.theme.mainPurpleColor)
     
             
-            Text("\(getChallenge(index: self.index).chlg_title)\n연속 해결하기")
+            Text("\(getChallenge(index: self.index).title)\n연속 해결하기")
                 .font(.appleSDGothicNeo(.regular, size: 17))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
@@ -166,16 +166,16 @@ extension ChallengeAlertView {
 
             Spacer()
             
-            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].chlg_type, isLock: self.allChallenge[index].chlg_lock, isComplete: self.allChallenge[index].chlg_status))
+            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].lock, isComplete: self.allChallenge[index].status))
                 .frame(width: 82, height: 82)
             
-            Text("\(getChallenge(index: self.index).chlg_title)")
+            Text("\(getChallenge(index: self.index).title)")
                 .font(.appleSDGothicNeo(.bold, size: 24))
                 .multilineTextAlignment(.center)
                 .foregroundColor(.theme.mainPurpleColor)
     
             
-            Text("\(getChallenge(index: self.index).chlg_title)프로젝트 5개\n연속 해결하기")
+            Text("\(getChallenge(index: self.index).title)프로젝트 5개\n연속 해결하기")
                 .font(.appleSDGothicNeo(.regular, size: 17))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
@@ -225,16 +225,16 @@ extension ChallengeAlertView {
 
             Spacer()
             
-            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].chlg_type, isLock: self.allChallenge[index].chlg_lock, isComplete: self.allChallenge[index].chlg_status))
+            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].lock, isComplete: self.allChallenge[index].status))
                 .frame(width: 82, height: 82)
             
-            Text("\(getChallenge(index: self.index).chlg_title)")
+            Text("\(getChallenge(index: self.index).title)")
                 .font(.appleSDGothicNeo(.bold, size: 24))
                 .multilineTextAlignment(.center)
                 .foregroundColor(.theme.mainPurpleColor)
     
             
-            Text("'\(getChallenge(index: self.index).chlg_title)'\n해결 후 잠금해제")
+            Text("'\(getChallenge(index: self.index).title)'\n해결 후 잠금해제")
                 .font(.appleSDGothicNeo(.regular, size: 17))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
@@ -263,16 +263,16 @@ extension ChallengeAlertView {
 
             Spacer()
             
-            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].chlg_type, isLock: self.allChallenge[index].chlg_lock, isComplete: self.allChallenge[index].chlg_status))
+            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].lock, isComplete: self.allChallenge[index].status))
                 .frame(width: 82, height: 82)
             
-            Text("\(getChallenge(index: self.index).chlg_title)")
+            Text("\(getChallenge(index: self.index).title)")
                 .font(.appleSDGothicNeo(.bold, size: 24))
                 .multilineTextAlignment(.center)
                 .foregroundColor(.theme.mainPurpleColor)
     
             
-            Text("\(getChallenge(index: self.index).chlg_title)프로젝트 5개\n연속 해결하기")
+            Text("\(getChallenge(index: self.index).title)프로젝트 5개\n연속 해결하기")
                 .font(.appleSDGothicNeo(.regular, size: 17))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
@@ -359,7 +359,7 @@ extension ChallengeAlertView {
                 Spacer()
                     .frame(height: 50)
                 
-                Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].chlg_type))
+                Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type))
                     .frame(width: 82, height: 82)
                 
                 Spacer()

@@ -9,144 +9,153 @@
 import Foundation
 import CoreData
 
-final class UserServicesCoredata{
+final class UserServicesCoredata: FullObjectManage {
+    typealias Entity = UserEntity
+    typealias Object = UserObject
+    typealias DTO = UserUpdateDTO
     
-    //================================
-    // MARK: - Parameter
-    //================================
-    let util = Utilities()
-    let cm = CoreDataManager.shared
-    var context: NSManagedObjectContext {
-        return cm.context
-    }
-}
-
-//================================
-// MARK: - Main Function
-//================================
-extension UserServicesCoredata{
-    
-    //--------------------
-    // Set
-    //--------------------
-    func setUser(with newUser: UserObject, and setDate: Date) throws {
-        // Create Entity
-        createEntity(with: newUser, and: setDate)
-        // Set Entity
-        try context.save()
+    var context: NSManagedObjectContext
+    init(coredataController: CoredataProtocol) {
+        self.context = coredataController.context
     }
     
-    //--------------------
-    // Get
-    //--------------------
-    func getUser(with userId: String) throws -> UserObject {
-        // Fetch ENtity
-        let entity = try fetchEntity(with: userId)
-        // Convert & Return
-        return try convertToUser(with: entity)
+    func setObject(with object: UserObject) throws {
+        createEntity(with: object, and: object.createdAt)
+        try self.context.save()
     }
     
-    //--------------------
-    // Update
-    //--------------------
-    func updateUser(with dto: UserUpdateDTO) throws {
-        // Fetch Entity
-        let entity = try fetchEntity(with: dto.userId)
-        // Update Check
+    func getObject(with userId: String) throws -> UserObject {
+        let entity = try getEntity(with: userId)
+        return try convertToObject(with: entity)
+    }
+    
+    func updateObject(with dto: DTO) throws {
+        let entity = try getEntity(with: dto.userId)
         if checkUpdate(from: entity, to: dto) {
             try context.save()
         }
     }
     
-    //--------------------
-    // Delete
-    //--------------------
-    func deleteUser(with userId: String) throws {
-        // Fetch Entity
-        let entity = try fetchEntity(with: userId)
-        // Delete Data
+    func deleteObject(with userId: String) throws {
+        let entity = try getEntity(with: userId)
         context.delete(entity)
         try context.save()
     }
 }
 
-//===============================
-// MARK: - Support Function
-//===============================
+
+// MARK: - Set Extension
 extension UserServicesCoredata{
     
-    // Fetch User Entity
-    private func fetchEntity(with userId: String) throws -> UserEntity {
-        // parameter setting
-        let fetchReq: NSFetchRequest<UserEntity> = UserEntity.fetchRequest()
-        // Request Query
-        fetchReq.predicate = NSPredicate(format: "user_id == %@", userId)
-        fetchReq.fetchLimit = 1
+    private func createEntity(with object: UserObject, and setDate: Date) {
+        let entity = UserEntity(context: context)
         
-        guard let entity = try context.fetch(fetchReq).first else {
-            throw UserErrorCD.UnexpectedFetchError
+        entity.user_id = object.userId
+        entity.email = object.email
+        entity.name = object.name
+        entity.social_type = object.socialType.rawValue
+        entity.status = object.status.rawValue
+        entity.access_log_head = Int32(object.accessLogHead)
+        entity.created_at = object.createdAt
+        entity.changed_at = object.changedAt
+        entity.synced_at = object.syncedAt
+    }
+}
+
+
+// MARK: - Get Extension
+extension UserServicesCoredata{
+    
+    private func getEntity(with userId: String) throws -> UserEntity {
+        let fetchRequest: NSFetchRequest<UserEntity> = UserEntity.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: EntityPredicate.user.format, userId)
+        
+        guard let entity = try fetchEntity(with: fetchRequest, and: self.context) else {
+            throw CoredataError.fetchFailure(serviceName: .user)
         }
         return entity
     }
     
-    // Set Entity
-    private func createEntity(with object: UserObject, and setDate: Date) {
-        let entity = UserEntity(context: context)
-        
-        entity.user_id = object.user_id
-        entity.user_email = object.user_email
-        entity.user_name = object.user_name
-        entity.user_social_type = object.user_social_type
-        entity.user_status = object.user_status
-        entity.user_created_at = setDate
-        entity.user_login_at = setDate
-        entity.user_updated_at = setDate
-    }
-    
-    // Convert: to Object
-    private func convertToUser(with entity: UserEntity) throws -> UserObject {
-        guard let data = UserObject(userEntity: entity) else {
-            throw UserErrorCD.UnexpectedConvertError
+    private func convertToObject(with entity: UserEntity) throws -> UserObject {
+        guard let userId = entity.user_id,
+              let email = entity.email,
+              let name = entity.name,
+              let stringSocialType = entity.social_type,
+              let socialType = Providers(rawValue: stringSocialType),
+              let stringStatus = entity.status,
+              let status = UserStatus(rawValue: stringStatus),
+              let createdAt = entity.created_at,
+              let changedAt = entity.changed_at,
+              let syncedAt = entity.synced_at
+        else {
+            throw CoredataError.convertFailure(serviceName: .user)
         }
-        return data
-    }
-    
-    // Update
-    private func checkUpdate(from origin: UserEntity, to updated: UserUpdateDTO) -> Bool {
-        var isUpdated = false
-        
-        if let newEmail = updated.newEmail {
-            isUpdated = util.updateFieldIfNeeded(&origin.user_email, newValue: newEmail) || isUpdated
-        }
-        if let newNickName = updated.newNickName {
-            isUpdated = util.updateFieldIfNeeded(&origin.user_name, newValue: newNickName) || isUpdated
-        }
-        if let newUpdateAt = updated.newUpdateAt {
-            isUpdated = util.updateFieldIfNeeded(&origin.user_updated_at, newValue: newUpdateAt) || isUpdated
-        }
-        if let newLoginAt = updated.newLoginAt {
-            isUpdated = util.updateFieldIfNeeded(&origin.user_login_at, newValue: newLoginAt) || isUpdated
-        }
-        return isUpdated
+        return UserObject(
+            userId: userId,
+            email: email,
+            name: name,
+            socialType: socialType,
+            status: status,
+            accessLogHead: Int(entity.access_log_head),
+            createdAt: createdAt,
+            changedAt: changedAt,
+            syncedAt: syncedAt)
     }
 }
 
-//===============================
-// MARK: - Exception
-//===============================
-enum UserErrorCD: LocalizedError {
-    case UnexpectedFetchError
-    case UnexpectedConvertError
-    case UserRetrievalByIdentifierFailed
+
+// MARK: - Update Extension
+struct UserUpdateDTO{
+    let userId: String
+    let newEmail: String?
+    let newName: String?
+    let newStatus: UserStatus?
+    let newLogHead: Int?
+    let newChangedAt: Date?
+    let newSyncedAt: Date?
     
-    var errorDescription: String?{
-        switch self {
-        case .UnexpectedFetchError:
-            return "Coredata: There was an unexpected error while Fetch 'User' details"
-        case .UnexpectedConvertError:
-            return "Coredata: There was an unexpected error while Convert 'User' details"
-        case .UserRetrievalByIdentifierFailed:
-            return "CoreData: Unable to retrieve 'User' data using the provided identifier."
+    init(userId: String,
+         newEmail: String? = nil,
+         newName: String? = nil,
+         newStatus: UserStatus? = nil,
+         newLogHead: Int? = nil,
+         newChangedAt: Date? = nil,
+         newSyncedAt: Date? = nil)
+    {
+        self.userId = userId
+        self.newEmail = newEmail
+        self.newName = newName
+        self.newStatus = newStatus
+        self.newLogHead = newLogHead
+        self.newChangedAt = newChangedAt
+        self.newSyncedAt = newSyncedAt
+    }
+}
+
+extension UserServicesCoredata{
+    
+    private func checkUpdate(from entity: UserEntity, to dto: UserUpdateDTO) -> Bool {
+        let util = Utilities()
+        var isUpdated = false
+        
+        if let newEmail = dto.newEmail {
+            isUpdated = util.updateIfNeeded(&entity.email, newValue: newEmail) || isUpdated
         }
+        if let newName = dto.newName {
+            isUpdated = util.updateIfNeeded(&entity.name, newValue: newName) || isUpdated
+        }
+        if let newStatus = dto.newStatus?.rawValue {
+            isUpdated = util.updateIfNeeded(&entity.status, newValue: newStatus) || isUpdated
+        }
+        if let newLogHead = dto.newLogHead {
+            isUpdated = util.updateIfNeeded(&entity.access_log_head, newValue: Int32(newLogHead)) || isUpdated
+        }
+        if let newChangedAt = dto.newChangedAt {
+            isUpdated = util.updateIfNeeded(&entity.changed_at, newValue: newChangedAt) || isUpdated
+        }
+        if let newSyncedAt = dto.newSyncedAt {
+            isUpdated = util.updateIfNeeded(&entity.synced_at, newValue: newSyncedAt) || isUpdated
+        }
+        return isUpdated
     }
 }
