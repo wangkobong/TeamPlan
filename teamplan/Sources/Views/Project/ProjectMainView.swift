@@ -14,7 +14,7 @@ enum ProjectViewType {
 
 struct ProjectMainView: View {
     
-    @StateObject var projectViewModel = ProjectViewModel()
+    @ObservedObject var projectViewModel: ProjectViewModel
     
     @State private var isAddProjectViewActive = false
     @State private var isPushProjectDetailView = false
@@ -49,7 +49,7 @@ struct ProjectMainView: View {
             }
             .padding(.horizontal, 16)
             .sheet(isPresented: $isAddProjectViewActive) {
-                AddProjectView()
+                AddProjectView(projectViewModel: projectViewModel)
             }
         }
 
@@ -58,7 +58,7 @@ struct ProjectMainView: View {
 
 struct ProjectMainView_Previews: PreviewProvider {
     static var previews: some View {
-        ProjectMainView()
+        ProjectMainView(projectViewModel: ProjectViewModel())
     }
 }
 
@@ -79,7 +79,7 @@ extension ProjectMainView {
                     Spacer()
                 }
                 HStack {
-                    Text("3개의 프로젝트가 있어요")
+                    Text("\(projectViewModel.projectList.count)개의 프로젝트가 있어요")
                         .font(.appleSDGothicNeo(.bold, size: 20))
                         .foregroundColor(.theme.blackColor)
                     Spacer()
@@ -121,7 +121,7 @@ extension ProjectMainView {
                         .foregroundColor(.theme.blackColor)
                         .padding(.top, 11)
                     Spacer()
-                    Text("3")
+                    Text("\(projectViewModel.projectService.statData.totalRegistedProjects)")
                         .font(.appleSDGothicNeo(.bold, size: 18))
                         .foregroundColor(.theme.mainPurpleColor)
                         .padding(.bottom, 14)
@@ -141,7 +141,7 @@ extension ProjectMainView {
                         .foregroundColor(.theme.blackColor)
                         .padding(.top, 11)
                     Spacer()
-                    Text("12")
+                    Text("\(projectViewModel.projectService.statData.totalFinishedProjects)")
                         .font(.appleSDGothicNeo(.bold, size: 18))
                         .foregroundColor(.theme.mainPurpleColor)
                         .padding(.bottom, 14)
@@ -163,7 +163,7 @@ extension ProjectMainView {
                         .foregroundColor(.theme.blackColor)
                         .padding(.top, 11)
                     Spacer()
-                    Text("10")
+                    Text("\(projectViewModel.projectService.statData.drop)")
                         .font(.appleSDGothicNeo(.bold, size: 18))
                         .foregroundColor(.theme.mainBlueColor)
                         .padding(.bottom, 14)
@@ -182,12 +182,11 @@ extension ProjectMainView {
     private var projectsArea: some View {
         VStack {
             VStack {
-                ForEach(Array(projectViewModel.projects.enumerated()), id: \.1.id) { index, project in
+                ForEach(Array(projectViewModel.projectList.enumerated()), id: \.1.projectId) { index, project in
                     ProjectCardView(project: project)
                         .onTapGesture {
                             projectDetailViewIndex = index
                             isPushProjectDetailView.toggle()
-                            print("Index: \(index)")
                         }
                 }
             }

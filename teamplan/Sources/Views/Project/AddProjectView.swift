@@ -28,6 +28,8 @@ enum DurationSelection {
 
 struct AddProjectView: View {
     
+    @ObservedObject var projectViewModel: ProjectViewModel
+    
     @Environment(\.dismiss) var dismiss
     
     @State var projectName: String = ""
@@ -65,7 +67,7 @@ struct AddProjectView: View {
 
 struct AddProjectView_Previews: PreviewProvider {
     static var previews: some View {
-        AddProjectView()
+        AddProjectView(projectViewModel: ProjectViewModel())
     }
 }
 

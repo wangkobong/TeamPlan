@@ -10,19 +10,19 @@ import SwiftUI
 
 struct ProjectCardView: View {
     
-    let project: ProjectModel
+    let project: ProjectDTO
     var body: some View {
         VStack {
             Spacer()
                 .frame(height: 18)
             HStack {
                 VStack(alignment: .leading) {
-                    Text(project.name)
+                    Text(project.title)
                         .font(.appleSDGothicNeo(.bold, size: 17))
                         .foregroundColor(.theme.blackColor)
 
                     HStack {
-                        Text("\(project.toDos.count)개의 투두")
+                        Text("\(project.todoList.count)개의 투두")
                             .font(.appleSDGothicNeo(.semiBold, size: 12))
                             .foregroundColor(.theme.darkGreyColor)
                         Text("가 남아있어요")
@@ -77,7 +77,7 @@ struct ProjectCardView: View {
                 
                 HStack {
                     Spacer()
-                    Text("D-\(project.endDate)")
+                    Text("D-\(project.deadline.days(from: Date()))")
                         .font(.appleSDGothicNeo(.regular, size: 12))
                         .foregroundColor(.theme.blackColor)
                 }
@@ -106,3 +106,14 @@ struct ProjectCardView: View {
 //            .previewLayout(.sizeThatFits)
 //    }
 //}
+
+
+extension ProjectCardView {
+    func calculateGraphWidth(remainingDays: Int, totalDays: Int) -> CGFloat {
+        
+        let barWidth = UIScreen.main.bounds.size.width - 32 - 40
+        let remainingDaysFloat = CGFloat(remainingDays)
+        let totalDaysFloat = CGFloat(totalDays)
+        return (remainingDaysFloat / totalDaysFloat) * barWidth
+    }
+}
