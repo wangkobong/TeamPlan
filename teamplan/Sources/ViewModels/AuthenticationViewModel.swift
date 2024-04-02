@@ -8,35 +8,50 @@
 import Foundation
 import GoogleSignIn
 import KeychainSwift
-import Combine
-import SwiftUI
+import FirebaseAuth
+import AuthenticationServices
 
-final class AuthenticationViewModel: ObservableObject{
-    
-    //====================
-    // Parameter
-    //====================
-    let loginService = LoginService()
-    let util = Utilities()
-    lazy var loginLoadingService = LoginLoadingService()
-    
-    @Published var nickName: String = ""
-    @Published var signupUser: AuthSocialLoginResDTO?
+enum SignupError: Error {
+    case invalidUser
+    case invalidAccountInfo
+    case signupFailed
+}
 
-    private var cancellables = Set<AnyCancellable>()
+final class AuthenticationViewModel: ObservableObject {
     
-    let signupService = SignupService()
-    
-    init(){
-        self.addSubscribers()
+    enum State {
+        case signedIn
+        case signedOut
+    }
+
+    enum loginAction: Equatable {
+        case loginGoogle
+        case loginApple
     }
     
-    //====================
-    // Google Login
-    //====================
+    // MARK: - published properties
+    @Published var nickName: String = ""
+    @Published var signupUser: AuthSocialLoginResDTO?
+    @Published var rawNonce: String?
+    @Published var hashedNonce: String?
+    @Published var error: SignupError? // 에러타입 준수하는 어떤 것을 만들어서 값이 변경될 때마다 알럿 띄워줘야함. 지금은 아무거나(SignupError) 박아놓음
+    @Published var appleLoginStatus: UserType?
+    
+    
+    // MARK: - private properties
+    private let keychain = KeychainSwift()
+    private lazy var loginLoadingService = LoginLoadingService()
+    private let signupService = SignupService()
+    private let loginService = LoginService(
+        authGoogleService: AuthGoogleServices(),
+        authAppleService: AuthAppleServices()
+    )
+    
+    
+    // MARK: - method
     func signInGoogle() async throws -> AuthSocialLoginResDTO {
         do {
-            let user = try await loginService.loginGoole()
+            let user = try await loginService.loginGoogle()
             
             switch user.status {
             case .exist:
@@ -44,18 +59,39 @@ final class AuthenticationViewModel: ObservableObject{
             case .new:
                 self.signupUser = user
             }
-            let keychain = KeychainSwift()
-            keychain.set(user.idToken, forKey: "idToken")
-            keychain.set(user.accessToken, forKey: "accessToken")
+
+            guard let idToken = user.idToken else {
+                throw SignupError.invalidAccountInfo
+            }
+            self.keychain.set(idToken, forKey: "idToken")
+            self.keychain.set(user.accessToken, forKey: "accessToken")
             
             return user
-            
         } catch {
-            print("[Critical]AuthViewModel - Throw: There was an unexpected error while proceed social login")
             throw error
         }
     }
     
+    func signInApple(providerID: String = "apple.com", idToken: String) {
+        let credential: OAuthCredential = {
+            return OAuthProvider.credential(withProviderID: providerID, idToken: idToken, rawNonce: self.rawNonce)
+        }()
+        self.loginService.loginApple(credential: credential, idToken: idToken) { [weak self] loginResult in
+            DispatchQueue.main.async {
+                switch loginResult {
+                case .success(let response):
+                    self?.appleLoginStatus = response.status
+                case .failure(let error):
+                    self?.error = error
+                }
+            }
+        }
+    }
+    
+    func requestRandomNonce() {
+        self.rawNonce = self.loginService.requestRandomNonce()
+    }
+ 
     func tryLogin() async -> Bool {
         if let loginUser = self.signupUser {
             do {
@@ -98,36 +134,5 @@ final class AuthenticationViewModel: ObservableObject{
         userDefaultManager?.userName = signedUser.nickName
         userDefaultManager?.identifier = signedUser.userId
         return signedUser
-    }
-    
-    
-    /*====================
-    // Authenticate
-    //====================
-    func logout() async throws {
-        try firebaseAuthenticator.logout()
-        self.user = AuthenticatedUser()
-    }
-    */
-    
-    private func addSubscribers() {
-
-    }
-}
-
-
-//====================
-// Extension
-//====================
-extension AuthenticationViewModel{
-    enum State{
-        case signedIn
-        case signedOut
-    }
-    
-    enum SignupError: Error {
-        case invalidUser
-        case invalidAccountInfo
-        case signupFailed
     }
 }

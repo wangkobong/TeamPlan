@@ -77,10 +77,8 @@ extension LoginView {
     
     private var buttons: some View {
         VStack(spacing: 18) {
-
             SignInWithAppleButton(
                 onRequest: { request in
-                    // 사용자 정보 요청 설정
                     request.requestedScopes = [.fullName, .email]
                 },
                 onCompletion: { result in
@@ -88,11 +86,15 @@ extension LoginView {
                     case .success(let authResults):
                         switch authResults.credential {
                         case let appleIDCredential as ASAuthorizationAppleIDCredential:
-                            // Apple ID Credential을 사용하여 로그인 정보 처리
-                            let userIdentifier = appleIDCredential.user
-                            print("userIdentifier: \(userIdentifier)")
-                            // 사용자 식별자(userIdentifier)를 사용하여 로그인 후의 작업 수행
-                            showHomeView = true
+                            guard let appleIDToken = appleIDCredential.identityToken else {
+                                print("Unable to fetch identity token")
+                                return
+                            }
+                            guard let idTokenString = String(data: appleIDToken, encoding: .utf8) else {
+                                print("\(appleIDToken.debugDescription)")
+                                return
+                            }
+                            self.authViewModel.signInApple(idToken: idTokenString)
                         default:
                             break
                         }
@@ -102,6 +104,20 @@ extension LoginView {
                     }
                 }
             )
+            .onAppear(perform: {
+                self.authViewModel.requestRandomNonce()
+            })
+            .onChange(of: self.authViewModel.appleLoginStatus) { appleLoginStatus in
+                guard let status = appleLoginStatus else {
+                    return
+                }
+                switch status {
+                case .exist:
+                    self.mainViewState = .main
+                case .new:
+                    self.mainViewState = .signup
+                }
+            }
             .padding(.horizontal)
             .frame(height: 48)
             .frame(maxWidth: .infinity)

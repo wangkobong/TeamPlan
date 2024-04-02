@@ -13,7 +13,7 @@ final class Utilities {
     // MARK: Extract Identifier
     func getIdentifier(from authRes: AuthSocialLoginResDTO) throws -> String {
         
-        let accountName = try getAccountName(from: authRes.email)
+        let accountName = try getAccountName(from: authRes.email ?? "")
         return "\(accountName)_\(authRes.provider.rawValue)"
     }
     // Account Name

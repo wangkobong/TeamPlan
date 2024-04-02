@@ -57,6 +57,10 @@ final class SignupLoadingService{
         self.newStat = StatisticsObject(with: newUser.userId, and: self.signupDate)
         self.newLog = AccessLog(with: newUser.userId, and: self.signupDate)
     }
+}
+
+// MARK: - Main Executor
+extension SignupLoadingService {
     
     /// 신규 사용자 가입과정의 메인 실행 함수입니다.
     /// - Returns: 가입이 완료된 사용자 정보를 담고 있는 `UserInfoDTO` 객체를 반환합니다.
