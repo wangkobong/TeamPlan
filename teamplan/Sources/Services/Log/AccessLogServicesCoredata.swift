@@ -24,28 +24,25 @@ final class AccessLogServicesCoredata: LogObjectManage {
     }
     
     // Single Log
-    func getObject(with userId: String) throws -> Object {
-        let entities = try getEntities(with: userId)
-        guard let entity = entities.first else {
-            throw CoredataError.fetchFailure(serviceName: .log)
-        }
+    func getSingleObject(with userId: String) throws -> Object {
+        let entity = try getSingleEntity(with: userId)
         return try convertToObject(with: entity)
     }
     
-    // Every Log
-    func getObjects(with userId: String) throws -> [Object] {
-        let entities = try getEntities(with: userId)
+    // Full Log
+    func getFullObjects(with userId: String) throws -> [Object] {
+        let entities = try getFullEntities(with: userId)
         return try convertToObjects(with: entities)
     }
     
     // SyncedAt ~ Recent Log
-    func getTargetObjects(with userId: String, and syncedAt: Date) throws -> [Object] {
-        let entities = try getTargetEntities(with: userId, and: syncedAt)
+    func getPartialObjects(with userId: String, and syncedAt: Date) throws -> [Object] {
+        let entities = try getPartialEntities(with: userId, and: syncedAt)
         return try convertToObjects(with: entities)
     }
     
     func deleteObject(with userId: String) throws {
-        let entities = try getEntities(with: userId)
+        let entities = try getFullEntities(with: userId)
         for entity in entities {
             self.context.delete(entity)
         }
@@ -62,7 +59,20 @@ extension AccessLogServicesCoredata{
         entity.access_record = log.accessRecord
     }
     
-    private func getEntities(with userId: String) throws -> [Entity] {
+    private func getSingleEntity(with userId: String) throws -> Entity {
+        
+        let fetchReq: NSFetchRequest<Entity> = Entity.fetchRequest()
+        fetchReq.predicate = NSPredicate(format: EntityPredicate.accessLog.format, userId)
+        fetchReq.sortDescriptors = [NSSortDescriptor(key: EntitySortBy.date.rawValue, ascending: false)]
+        fetchReq.fetchLimit = 1
+        
+        guard let entity = try self.context.fetch(fetchReq).first else {
+            throw CoredataError.fetchFailure(serviceName: .log)
+        }
+        return entity
+    }
+    
+    private func getFullEntities(with userId: String) throws -> [Entity] {
         
         let fetchReq: NSFetchRequest<Entity> = Entity.fetchRequest()
         fetchReq.predicate = NSPredicate(format: EntityPredicate.accessLog.format, userId)
@@ -70,7 +80,7 @@ extension AccessLogServicesCoredata{
         return try self.context.fetch(fetchReq)
     }
     
-    private func getTargetEntities(with userId: String, and syncedAt: Date) throws -> [Entity] {
+    private func getPartialEntities(with userId: String, and syncedAt: Date) throws -> [Entity] {
         
         let fetchReq: NSFetchRequest<Entity> = Entity.fetchRequest()
         fetchReq.predicate = NSPredicate(format: EntityPredicate.targetLog.format, userId, syncedAt as NSDate)

@@ -53,6 +53,13 @@ final class ProjectServicesCoredata: ProjectObjectManage {
         try self.context.save()
     }
     
+    func deleteAllObject(with userId: String) throws {
+        let entities = try getEntities(with: userId)
+        for entity in entities {
+            self.context.delete(entity)
+        }
+        try self.context.save()
+    }
 }
 
 

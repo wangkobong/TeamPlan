@@ -10,18 +10,17 @@ import Foundation
 
 final class SignupLoadingService{
     
-    private let util = Utilities()
-    private let controller = CoredataController()
-    
     private let userCD: UserServicesCoredata
     private let statCD: StatisticsServicesCoredata
     private let challengeCD: ChallengeServicesCoredata
     private let accessLogCD: AccessLogServicesCoredata
+    private let coreValueCD: CoreValueServicesCoredata
     
     private let userFS = UserServicesFirestore()
     private let statFS = StatisticsServicesFirestore()
     private let challengeFS = ChallengeServicesFirestore()
     private let accessLogFS = AccessLogServicesFirestore()
+    private let coreValueFS = CoreValueServicesFirestore()
     
     private let logHead: Int
     private let userId: String
@@ -43,11 +42,12 @@ final class SignupLoadingService{
     /// - 신규 `AccessLog`와 `ChallengeLog`생성을 위해  'LogManager' 를 초기화합니다.
     ///
     /// 이 과정은 사용자가 앱에 가입할 때 필요한 기능들의 기본 설정을 제공합니다.
-    init(newUser: UserSignupDTO){
-        self.userCD = UserServicesCoredata(coredataController: self.controller)
-        self.statCD = StatisticsServicesCoredata(coredataController: self.controller)
-        self.challengeCD = ChallengeServicesCoredata(coredataController: self.controller)
-        self.accessLogCD = AccessLogServicesCoredata(coredataController: self.controller)
+    init(newUser: UserSignupDTO, controller: CoredataController = CoredataController()){
+        self.userCD = UserServicesCoredata(coredataController: controller)
+        self.statCD = StatisticsServicesCoredata(coredataController: controller)
+        self.challengeCD = ChallengeServicesCoredata(coredataController: controller)
+        self.accessLogCD = AccessLogServicesCoredata(coredataController: controller)
+        self.coreValueCD = CoreValueServicesCoredata(coredataController: controller)
         
         self.logHead = newUser.logHead
         self.userId = newUser.userId
@@ -130,6 +130,9 @@ final class SignupLoadingService{
             try await setNewChallengeStatusAtServer()
             rollbackStack.append(rollbackSetNewChallengeStatusAtServer)
             
+            try await setNewCoreValueAtLocal()
+            rollbackStack.append(rollbackSetNewCoreValueAtLocal)
+            
             rollbackStack.removeAll()
             return true
             
@@ -208,7 +211,7 @@ extension SignupLoadingService{
         try await accessLogFS.setDocs(with: userId, and: logHead, and: [newLog])
     }
     private func rollbackSetNewAccessLogAtServer() async throws {
-        try await accessLogFS.deleteDocs(with: userId)
+        try await accessLogFS.deleteDocs(with: userId, and: 1)
     }
 }
 
@@ -235,6 +238,20 @@ extension SignupLoadingService{
     }
     private func rollbackSetNewChallengeStatusAtServer() async throws {
         try await challengeFS.deleteDocs(with: userId)
+    }
+}
+
+// MARK: - CoreValue
+extension SignupLoadingService{
+    
+    // : Firestore to Coredata
+    private func setNewCoreValueAtLocal() async throws {
+        let docs = try await coreValueFS.getDocs(with: userId)
+        try coreValueCD.setObject(with: docs)
+    }
+    
+    private func rollbackSetNewCoreValueAtLocal() throws {
+        try coreValueCD.deleteObject(with: userId)
     }
 }
 

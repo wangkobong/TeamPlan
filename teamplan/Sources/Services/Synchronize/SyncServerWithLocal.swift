@@ -7,71 +7,68 @@
 //
 
 import Foundation
+import FirebaseFirestore
+import FirebaseFirestoreSwift
 
 final class SyncServerWithLocal {
-    
-    // for service
-    private let util = Utilities()
-    private let controller = CoredataController()
     
     private let userCD: UserServicesCoredata
     private let statCD: StatisticsServicesCoredata
     private let challengeCD: ChallengeServicesCoredata
     private let accessLogCD: AccessLogServicesCoredata
+    private let projectCD: ProjectServicesCoredata
     
     private let userFS = UserServicesFirestore()
     private let statFS = StatisticsServicesFirestore()
     private let challengeFS = ChallengeServicesFirestore()
     private let accessLogFS = AccessLogServicesFirestore()
+    private let projectFS = ProjectServicesFirestore()
     
+    private let instance = Firestore.firestore()
     private var userId: String
+    private var logHead: Int
     private var previousSyncedAt: Date
-    private var rollbackStack: [() throws -> Void ] = []
     
-    init(with userId: String) {
+    init(with userId: String, controller: CoredataController = CoredataController()) {
         self.userId = userId
+        self.logHead = 0
         self.previousSyncedAt = Date()
         
-        self.userCD = UserServicesCoredata(coredataController: self.controller)
-        self.statCD = StatisticsServicesCoredata(coredataController: self.controller)
-        self.challengeCD = ChallengeServicesCoredata(coredataController: self.controller)
-        self.accessLogCD = AccessLogServicesCoredata(coredataController: self.controller)
+        self.userCD = UserServicesCoredata(coredataController: controller)
+        self.statCD = StatisticsServicesCoredata(coredataController: controller)
+        self.challengeCD = ChallengeServicesCoredata(coredataController: controller)
+        self.accessLogCD = AccessLogServicesCoredata(coredataController: controller)
+        self.projectCD = ProjectServicesCoredata(coredataController: controller)
     }
     
     func syncExecutor(with userId: String, and syncDate: Date) async throws {
         self.userId = userId
-        do {
-            // User
-            let user = try getUserFromLocal()
-            rollbackStack.append(rollbackUserSyncedAt)
-            try await updateServerUser(with: user)
-            try applyUserSyncedAt(with: syncDate)
-            
-            // Statistics
-            let stat = try getStatFromLocal()
-            rollbackStack.append(rollbackStatSyncedAt)
-            try await updateServerStatistics(with: stat)
-            try applyStatSyncedAt(with: syncDate)
-            
-            // Challenge
-            let challengeList = try getChallengeFromLocal()
-            try await updateServerChallenge(with: challengeList)
-            
-            // AccessLog
-            let accessLog = try getAccessLogFromLocal(with: syncDate)
-            try await updateServerAccesslog(with: accessLog, and: user.accessLogHead)
-            
-            // Project Log (WIP)
-        } catch {
-            try rollbackAll()
-            throw error
-        }
+        let batch = self.instance.batch()
+        
+        // User
+        try await updateServerUser(with: batch)
+
+        // Statistics
+        try await updateServerStatistics(with: batch)
+        
+        // Challenge
+        try await updateServerChallenge(with: batch)
+        
+        // Project
+        try await updateServerProject(with: batch)
+        
+        // AccessLog
+        try await updateServerAccesslog(with: batch, at: syncDate)
+        
+        try await batch.commit()
+        
+        try updateSyncDate(with: syncDate)
     }
-    private func rollbackAll() throws {
-        for rollback in rollbackStack.reversed() {
-            try rollback()
-        }
-        rollbackStack.removeAll()
+    
+    private func updateSyncDate(with syncDate: Date) throws {
+        try applyUserSyncedAt(with: syncDate)
+        try applyStatSyncedAt(with: syncDate)
+        try deleteLegacyAccessLog()
     }
 }
 
@@ -93,14 +90,18 @@ extension SyncServerWithLocal{
     
     // Access Log
     private func getAccessLogFromLocal(with syncedAt: Date) throws -> [AccessLog] {
-        return try accessLogCD.getTargetObjects(with: userId, and: syncedAt)
+        return try accessLogCD.getPartialObjects(with: userId, and: syncedAt)
     }
     
     // Challenge
     private func getChallengeFromLocal() throws -> [ChallengeObject] {
         return try challengeCD.getObjects(with: userId)
     }
-    // Project Log (WIP)
+    
+    // Project
+    private func getProjectFromLocal() throws -> [ProjectObject] {
+        return try projectCD.getObjects(with: userId)
+    }
 }
 
 
@@ -108,38 +109,75 @@ extension SyncServerWithLocal{
 extension SyncServerWithLocal{
     
     // User
-    private func updateServerUser(with object: UserObject) async throws {
-        try await userFS.updateDocs(with: object)
+    private func updateServerUser(with batch: WriteBatch) async throws {
+        let user = try getUserFromLocal()
+        let userRef = try await userFS.fetchDocsReference(with: userId, and: .user)
+        let userData = userFS.convertToData(with: user)
+        batch.updateData(userData, forDocument: userRef)
+        self.logHead = user.accessLogHead
     }
     
     // Statistics
-    private func updateServerStatistics(with object: StatisticsObject) async throws {
-        try await statFS.updateDocs(with: object)
+    private func updateServerStatistics(with batch: WriteBatch) async throws {
+        let stat = try getStatFromLocal()
+        let statRef = try await statFS.fetchDocsReference(with: userId, and: .stat)
+        let statData = try statFS.convertToData(with: stat)
+        batch.updateData(statData, forDocument: statRef)
     }
     
     // Challenge
-    private func updateServerChallenge(with objects: [ChallengeObject]) async throws {
-        try await challengeFS.updateDocs(with: objects, and: userId)
+    private func updateServerChallenge(with batch: WriteBatch) async throws {
+        let challengeList = try getChallengeFromLocal()
+        for challenge in challengeList {
+            let challengeRef = try await challengeFS.fetchStatusDocsReference(with: userId, and: challenge.challengeId)
+            let challengeData = challengeFS.convertObjectToStatus(with: challenge)
+            batch.updateData(challengeData, forDocument: challengeRef)
+        }
+    }
+    
+    // Project(Status)
+    private func updateServerProject(with batch: WriteBatch) async throws {
+        let projectList = try getProjectFromLocal()
+        for project in projectList {
+            // prepare data & reference
+            let projectRef = try await projectFS.fetchSingleDocsReference(userId, project.projectId, .project)
+            let projectData = projectFS.convertToData(with: project)
+            
+            // New Registed At Firestore
+            if project.registedAt == project.syncedAt {
+                batch.setData(projectData, forDocument: projectRef)
+            } else {
+                batch.updateData(projectData, forDocument: projectRef)
+            }
+            
+            // delete local project excpet ongoing or completable project
+            if shouldDeleteProjectAtLocal(with: project.status) {
+                try projectCD.deleteObject(with: userId, and: project.projectId)
+            }
+        }
+    }
+    private func shouldDeleteProjectAtLocal(with status: ProjectStatus) -> Bool {
+        return status != .ongoing || status != .completable
     }
     
     // Access Log
-    private func updateServerAccesslog(with log: [AccessLog], and logHead: Int) async throws {
-        try await accessLogFS.setDocs(with: userId, and: logHead, and: log)
+    private func updateServerAccesslog(with batch: WriteBatch, at syncedAt: Date) async throws {
+        let accessLog = try getAccessLogFromLocal(with: syncedAt)
+        for log in accessLog {
+            let accessLogRef = accessLogFS.fetchCollectionReference(with: userId, and: self.logHead).document()
+            let accessLogData = accessLogFS.convertToData(with: log)
+            batch.setData(accessLogData, forDocument: accessLogRef)
+        }
     }
-    // Project Log (WIP)
 }
 
 
-// MARK: - Update Local SyncedAt
+// MARK: - Update SyncedAt
 extension SyncServerWithLocal{
     
     // User
     private func applyUserSyncedAt(with syncDate: Date) throws {
         let updated = UserUpdateDTO(userId: userId, newSyncedAt: syncDate)
-        try userCD.updateObject(with: updated)
-    }
-    private func rollbackStatSyncedAt() throws {
-        let updated = UserUpdateDTO(userId: userId, newSyncedAt: previousSyncedAt)
         try userCD.updateObject(with: updated)
     }
     
@@ -148,9 +186,9 @@ extension SyncServerWithLocal{
         let updated = StatUpdateDTO(userId: userId, newSyncedAt: syncDate)
         try statCD.updateObject(with: updated)
     }
-    private func rollbackUserSyncedAt() throws {
-        let updated = StatUpdateDTO(userId: userId, newSyncedAt: previousSyncedAt)
-        try statCD.updateObject(with: updated)
+    
+    // log
+    private func deleteLegacyAccessLog() throws {
+        try accessLogCD.deleteObject(with: userId)
     }
-    // Project Log (WIP)
 }

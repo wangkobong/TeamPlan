@@ -31,12 +31,7 @@ final class Utilities {
     func compareTime(currentTime: Date, lastTime: Date) -> Bool {
         
         let calendar = Calendar.current
-        let lastTimeComp = calendar.dateComponents([.year, .month, .day], from: lastTime)
-        let currentTimeComp = calendar.dateComponents([.year, .month, .day], from: currentTime)
-        
-        return lastTimeComp.year == currentTimeComp.year &&
-               lastTimeComp.month == currentTimeComp.month &&
-               lastTimeComp.day == currentTimeComp.day
+        return calendar.isDate(currentTime, inSameDayAs: lastTime)
     }
     // D-Day
     func calculateDatePeroid(with start: Date, and end: Date) throws -> Int {

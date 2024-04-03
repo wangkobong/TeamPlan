@@ -10,45 +10,36 @@ import Foundation
 
 final class SyncLocalWithServer{
     
-    //================================
-    // MARK: - Properties
-    //================================
-    // for service
-    private let util = Utilities()
-    private let controller = CoredataController()
-    
     private let userCD: UserServicesCoredata
     private let statCD: StatisticsServicesCoredata
+    private let coreValueCD: CoreValueServicesCoredata
     private let challengeCD: ChallengeServicesCoredata
     private let accessLogCD: AccessLogServicesCoredata
+    private let projectCD: ProjectServicesCoredata
     
     private let userFS = UserServicesFirestore()
     private let statFS = StatisticsServicesFirestore()
+    private let coreValueFS = CoreValueServicesFirestore()
     private let challengeFS = ChallengeServicesFirestore()
     private let accessLogFS = AccessLogServicesFirestore()
-
+    private let projectFS = ProjectServicesFirestore()
+    
     private var userId: String
-    private var challengeStep: [Int:Int] =  [
-        ChallengeType.serviceTerm.rawValue : 1,
-        ChallengeType.totalTodo.rawValue : 1,
-        ChallengeType.projectAlert.rawValue : 1,
-        ChallengeType.projectFinish.rawValue : 1,
-        ChallengeType.waterDrop.rawValue : 1
-    ]
     private var rollbackStack: [() throws -> Void ] = []
     
-    init(with userId: String) {
+    init(with userId: String, controller: CoredataController = CoredataController()) {
         self.userId = userId
         self.userCD = UserServicesCoredata(coredataController: controller)
         self.statCD = StatisticsServicesCoredata(coredataController: controller)
+        self.coreValueCD = CoreValueServicesCoredata(coredataController: controller)
         self.challengeCD = ChallengeServicesCoredata(coredataController: controller)
         self.accessLogCD = AccessLogServicesCoredata(coredataController: controller)
+        self.projectCD = ProjectServicesCoredata(coredataController: controller)
     }
 }
 
-//===============================
-// MARK: - Main Function
-//===============================
+
+// MARK: - Main
 extension SyncLocalWithServer{
     
     func syncExecutor(with userId: String) async throws {
@@ -57,22 +48,26 @@ extension SyncLocalWithServer{
             let user = try await getUserFromServer()
             try resetLocalUser(with: user)
             rollbackStack.append(rollbackResetUser)
-            print("successfully get user data from server")
             
             let stat = try await getStatFromServer()
             try resetLocalStat(with: stat)
             rollbackStack.append(rollbackResetStat)
-            print("successfully get stat data from server")
+            
+            let coreValue = try await getCoreValueFromServer()
+            try resetLocalCoreValue(with: coreValue)
+            rollbackStack.append(rollbackResetCoreValue)
             
             let accessLogList = try await getAccessLogFromServer(with: user.accessLogHead)
             try resetLocalAccessLog(with: accessLogList)
             rollbackStack.append(rollbackResetAccessLog)
-            print("successfully get log data from server")
+            
+            let projectList = try await getProjectFromServer()
+            try resetLocalProject(with: projectList)
+            rollbackStack.append(rollbackResetProject)
             
             let challengeList = try await getChallengeFromServer()
             try resetLocalChallenge(with: challengeList)
             rollbackStack.append(rollbackResetChallenge)
-            print("successfully get status data from server")
             
             rollbackStack.removeAll()
             
@@ -90,35 +85,118 @@ extension SyncLocalWithServer{
     }
 }
 
-// MARK: - Fetch Server Data
+// MARK: - Apply Local
 extension SyncLocalWithServer{
     
+    // User
+    private func resetLocalUser(with object: UserObject) throws {
+        try userCD.setObject(with: object)
+    }
+    private func rollbackResetUser() throws {
+        try userCD.deleteObject(with: userId)
+    }
+    
+    // Stat
+    private func resetLocalStat(with object: StatisticsObject) throws {
+        try statCD.setObject(with: object)
+    }
+    private func rollbackResetStat() throws {
+        try statCD.deleteObject(with: userId)
+    }
+    
+    // CoreValue
+    private func resetLocalCoreValue(with object: CoreValueObject) throws {
+        try coreValueCD.setObject(with: object)
+    }
+    private func rollbackResetCoreValue() throws {
+        try coreValueCD.deleteObject(with: userId)
+    }
+    
+    // AccessLog
+    private func resetLocalAccessLog(with logList: [AccessLog]) throws {
+        for log in logList {
+            try accessLogCD.setObject(with: log)
+        }
+    }
+    private func rollbackResetAccessLog() throws {
+        try accessLogCD.deleteObject(with: userId)
+    }
+    
+    // Project
+    private func resetLocalProject(with list: [ProjectObject]) throws {
+        for project in list {
+            try projectCD.setObject(with: project)
+        }
+    }
+    private func rollbackResetProject() throws {
+        try projectCD.deleteAllObject(with: userId)
+    }
+    
+    // Challenge
+    private func resetLocalChallenge(with challengeList: [ChallengeObject]) throws {
+        for challenge in challengeList {
+            try challengeCD.setObject(with: challenge)
+        }
+    }
+    private func rollbackResetChallenge() throws {
+        try challengeCD.deleteObject(with: userId)
+    }
+}
+
+
+// MARK: - Fetch From Server
+extension SyncLocalWithServer{
+    
+    // User
     private func getUserFromServer() async throws -> UserObject {
         return try await userFS.getDocs(with: userId)
     }
     
+    // Stat
     private func getStatFromServer() async throws -> StatisticsObject {
         return try await statFS.getDocs(with: userId)
     }
     
+    // CoreValue
+    private func getCoreValueFromServer() async throws -> CoreValueObject {
+        return try await coreValueFS.getDocs(with: userId)
+    }
+    
+    // AccessLog
     private func getAccessLogFromServer(with logHead: Int) async throws -> [AccessLog] {
         return try await accessLogFS.getDocs(with: userId, and: logHead)
     }
     
+    // Project
+    private func getProjectFromServer() async throws -> [ProjectObject] {
+        return try await projectFS.getDocsList(with: userId)
+    }
+    
+    // Challenge
     private func getChallengeFromServer() async throws -> [ChallengeObject] {
         async let getInfoList = try await challengeFS.getInfoDocsList()
         async let getStatusList = try await challengeFS.getStatusDocsList(with: userId)
-        
         let (infoList, statusList) = try await (getInfoList, getStatusList)
-        
-        let challengeList = try infoList.compactMap { info -> ChallengeObject? in
-            guard let status = statusList.first(where: { $0.challengeId == info.challengeId }) else {
-                throw FirestoreError.convertFailure(serviceName: .challenge)
+    
+        let (infoDict, statusDict) = convertToDictionary(infoList, statusList)
+        let challengeList = try createChallengeObjects(infoDict, statusDict)
+        return challengeList
+    }
+    
+    private func convertToDictionary(_ infoList: [ChallengeInfoDTO], _ statusList: [ChallengeStatusDTO]) -> (infoDict: [Int: ChallengeInfoDTO], statusDict: [Int: ChallengeStatusDTO]) {
+        let infoDict = Dictionary(uniqueKeysWithValues: infoList.map { ($0.challengeId, $0) })
+        let statusDict = Dictionary(uniqueKeysWithValues: statusList.map { ($0.challengeId, $0) })
+        return (infoDict, statusDict)
+    }
+
+    private func createChallengeObjects(_ infoDict: [Int: ChallengeInfoDTO], _ statusDict: [Int: ChallengeStatusDTO]) throws -> [ChallengeObject] {
+        var challengeList = [ChallengeObject]()
+        for (challengeId, info) in infoDict {
+            guard let status = statusDict[challengeId] else {
+                throw FirestoreError.convertFailure(serviceName: .challenge) // 대응되는 status 정보가 없는 경우 예외 처리
             }
-            return prepareChallenge(with: info, and: status)
-        }
-        if challengeList.count != infoList.count {
-            throw FirestoreError.convertFailure(serviceName: .challenge)
+            let challengeObject = prepareChallenge(with: info, and: status)
+            challengeList.append(challengeObject)
         }
         return challengeList
     }
@@ -146,42 +224,3 @@ extension SyncLocalWithServer{
 }
 
 
-// MARK: - Apply Local
-extension SyncLocalWithServer{
-    
-    // User
-    private func resetLocalUser(with object: UserObject) throws {
-        try userCD.setObject(with: object)
-    }
-    private func rollbackResetUser() throws {
-        try userCD.deleteObject(with: userId)
-    }
-    
-    // Statistics
-    private func resetLocalStat(with object: StatisticsObject) throws {
-        try statCD.setObject(with: object)
-    }
-    private func rollbackResetStat() throws {
-        try statCD.deleteObject(with: userId)
-    }
-    
-    // AccessLog
-    private func resetLocalAccessLog(with logList: [AccessLog]) throws {
-        for log in logList {
-            try accessLogCD.setObject(with: log)
-        }
-    }
-    private func rollbackResetAccessLog() throws {
-        try accessLogCD.deleteObject(with: userId)
-    }
-    
-    // Challenge
-    private func resetLocalChallenge(with challengeList: [ChallengeObject]) throws {
-        for challenge in challengeList {
-            try challengeCD.setObject(with: challenge)
-        }
-    }
-    private func rollbackResetChallenge() throws {
-        try challengeCD.deleteObject(with: userId)
-    }
-}

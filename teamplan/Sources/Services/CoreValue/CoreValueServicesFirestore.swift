@@ -10,23 +10,21 @@ import Foundation
 import FirebaseFirestore
 import FirebaseFirestoreSwift
 
-final class CoreValueServicesFirestore: ReadOnlyDocsManage {
+final class CoreValueServicesFirestore: BasicDocsManage {
     typealias Object = CoreValueObject
     
     func getDocs(with userId: String) async throws -> CoreValueObject {
-        guard let docs = try await fetchDocument(with: userId, and: .coreValue),
-              let data = docs.data() else {
+        guard let data = try await fetchDocument(with: .coreValue).data() else {
             throw FirestoreError.fetchFailure(serviceName: .coreValue)
         }
-        return try convertToObject(with: data)
+        return try convertToObject(with: userId, and: data)
     }
 }
 
 extension CoreValueServicesFirestore {
     
-    private func convertToObject(with data: [String:Any]) throws -> CoreValueObject {
-        guard let userId = data["user_id"] as? String,
-              let projectRegistLimit = data["project_limit"] as? Int,
+    private func convertToObject(with userId: String, and data: [String:Any]) throws -> CoreValueObject {
+        guard let projectRegistLimit = data["project_limit"] as? Int,
               let todoRegistLimit = data["todo_limit"] as? Int,
               let dropRation = data["drop_ratio"] as? Float,
               let syncCycle = data["sync_cycle"] as? Int
