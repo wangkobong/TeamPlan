@@ -10,6 +10,7 @@ import SwiftUI
 
 struct ProjectView: View {
     
+    @ObservedObject var projectViewModel = ProjectViewModel()
     @State private var isNotificationViewActive = false
     private var isEmpty = false
     
@@ -19,10 +20,10 @@ struct ProjectView: View {
                 .padding(.bottom, 20)
             Spacer()
             ZStack {
-                if isEmpty {
-                    ProjectEmptyView()
+                if projectViewModel.projectList.count == 0 {
+                    ProjectEmptyView(projectViewModel: projectViewModel)
                 } else {
-                    ProjectMainView()
+                    ProjectMainView(projectViewModel: projectViewModel)
                 }
             }
         }

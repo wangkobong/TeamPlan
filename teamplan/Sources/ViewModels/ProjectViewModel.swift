@@ -62,6 +62,10 @@ final class ProjectViewModel: ObservableObject {
                      endDate: 5,
                      toDos:  [])
     ]
+    
+    lazy var projectService = ProjectService(userId: self.identifier)
+    
+    @Published var projectList: [ProjectDTO] = []
 
     init() {
         let userDefaultManager = UserDefaultManager.loadWith(key: "user")
@@ -74,7 +78,13 @@ final class ProjectViewModel: ObservableObject {
     }
     
     private func addSubscribers() {
-        
+        projectService.$projectList
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] projects in
+                print("projects: \(projects)")
+                self?.projectList = projects
+            }
+            .store(in: &cancellables)
     }
     
     @MainActor
