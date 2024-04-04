@@ -10,42 +10,28 @@ import Foundation
 import FirebaseFirestore
 import FirebaseFirestoreSwift
 
-final class UserServicesFirestore: FullDocsManage {
+final class UserServicesFirestore: SingleDocsManage {
     typealias Object = UserObject
     typealias DTO = UserUpdateDTO
     
     func setDocs(with object: UserObject) async throws {
-        let collectionRef = fetchCollection(with: .user)
-        try await collectionRef.addDocument(data: try convertToData(with: object))
+        let docsRef = fetchCollection(with: .user).document(object.userId)
+        try await docsRef.setData(convertToData(with: object))
     }
     
     func getDocs(with userId: String) async throws -> UserObject {
-        guard let docs = try await fetchDocument(with: userId, and: .user),
-              let data = docs.data() else {
+        guard let data = try await fetchDocsSnapshot(with: userId, and: .user).data() else {
             throw FirestoreError.fetchFailure(serviceName: .user)
         }
         return try convertToObject(with: data)
     }
     
-    func updateDocs(with object: Object) async throws {
-        guard let docs = try await fetchDocument(with: object.userId, and: .user) else {
-            throw FirestoreError.fetchFailure(serviceName: .user)
-        }
-        try await docs.reference.updateData(try convertToData(with: object))
-    }
-    
     func deleteDocs(with userId: String) async throws {
-        guard let docs = try await fetchDocument(with: userId, and: .user) else {
-            throw FirestoreError.fetchFailure(serviceName: .user)
-        }
-        try await docs.reference.delete()
+        let docsRef = try await fetchDocsReference(with: userId, and: .user)
+        try await docsRef.delete()
     }
-}
-
-// MARK: - Converter
-extension UserServicesFirestore{
     
-    private func convertToData(with object: Object) throws -> [String: Any] {
+    func convertToData(with object: Object) -> [String: Any] {
         let stringCreatedAt = DateFormatter.standardFormatter.string(from: object.createdAt)
         let stringChangedAt = DateFormatter.standardFormatter.string(from: object.changedAt)
         let stringSyncedAt = DateFormatter.standardFormatter.string(from: object.syncedAt)
@@ -62,6 +48,10 @@ extension UserServicesFirestore{
             "synced_at": stringSyncedAt
         ]
     }
+}
+
+// MARK: - Converter
+extension UserServicesFirestore{
     
     private func convertToObject(with data: [String: Any]) throws -> UserObject {
         guard let userId = data["user_id"] as? String,

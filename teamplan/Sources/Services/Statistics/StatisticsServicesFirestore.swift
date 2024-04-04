@@ -10,44 +10,28 @@ import Foundation
 import FirebaseFirestore
 import FirebaseFirestoreSwift
 
-//================================
-// MARK: - Main Function
-//================================
-final class StatisticsServicesFirestore: FullDocsManage {
+final class StatisticsServicesFirestore: SingleDocsManage {
     typealias Object = StatisticsObject
     typealias DTO = StatUpdateDTO
     
     func setDocs(with object: Object) async throws {
-        let collectionRef = fetchCollection(with: .stat)
-        try await collectionRef.addDocument(data: try convertToData(with: object))
+        let docsRef = fetchCollection(with: .stat).document(object.userId)
+        try await docsRef.setData(try convertToData(with: object))
     }
     
     func getDocs(with userId: String) async throws -> Object {
-        guard let docs = try await fetchDocument(with: userId, and: .stat),
-              let data = docs.data() else {
+        guard let data = try await fetchDocsSnapshot(with: userId, and: .stat).data() else {
             throw FirestoreError.fetchFailure(serviceName: .stat)
         }
         return try convertToObject(with: data)
     }
 
-    func updateDocs(with object: Object) async throws {
-        guard let docs = try await fetchDocument(with: object.userId, and: .stat) else {
-            throw FirestoreError.fetchFailure(serviceName: .stat)
-        }
-        try await docs.reference.updateData(try convertToData(with: object))
-    }
-
     func deleteDocs(with userId: String) async throws {
-        guard let docs = try await fetchDocument(with: userId, and: .stat) else {
-            throw FirestoreError.fetchFailure(serviceName: .stat)
-        }
-        try await docs.reference.delete()
+        let docsRef = try await fetchDocsReference(with: userId, and: .stat)
+        try await docsRef.delete()
     }
-}
-
-// MARK: - Converter
-extension StatisticsServicesFirestore {
-    private func convertToData(with object: Object) throws -> [String: Any] {
+    
+    func convertToData(with object: Object) throws -> [String: Any] {
         let stringSyncedAt = DateFormatter.standardFormatter.string(from: object.syncedAt)
         let challengeStepStatus = try Utilities().convertToJSON(data: object.challengeStepStatus)
         let myChallenges = try Utilities().convertToJSON(data: object.mychallenges)
@@ -68,6 +52,10 @@ extension StatisticsServicesFirestore {
             "synced_at": stringSyncedAt
         ]
     }
+}
+
+// MARK: - Converter
+extension StatisticsServicesFirestore {
     
     private func convertToObject(with data: [String: Any]) throws -> Object {
         guard let userId = data["user_id"] as? String,

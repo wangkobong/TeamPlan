@@ -15,7 +15,9 @@ final class ProjectServicesFirestore: ProjectDocsManage {
     
     func setDocs(with objects: [ProjectObject], and userId: String) async throws {
         let batch = getFirestoreInstance().batch()
-        let collectionRef = fetchCollection(with: .project).document(userId).collection(CollectionType.project.rawValue)
+        let collectionRef = fetchCollection(with: .project)
+            .document(userId)
+            .collection(CollectionType.project.rawValue)
         
         for object in objects {
             let docsRef = collectionRef.document(String(object.projectId))
@@ -24,40 +26,24 @@ final class ProjectServicesFirestore: ProjectDocsManage {
         try await batch.commit()
     }
     
-    func getDocs(with userId: String) async throws -> [ProjectObject] {
-        let docs = try await fetchDocuments(with: userId, and: .project)
-        return try docs.map { try convertToObject(with: $0.data()) }
-    }
-    
     func getDocs(with projectId: Int, and userId: String) async throws -> ProjectObject {
-        let docs = try await fetchProjectDocs(userId: userId, type: .project, projectId: projectId)
-        guard let data = docs.data() else {
+        guard let data = try await fetchSingleDocsSnapshot(userId: userId, projectId: projectId, type: .project).data() else {
             throw FirestoreError.fetchFailure(serviceName: .project)
         }
         return try convertToObject(with: data)
     }
     
-    func updateDocs(with objects: [Object], and userId: String) async throws {
-        let batch = getFirestoreInstance().batch()
-        let collectionRef = fetchCollection(with: .project).document(userId).collection(CollectionType.project.rawValue)
-        
-        for object in objects {
-            let docsRef = collectionRef.document(String(object.projectId))
-            batch.updateData(convertToData(with: object), forDocument: docsRef)
-        }
-        try await batch.commit()
+    func getDocsList(with userId: String) async throws -> [ProjectObject] {
+        let docs = try await fetchFullDocs(with: userId)
+        return try docs.map { try convertToObject(with: $0.data()) }
     }
     
     func deleteDocs(with projectId: Int, and userId: String) async throws {
         let docs = fetchCollection(with: .project).document(userId).collection(CollectionType.project.rawValue).document(String(projectId))
         try await docs.delete()
     }
-}
-
-// Converter
-extension ProjectServicesFirestore {
     
-    private func convertToData(with object: Object) -> [String:Any] {
+    func convertToData(with object: Object) -> [String:Any] {
         let stringRegistedAt = DateFormatter.standardFormatter.string(from: object.registedAt)
         let stringStartedAt = DateFormatter.standardFormatter.string(from: object.startedAt)
         let stringDeadline = DateFormatter.standardFormatter.string(from: object.deadline)
@@ -81,6 +67,10 @@ extension ProjectServicesFirestore {
             "synced_at": stringSyncedAt
         ]
     }
+}
+
+// Converter
+extension ProjectServicesFirestore {
     
     private func convertToObject(with data: [String: Any]) throws -> ProjectObject {
         guard let projectId = data["project_id"] as? Int,

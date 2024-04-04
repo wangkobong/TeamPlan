@@ -104,7 +104,7 @@ extension HomeView {
             
             Button {
                 do {
-                    let google = AuthGoogleServices()
+                    let google = AuthGoogleService()
                     try google.logout()
                     withAnimation(.easeIn(duration: 10)) {
                         mainViewState = .login

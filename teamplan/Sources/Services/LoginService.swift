@@ -7,63 +7,53 @@
 //
 
 import Foundation
-import FirebaseAuth
 import GoogleSignIn
+import FirebaseAuth
 import AuthenticationServices
 
 final class LoginService{
+
+    private let google: AuthGoogleService
+    private let apple: AuthAppleService
+
+    // MARK: - life cycle
+    init(authGoogleService: AuthGoogleService, authAppleService: AuthAppleService) {
+        self.google = authGoogleService
+        self.apple = authAppleService
+    }
     
-    let google = AuthGoogleServices()
-    let apple = AuthAppleServices()
-    
-    func loginGoole() async throws -> AuthSocialLoginResDTO {
+    // MARK: - method
+    func loginGoogle() async throws -> AuthSocialLoginResDTO {
         return try await google.login()
     }
-
-    func loginApple(
-        appleCredential: ASAuthorizationAppleIDCredential ,
-        result: @escaping(Result<AuthSocialLoginResDTO, Error>) -> Void) async {
-        
-        await apple.login(appleCredential: appleCredential){ loginResult in
-            switch loginResult {
-            // Authentication Success: NewUser & Exist
-            case .success(let userInfo):
-                result(.success(userInfo))
-                break
-            // Authentication Failure: print error
-            case .failure(let error):
-                print(error)
-                
-                // TODO: case2. firebase authentication error
-                // TODO: case3. Apple Social Login error
-                
-                break
-            }
-        }
+    
+    func requestNonceSignInApple() -> String {
+        return self.apple.randomNonce()
     }
 }
 
-struct AuthSocialLoginResDTO{
+// MARK: - AuthDTO
+struct AuthSocialLoginResDTO {
     
-    let email: String
+    let email: String?
     let provider: Providers
-    let idToken: String
+    let idToken: String?
     let accessToken: String
     var status: UserType
     
     // Google
     init(loginResult: GIDSignInResult, userType: UserType){
         self.provider = .google
-        self.email = loginResult.user.profile!.email
-        self.idToken = loginResult.user.idToken!.tokenString
+        self.email = loginResult.user.profile?.email
+        self.idToken = loginResult.user.idToken?.tokenString
         self.accessToken = loginResult.user.accessToken.tokenString
         self.status = userType
     }
     
     // Apple
-    init(loginResult: User, idToken: String, userType: UserType){
+    init(loginResult: User?, idToken: String, userType: UserType){
         self.provider = .apple
-        self.email = loginResult.email!
+        self.email = loginResult?.email
         self.idToken = idToken
         self.accessToken = ""
         self.status = userType

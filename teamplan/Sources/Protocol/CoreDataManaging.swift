@@ -40,6 +40,8 @@ final class CoredataController: CoredataProtocol {
     }
 }
 
+
+// MARK: - Basic
 protocol BasicObjectManage {
     associatedtype Entity: NSManagedObject
     associatedtype Object
@@ -56,23 +58,27 @@ extension BasicObjectManage {
     }
 }
 
-
-// MARK: - ReadOnly
-protocol ReadOnlyObjectManage: BasicObjectManage {
-    func getObject(with userId: String) throws -> Object
-}
-
-
-
 // MARK: - Full Manage
-protocol FullObjectManage: ReadOnlyObjectManage {
+protocol FullObjectManage: BasicObjectManage {
     associatedtype DTO
     
+    func getObject(with userId: String) throws -> Object
     func setObject(with object: Object) throws
     func updateObject(with dto: DTO) throws
     func deleteObject(with userId: String) throws
 }
 
+
+// MARK: - CoreValue
+protocol CoreValueObjectManage: BasicObjectManage {
+    
+    func setObject(with object: Object) throws
+    func getObject(with userId: String) throws -> Object
+    func deleteObject(with userId: String) throws
+}
+
+
+// MARK: - Challenge
 protocol ChallengeObjectManage: BasicObjectManage {
     associatedtype DTO
     
@@ -84,15 +90,18 @@ protocol ChallengeObjectManage: BasicObjectManage {
 }
 
 
+// MARK: - Log
 protocol LogObjectManage: BasicObjectManage {
     
     func setObject(with object: Object) throws
-    func getObject(with userId: String) throws -> Object
-    func getObjects(with userId: String) throws -> [Object]
-    func getTargetObjects(with userId: String, and syncedAt: Date) throws -> [Object]
+    func getSingleObject(with userId: String) throws -> Object
+    func getFullObjects(with userId: String) throws -> [Object]
+    func getPartialObjects(with userId: String, and syncedAt: Date) throws -> [Object]
     func deleteObject(with userId: String) throws
 }
 
+
+// MARK: - Project
 protocol ProjectObjectManage: BasicObjectManage {
     associatedtype DTO
     associatedtype CardDTO
@@ -103,8 +112,11 @@ protocol ProjectObjectManage: BasicObjectManage {
     func getObjects(with userId: String) throws -> [Object]
     func updateObject(with dto: DTO) throws
     func deleteObject(with userId: String, and projectId: Int) throws
+    func deleteAllObject(with userId: String) throws
 }
 
+
+// MARK: - Todo
 protocol TodoObjectManage: BasicObjectManage {
     associatedtype DTO
     

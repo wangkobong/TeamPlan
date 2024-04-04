@@ -15,7 +15,9 @@ final class AccessLogServicesFirestore: LogDocsManage {
     
     func setDocs(with userId: String, and logHead: Int, and objects: [AccessLog]) async throws {
         let batch = Firestore.firestore().batch()
-        let collectionRef = fetchCollection(with: .accessLog).document(userId).collection(String(logHead))
+        let collectionRef = fetchCollection(with: .accessLog)
+            .document(userId)
+            .collection(String(logHead))
         
         for object in objects {
             let docsRef = collectionRef.document()
@@ -25,18 +27,25 @@ final class AccessLogServicesFirestore: LogDocsManage {
     }
     
     func getDocs(with userId: String, and logHead: Int) async throws -> [AccessLog] {
-        let docs = try await fetchLogDocs(with: userId, and: .accessLog, and: logHead)
+        let docs = try await fetchDocsSnapshot(with: userId, and: logHead)
         return try docs.map { try convertToObject(with: $0.data()) }
     }
     
-    func deleteDocs(with userId: String) async throws {
+    func deleteDocs(with userId: String, and logHead: Int) async throws {
         let batch = Firestore.firestore().batch()
-        let docs = try await fetchDocuments(with: userId, and: .accessLog)
+        let docsList = try await fetchDocsSnapshot(with: userId, and: logHead)
         
-        for doc in docs {
-            batch.deleteDocument(doc.reference)
+        for docs in docsList {
+            batch.deleteDocument(docs.reference)
         }
         try await batch.commit()
+    }
+    
+    func convertToData(with object: AccessLog) -> [String:Any] {
+        return [
+            "user_id": object.userId,
+            "access_record": DateFormatter.standardFormatter.string(from: object.accessRecord)
+        ]
     }
 }
 
@@ -50,13 +59,6 @@ extension AccessLogServicesFirestore {
             throw FirestoreError.convertFailure(serviceName: .log)
         }
         return AccessLog(userId: userId, accessDate: accessRecord)
-    }
-    
-    private func convertToData(with object: AccessLog) -> [String:Any] {
-        return [
-            "user_id": object.userId,
-            "access_record": DateFormatter.standardFormatter.string(from: object.accessRecord)
-        ]
     }
 }
 

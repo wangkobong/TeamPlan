@@ -11,13 +11,14 @@ import GoogleSignIn
 import FirebaseAuth
 import KeychainSwift
 
-final class AuthGoogleServices{
+final class AuthGoogleService {
     
+    
+    // MARK: - private properties
     private var keychain = KeychainSwift()
     
     @MainActor
     func login() async throws -> AuthSocialLoginResDTO {
-        
         guard let topVC = GoogleLoginHelper.shared.topViewController() else {
             throw GoogleSocialLoginError.topViewControllerSearchFailure(serviceName: .googleLogin)
         }
@@ -27,7 +28,6 @@ final class AuthGoogleServices{
         return dto
     }
     
-    // firebase authentication
     private func firebaseAuth(loginResult: GIDSignInResult) async throws -> UserType {
         let credential = GoogleAuthProvider.credential(
             withIDToken: loginResult.user.idToken!.tokenString,
@@ -44,5 +44,18 @@ final class AuthGoogleServices{
         let userDefaultManager = UserDefaultManager.loadWith(key: "user")
         userDefaultManager?.identifier = ""
         userDefaultManager?.userName = ""
+    }
+}
+
+// MARK: Exception
+
+enum AuthGoogleError: LocalizedError {
+    case UnexpectedTopViewControllerError
+    
+    var errorDescription: String?{
+        switch self {
+        case .UnexpectedTopViewControllerError:
+            return "[Critical]AuthGoogle - Throw: There was an unexpected error while get TopView Controller"
+        }
     }
 }
