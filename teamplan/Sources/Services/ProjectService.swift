@@ -125,6 +125,7 @@ extension ProjectService {
     
     private func getProjectList() throws {
         let projectObjects = try projectCD.getObjects(with: userId)
+        self.projectList.removeAll()
         for object in projectObjects {
             if object.status == .ongoing{
                 self.projectList.append(try convertToProjectDTO(data: object, registLimit: self.coreValue.todoRegistLimit))

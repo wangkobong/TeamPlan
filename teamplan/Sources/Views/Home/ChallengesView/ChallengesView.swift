@@ -87,21 +87,6 @@ struct ChallengesView: View {
                 }
             }
             .toastView(toast: $toast)
-            .onAppear {
-                homeViewModel.challengeArray.forEach {
-                    print("-------")
-                    print("desc: \($0.desc)")
-                    print("id: \($0.challengeId)")
-                    print("desc2: \($0.title)")
-                    print("isSelected: \($0.selectStatus)")
-                    print("lock: \($0.lock)")
-                    print("isComplete: \($0.status)")
-                    print("prevGoal: \($0.goal)")
-                    print("prevTitle: \($0.title)")
-                    
-                }
-                print("$homeViewModel.challengeArray: \($homeViewModel.challengeArray.count)")
-            }
         }
     }
 }

@@ -51,6 +51,9 @@ struct ProjectMainView: View {
             .sheet(isPresented: $isAddProjectViewActive) {
                 AddProjectView(projectViewModel: projectViewModel)
             }
+            .onAppear {
+                projectViewModel.getProjects()
+            }
         }
 
     }

@@ -39,7 +39,10 @@ final class ProjectViewModel: ObservableObject {
         projectService.$projectList
             .receive(on: DispatchQueue.main)
             .sink { [weak self] projects in
-                print("projects: \(projects)")
+                print("projects 개수: \(projects.count)")
+                projects.forEach {
+                    print("\($0.title): \($0.projectId), 시작날짜: \($0.startAt) ")
+                }
                 self?.projectList = projects
             }
             .store(in: &cancellables)
@@ -66,5 +69,14 @@ final class ProjectViewModel: ObservableObject {
         self.startDate = .none
         self.duration = .none
         self.projectName = ""
+        getProjects()
+    }
+    
+    func getProjects() {
+        do {
+            try projectService.prepareService()
+        } catch {
+            print("error: \(error)")
+        }
     }
 }
