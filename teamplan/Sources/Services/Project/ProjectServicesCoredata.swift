@@ -22,7 +22,11 @@ final class ProjectServicesCoredata: ProjectObjectManage {
     
     func setObject(with object: ProjectObject) throws {
         createEntity(with: object)
-        try context.save()
+        do {
+            try context.save()
+        } catch {
+            print("error: \(error)")
+        }
     }
     
     func getDTO(with userId: String) throws -> [CardDTO] {

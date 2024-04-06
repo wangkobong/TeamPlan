@@ -41,7 +41,7 @@ struct ProjectDetailView: View {
 //        .navigationTitle("\(projectViewModel.projects[index].name)")
         .onAppear {
 //            print("\(projectViewModel.projects[safe: index]?.toDos.count)")
-            print("테스트: \(projectViewModel.projects[index].toDos)")
+//            print("테스트: \(projectViewModel.projects[index].toDos)")
         }
     }
 }
@@ -120,12 +120,12 @@ extension ProjectDetailView {
     
     private var contents: some View {
         ZStack{
-            if projectViewModel.projects[index].toDos.count > 1 {
+            if projectViewModel.projectList[index].todoList.count > 1 {
                 ScrollView {
                     Spacer()
                         .frame(height: 25)
                     VStack(spacing: 8) {
-                        ForEach(Array(projectViewModel.projects[index].toDos.enumerated()), id: \.1.id) { index, toDo in
+                        ForEach(Array(projectViewModel.projectList[index].todoList.enumerated()), id: \.1.todoId) { index, toDo in
                             ToDoView(toDo: toDo)
                         }
                     }

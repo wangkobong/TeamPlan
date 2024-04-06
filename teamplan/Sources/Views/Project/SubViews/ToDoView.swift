@@ -10,18 +10,18 @@ import SwiftUI
 
 struct ToDoView: View {
     
-    let toDo: ToDo
+    let toDo: TodoDTO
     
     var body: some View {
         HStack {
             HStack {
-                Image(toDo.isDone ? "checkBox_done" : "checkBox_none")
+                Image(toDo.status.rawValue == 1 ? "checkBox_done" : "checkBox_none")
                     .onTapGesture {
                         print("toggle")
                     }
                 ZStack {
                     HStack {
-                        Text(toDo.name)
+                        Text(toDo.desc)
                             .font(.appleSDGothicNeo(.regular, size: 14))
                             .foregroundColor(Color(hex: "1E1E1E"))
                             .lineLimit(1)
@@ -31,7 +31,7 @@ struct ToDoView: View {
                                 Color.black
                                     .frame(height: 1)
                                     .padding(.horizontal, 10)
-                                    .opacity(toDo.isDone ? 1 : 0)
+                                    .opacity(toDo.status.rawValue == 1 ? 1 : 0)
                             )
                         
                         Spacer()
@@ -49,8 +49,8 @@ struct ToDoView: View {
     }
 }
 
-struct ToDoView_Previews: PreviewProvider {
-    static var previews: some View {
-        ToDoView(toDo: ToDo(name: "어쩌꾸 저쩌구", isDone: false))
-    }
-}
+//struct ToDoView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        ToDoView(toDo: Todo)
+//    }
+//}
