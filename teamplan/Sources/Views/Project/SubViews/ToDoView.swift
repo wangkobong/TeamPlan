@@ -10,34 +10,31 @@ import SwiftUI
 
 struct ToDoView: View {
     
-    let toDo: TodoDTO
+    @ObservedObject var projectViewModel: ProjectViewModel
+    @Binding var toDo: TodoDTO
+    @State private var isEditing: Bool = false
+    let projectId: Int
     
     var body: some View {
         HStack {
             HStack {
-                Image(toDo.status.rawValue == 1 ? "checkBox_done" : "checkBox_none")
+                Image("checkBox_none")
                     .onTapGesture {
                         print("toggle")
                     }
                 ZStack {
-                    HStack {
-                        Text(toDo.desc)
-                            .font(.appleSDGothicNeo(.regular, size: 14))
-                            .foregroundColor(Color(hex: "1E1E1E"))
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                            .padding(.horizontal, 16)
-                            .background(
-                                Color.black
-                                    .frame(height: 1)
-                                    .padding(.horizontal, 10)
-                                    .opacity(toDo.status.rawValue == 1 ? 1 : 0)
-                            )
-                        
-                        Spacer()
+                    TextField(toDo.desc, text: $toDo.desc) { editing in
+                        self.isEditing = editing
                     }
+                    .onSubmit {
+                        projectViewModel.update(updateTodoDescription: projectId, todoId: toDo.todoId, newDesc: toDo.desc)
+                    }
+                    
+                    .padding(.horizontal, 16)
+                    .font(.appleSDGothicNeo(.regular, size: 14))
+                    
                     RoundedRectangle(cornerRadius: 24)
-                        .stroke(Color(hex: "E2E2E2"), lineWidth: 1)
+                        .stroke(isEditing ? SwiftUI.Color.theme.mainPurpleColor : Color(hex: "E2E2E2"), lineWidth: 1)
                     
                 }
                 .frame(height: 38)

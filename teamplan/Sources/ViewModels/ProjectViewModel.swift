@@ -79,4 +79,27 @@ final class ProjectViewModel: ObservableObject {
             print("error: \(error)")
         }
     }
+    
+    func addNewTodo(projectId: Int) {
+        
+        if projectService.canRegistNewProject() {
+            
+        } else {
+            
+        }
+        
+        do {
+            try projectService.setNewTodo(projectId: projectId)
+        } catch {
+            print("error: \(error)")
+        }
+    }
+    
+    func update(updateTodoDescription projectId: Int, todoId: Int, newDesc: String) {
+        do {
+            try projectService.updateTodoDesc(with: projectId, todoId: todoId, newDesc: newDesc)
+        } catch {
+            
+        }
+    }
 }

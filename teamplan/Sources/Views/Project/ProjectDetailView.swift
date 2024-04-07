@@ -17,6 +17,7 @@ struct ProjectDetailView: View {
     
     @State private var isShowAddToDo: Bool = false
     @State private var isShowEmptyView: Bool = true
+    @State private var isAdding: Bool = false
     
     var body: some View {
         VStack {
@@ -113,7 +114,7 @@ extension ProjectDetailView {
                 )
                 .offset(x: 0)
                 .onTapGesture {
-
+                    self.addTodo()
                 }
             }
         }
@@ -130,7 +131,7 @@ extension ProjectDetailView {
                         .frame(height: 25)
                     VStack(spacing: 8) {
                         ForEach(Array(project.todoList.enumerated()), id: \.1.todoId) { index, toDo in
-                            ToDoView(toDo: $project.todoList[index])
+                            ToDoView(projectViewModel: projectViewModel, toDo: $project.todoList[index], projectId: project.projectId)
                         }
                     }
                 }
@@ -194,6 +195,16 @@ extension ProjectDetailView {
                 .onTapGesture {
                     print("프로젝트 완료")
                 }
+        }
+    }
+}
+
+
+extension ProjectDetailView {
+    private func addTodo() {
+        withAnimation(.spring()) {
+            self.projectViewModel.addNewTodo(projectId: self.project.projectId)
+            self.isShowEmptyView = false
         }
     }
 }
