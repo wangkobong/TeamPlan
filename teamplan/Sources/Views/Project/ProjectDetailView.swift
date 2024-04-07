@@ -11,7 +11,7 @@ import SwiftUI
 struct ProjectDetailView: View {
     
     @Environment(\.dismiss) var dismiss
-    @EnvironmentObject var projectViewModel: ProjectViewModel
+    @ObservedObject var projectViewModel: ProjectViewModel
     
     @Binding var project: ProjectDTO
     
@@ -43,10 +43,9 @@ struct ProjectDetailView: View {
                 }
             }
         }
-//        .navigationTitle("\(projectViewModel.projects[index].name)")
+        .navigationTitle("\(project.title)")
         .onAppear {
-//            print("\(projectViewModel.projects[safe: index]?.toDos.count)")
-//            print("테스트: \(projectViewModel.projects[index].toDos)")
+
         }
     }
 }

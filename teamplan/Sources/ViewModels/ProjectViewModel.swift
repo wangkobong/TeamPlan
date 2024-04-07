@@ -54,6 +54,7 @@ final class ProjectViewModel: ObservableObject {
         self.userName = userDefaultManager?.userName ?? "Unkown"
     }
     
+    // MARK: - projects METHOD
     func addNewProject() {
         let start = self.startDate.futureDate(from: Date())
         let end = self.duration.futureDate(from: Date())
@@ -80,6 +81,16 @@ final class ProjectViewModel: ObservableObject {
         }
     }
     
+    func deleteProject(projectId: Int) {
+        do {
+            try projectService.deleteProject(projectId: projectId)
+        } catch {
+            print("error: \(error)")
+        }
+    }
+    
+    
+    // MARK: - ToDo METHOD
     func addNewTodo(projectId: Int) {
         
         if projectService.canRegistNewProject() {
@@ -110,4 +121,5 @@ final class ProjectViewModel: ObservableObject {
             
         }
     }
+    
 }

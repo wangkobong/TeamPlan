@@ -10,6 +10,7 @@ import SwiftUI
 
 struct ProjectCardView: View {
     
+    @ObservedObject var projectViewModel: ProjectViewModel
     @Binding var project: ProjectDTO
     var body: some View {
         VStack {
@@ -36,10 +37,10 @@ struct ProjectCardView: View {
                 
                 Menu {
                     Button("삭제", action: {
-                        print("삭제")
+                        projectViewModel.deleteProject(projectId: project.projectId)
                     })
                     Button("수정 및 기한 연장", action: {
-                        print("수정 및 기한 연장")
+                     
                     })
 
                 } label: {
