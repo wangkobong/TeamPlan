@@ -95,9 +95,17 @@ final class ProjectViewModel: ObservableObject {
         }
     }
     
-    func update(updateTodoDescription projectId: Int, todoId: Int, newDesc: String) {
+    func updateTodoDescription(with projectId: Int, todoId: Int, newDesc: String) {
         do {
             try projectService.updateTodoDesc(with: projectId, todoId: todoId, newDesc: newDesc)
+        } catch {
+            
+        }
+    }
+    
+    func toggleToDoStatus(with projectId: Int, todoId: Int, newStatus: TodoStatus) {
+        do {
+            try projectService.updateTodoStatus(with: projectId, todoId: todoId, newStatus: newStatus)
         } catch {
             
         }
