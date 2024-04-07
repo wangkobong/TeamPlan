@@ -12,7 +12,11 @@ struct ProjectDetailView: View {
     
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var projectViewModel: ProjectViewModel
-    let index: Int
+    
+    @Binding var project: ProjectDTO
+    
+    @State private var isShowAddToDo: Bool = false
+    @State private var isShowEmptyView: Bool = true
     
     var body: some View {
         VStack {
@@ -46,25 +50,25 @@ struct ProjectDetailView: View {
     }
 }
 
-struct ProjectDetailView_Previews: PreviewProvider {
-    static var previews: some View {
-        ProjectDetailView(index: 0)
-    }
-}
+//struct ProjectDetailView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        ProjectDetailView(index: 0)
+//    }
+//}
 
 extension ProjectDetailView {
     private var header: some View {
         ZStack{
             VStack(alignment: .leading) {
-                Text("D-14")
+                Text("D-\(project.deadline.days(from: Date()))")
                     .foregroundColor(Color.theme.mainPurpleColor)
                     .font(.appleSDGothicNeo(.bold, size: 24))
                     .padding(.bottom, 5)
                 
                 HStack {
-                    Text("23.08.12")
+                    Text("\(project.startAt.fullCheckDay)")
                     Text("~")
-                    Text("23.08.26")
+                    Text("\(project.deadline.fullCheckDay)")
                 }
                 .foregroundColor(Color.theme.mainBlueColor)
                 .font(.appleSDGothicNeo(.regular, size: 12))
@@ -82,7 +86,7 @@ extension ProjectDetailView {
                 }
                 .padding(.bottom, 1)
                 
-                Text("오늘, 추가할 수 있는 할 일은 10개 남았어요")
+                Text("오늘, 추가할 수 있는 할 일은 \(project.todoCanRegist)개 남았어요")
                     .font(.appleSDGothicNeo(.regular, size: 14))
                     .foregroundColor(.theme.darkGreyColor)
                 
@@ -120,13 +124,13 @@ extension ProjectDetailView {
     
     private var contents: some View {
         ZStack{
-            if projectViewModel.projectList[index].todoList.count > 1 {
+            if !project.todoList.isEmpty {
                 ScrollView {
                     Spacer()
                         .frame(height: 25)
                     VStack(spacing: 8) {
-                        ForEach(Array(projectViewModel.projectList[index].todoList.enumerated()), id: \.1.todoId) { index, toDo in
-                            ToDoView(toDo: toDo)
+                        ForEach(Array(project.todoList.enumerated()), id: \.1.todoId) { index, toDo in
+                            ToDoView(toDo: $project.todoList[index])
                         }
                     }
                 }
