@@ -39,10 +39,6 @@ final class ProjectViewModel: ObservableObject {
         projectService.$projectList
             .receive(on: DispatchQueue.main)
             .sink { [weak self] projects in
-                print("projects 개수: \(projects.count)")
-                projects.forEach {
-                    print("\($0.title): \($0.projectId), 시작날짜: \($0.startAt) ")
-                }
                 self?.projectList = projects
             }
             .store(in: &cancellables)
@@ -58,10 +54,6 @@ final class ProjectViewModel: ObservableObject {
     func addNewProject() {
         let start = self.startDate.futureDate(from: Date())
         let end = self.duration.futureDate(from: Date())
-//        let newProject = ProjectSetDTO(title: projectName, startedAt: start, deadline: end)
-//        try? projectService.setProject(with: newProject)
-//        self.userProjects = try! projectService.getProjects()
-//        self.projectStatus = try! projectService.getStatistics()
         do {
             try projectService.setNewProject(title: projectName, startAt: start, deadline: end)
         } catch {
@@ -119,6 +111,14 @@ final class ProjectViewModel: ObservableObject {
             try projectService.updateTodoStatus(with: projectId, todoId: todoId, newStatus: newStatus)
         } catch {
             
+        }
+    }
+    
+    func completeProject(with projectId: Int) async {
+        do {
+            try projectService.completeProject(projectId: projectId)
+        } catch {
+            print("error: \(error)")
         }
     }
     

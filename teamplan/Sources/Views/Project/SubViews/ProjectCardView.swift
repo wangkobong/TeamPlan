@@ -68,13 +68,18 @@ struct ProjectCardView: View {
                         .fill(
                             Color.theme.mainPurpleColor
                         )
-                        .frame(width: 45, height: 8)
+                        .frame(width: calculateGraphWidth(
+                            remainingDays: project.deadline.days(from: Date()),
+                            totalDays: project.deadline.days(from: project.startAt)),
+                               height: 8)
 
                     
                     Image("project_bomb_smile")
-                        .offset(x: 22.5)
+                        .offset(x: calculateGraphWidth(
+                            remainingDays: project.deadline.days(from: Date()),
+                            totalDays: project.deadline.days(from: project.startAt)) - 10
+                        )
                 }
-
                 
                 HStack {
                     Spacer()

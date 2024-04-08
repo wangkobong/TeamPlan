@@ -30,8 +30,6 @@ struct ProjectDetailView: View {
             
             button
         }
-        .navigationBarBackButtonHidden(true)
-        .navigationTitle("막걸리 브랜딩어쩌구")
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
 
@@ -44,6 +42,7 @@ struct ProjectDetailView: View {
             }
         }
         .navigationTitle("\(project.title)")
+        .navigationBarBackButtonHidden(true)
         .onAppear {
 
         }
@@ -187,12 +186,16 @@ extension ProjectDetailView {
                 .foregroundColor(.white)
                 .frame(height: 48)
                 .frame(maxWidth: .infinity)
-                .background(Color.theme.greyColor)
+                .background(isCompletedToDo() ? Color.theme.mainPurpleColor : Color.theme.greyColor)
                 .cornerRadius(8)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 16)
                 .onTapGesture {
-                    print("프로젝트 완료")
+                    if isCompletedToDo() {
+                        Task {
+                            await self.completeProject()
+                        }
+                    }
                 }
         }
     }
@@ -205,5 +208,14 @@ extension ProjectDetailView {
             self.projectViewModel.addNewTodo(projectId: self.project.projectId)
             self.isShowEmptyView = false
         }
+    }
+    
+    private func isCompletedToDo() -> Bool {
+        return project.todoList.count > 0 && project.todoList.allSatisfy { $0.status == .finish }
+    }
+    
+    private func completeProject() async {
+        await projectViewModel.completeProject(with: project.projectId)
+        dismiss.callAsFunction()
     }
 }
