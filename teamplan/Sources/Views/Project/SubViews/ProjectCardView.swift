@@ -10,7 +10,7 @@ import SwiftUI
 
 struct ProjectCardView: View {
     
-    let project: ProjectDTO
+    @Binding var project: ProjectDTO
     var body: some View {
         VStack {
             Spacer()

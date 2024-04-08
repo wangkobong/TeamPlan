@@ -22,7 +22,11 @@ final class ProjectServicesCoredata: ProjectObjectManage {
     
     func setObject(with object: ProjectObject) throws {
         createEntity(with: object)
-        try context.save()
+        do {
+            try context.save()
+        } catch {
+            print("error: \(error)")
+        }
     }
     
     func getDTO(with userId: String) throws -> [CardDTO] {
@@ -69,7 +73,7 @@ extension ProjectServicesCoredata{
     private func getEntity(with projectId: Int, and userId: String) throws -> Entity {
         
         let fetchReq: NSFetchRequest<Entity> = Entity.fetchRequest()
-        fetchReq.predicate = NSPredicate(format: EntityPredicate.project.format, projectId, userId)
+        fetchReq.predicate = NSPredicate(format: EntityPredicate.project.format, userId, projectId)
         fetchReq.fetchLimit = 1
         
         guard let entity = try fetchEntity(with: fetchReq, and: self.context) else {

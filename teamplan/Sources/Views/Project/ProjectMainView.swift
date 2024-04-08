@@ -26,7 +26,7 @@ struct ProjectMainView: View {
         ScrollView {
             VStack {
                 NavigationLink(
-                    destination: ProjectDetailView(index: projectDetailViewIndex)
+                    destination: ProjectDetailView(project: $projectViewModel.projectList[projectDetailViewIndex])
                         .environmentObject(projectViewModel),
                     isActive: $isPushProjectDetailView) {
                     
@@ -50,6 +50,9 @@ struct ProjectMainView: View {
             .padding(.horizontal, 16)
             .sheet(isPresented: $isAddProjectViewActive) {
                 AddProjectView(projectViewModel: projectViewModel)
+            }
+            .onAppear {
+                projectViewModel.getProjects()
             }
         }
 
@@ -183,7 +186,7 @@ extension ProjectMainView {
         VStack {
             VStack {
                 ForEach(Array(projectViewModel.projectList.enumerated()), id: \.1.projectId) { index, project in
-                    ProjectCardView(project: project)
+                    ProjectCardView(project: $projectViewModel.projectList[index])
                         .onTapGesture {
                             projectDetailViewIndex = index
                             isPushProjectDetailView.toggle()

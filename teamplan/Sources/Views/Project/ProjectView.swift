@@ -25,6 +25,10 @@ struct ProjectView: View {
                 } else {
                     ProjectMainView(projectViewModel: projectViewModel)
                 }
+//                ProjectMainView(projectViewModel: projectViewModel)
+            }
+            .onAppear {
+                projectViewModel.getProjects()
             }
         }
     }

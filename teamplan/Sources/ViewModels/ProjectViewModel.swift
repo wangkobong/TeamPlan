@@ -16,56 +16,14 @@ final class ProjectViewModel: ObservableObject {
     
     private var cancellables = Set<AnyCancellable>()
     
-    var projects: [ProjectModel] = [
-        ProjectModel(name: "막걸리 브랜딩 프로젝트",
-                     startDate: 10,
-                     endDate: 5,
-                     toDos:  [
-                        ToDo(name: "요구사항 정의", isDone: true),
-                        ToDo(name: "브랜딩 3개 거래처 수정", isDone: false),
-                        ToDo(name: "홈 화면 UI elwkdls", isDone: false),
-                        ToDo(name: "깃허브 작업 깃허브 작업 깃허브 작업 깃허브 작업 깃허브 작업", isDone: false),
-                        ToDo(name: "서비스 트러블 슈팅 정리", isDone: true),
-                     ]),
-        ProjectModel(name: "소주 브랜딩 프로젝트",
-                     startDate: 10,
-                     endDate: 5,
-                     toDos:  [
-                        ToDo(name: "요구사항 정의", isDone: false),
-                        ToDo(name: "브랜딩 3개 거래처 수정", isDone: false),
-                        ToDo(name: "홈 화면 UI elwkdls", isDone: false),
-                        ToDo(name: "깃허브 작업 깃허브 작업 깃허브 작업 깃허브 작업 깃허브 작업", isDone: false),
-                        ToDo(name: "서비스 트러블 슈팅 정리", isDone: false),
-                     ]),
-        ProjectModel(name: "맥주 브랜딩 프로젝트",
-                     startDate: 10,
-                     endDate: 5,
-                     toDos:  [
-                        ToDo(name: "요구사항 정의", isDone: false),
-                        ToDo(name: "브랜딩 3개 거래처 수정", isDone: false),
-                        ToDo(name: "홈 화면 UI elwkdls", isDone: false),
-                        ToDo(name: "깃허브 작업 깃허브 작업 깃허브 작업 깃허브 작업 깃허브 작업", isDone: false),
-                        ToDo(name: "서비스 트러블 슈팅 정리", isDone: false),
-                     ]),
-        ProjectModel(name: "위스키 브랜딩 프로젝트",
-                     startDate: 10,
-                     endDate: 5,
-                     toDos:  [
-                        ToDo(name: "요구사항 정의", isDone: false),
-                        ToDo(name: "브랜딩 3개 거래처 수정", isDone: false),
-                        ToDo(name: "홈 화면 UI elwkdls", isDone: false),
-                        ToDo(name: "깃허브 작업 깃허브 작업 깃허브 작업 깃허브 작업 깃허브 작업", isDone: false),
-                        ToDo(name: "서비스 트러블 슈팅 정리", isDone: false),
-                     ]),
-        ProjectModel(name: "투두없는 프로젝트",
-                     startDate: 10,
-                     endDate: 5,
-                     toDos:  [])
-    ]
-    
     lazy var projectService = ProjectService(userId: self.identifier)
     
     @Published var projectList: [ProjectDTO] = []
+    
+    // AddProjectView에 필요한 프로퍼티
+    @Published var projectName: String = ""
+    @Published var startDate: StartDateSelection = .none
+    @Published var duration: DurationSelection = .none
 
     init() {
         let userDefaultManager = UserDefaultManager.loadWith(key: "user")
@@ -81,7 +39,10 @@ final class ProjectViewModel: ObservableObject {
         projectService.$projectList
             .receive(on: DispatchQueue.main)
             .sink { [weak self] projects in
-                print("projects: \(projects)")
+                print("projects 개수: \(projects.count)")
+                projects.forEach {
+                    print("\($0.title): \($0.projectId), 시작날짜: \($0.startAt) ")
+                }
                 self?.projectList = projects
             }
             .store(in: &cancellables)
@@ -91,5 +52,62 @@ final class ProjectViewModel: ObservableObject {
     private func getUserName() async {
         let userDefaultManager = UserDefaultManager.loadWith(key: "user")
         self.userName = userDefaultManager?.userName ?? "Unkown"
+    }
+    
+    func addNewProject() {
+        let start = self.startDate.futureDate(from: Date())
+        let end = self.duration.futureDate(from: Date())
+//        let newProject = ProjectSetDTO(title: projectName, startedAt: start, deadline: end)
+//        try? projectService.setProject(with: newProject)
+//        self.userProjects = try! projectService.getProjects()
+//        self.projectStatus = try! projectService.getStatistics()
+        do {
+            try projectService.setNewProject(title: projectName, startAt: start, deadline: end)
+        } catch {
+            print("error: \(error)")
+        }
+        self.startDate = .none
+        self.duration = .none
+        self.projectName = ""
+        getProjects()
+    }
+    
+    func getProjects() {
+        do {
+            try projectService.prepareService()
+        } catch {
+            print("error: \(error)")
+        }
+    }
+    
+    func addNewTodo(projectId: Int) {
+        
+        if projectService.canRegistNewProject() {
+            
+        } else {
+            
+        }
+        
+        do {
+            try projectService.setNewTodo(projectId: projectId)
+        } catch {
+            print("error: \(error)")
+        }
+    }
+    
+    func updateTodoDescription(with projectId: Int, todoId: Int, newDesc: String) {
+        do {
+            try projectService.updateTodoDesc(with: projectId, todoId: todoId, newDesc: newDesc)
+        } catch {
+            
+        }
+    }
+    
+    func toggleToDoStatus(with projectId: Int, todoId: Int, newStatus: TodoStatus) {
+        do {
+            try projectService.updateTodoStatus(with: projectId, todoId: todoId, newStatus: newStatus)
+        } catch {
+            
+        }
     }
 }
