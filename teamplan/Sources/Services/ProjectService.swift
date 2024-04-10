@@ -10,10 +10,10 @@ import Foundation
 
 final class ProjectService {
     
-    private let coreValueCD: CoreValueServicesCoredata
-    private let statCD: StatisticsServicesCoredata
-    private let projectCD: ProjectServicesCoredata
-    private let todoCD: TodoServiceCoredata
+    private let coreValueCD = CoreValueServicesCoredata()
+    private let statCD = StatisticsServicesCoredata()
+    private let projectCD = ProjectServicesCoredata()
+    private let todoCD = TodoServiceCoredata()
     private let util = Utilities()
     private let userId: String
     
@@ -23,12 +23,8 @@ final class ProjectService {
     @Published var statDashBoard: ProjectStatDTO = ProjectStatDTO()
     @Published var projectList: [ProjectDTO] = []
     
-    init(userId: String, controller: CoredataController = CoredataController()) {
+    init(userId: String) {
         self.userId = userId
-        self.coreValueCD = CoreValueServicesCoredata(coredataController: controller)
-        self.statCD = StatisticsServicesCoredata(coredataController: controller)
-        self.projectCD = ProjectServicesCoredata(coredataController: controller)
-        self.todoCD = TodoServiceCoredata(coredataController: controller)
     }
     
     func prepareService() throws {
@@ -64,7 +60,7 @@ extension ProjectService {
             status: .ongoing,
             todos: [],
             totalRegistedTodo: 0,
-            dailyRegistedTodo: 0,
+            dailyRegistedTodo: self.coreValue.todoRegistLimit,
             finishedTodo: 0,
             alerted: 0,
             extendedCount: 0,
@@ -124,18 +120,13 @@ extension ProjectService {
 extension ProjectService {
     
     private func getProjectList() throws {
-        let projectObjects = try projectCD.getObjects(with: userId)
         self.projectList.removeAll()
-        for object in projectObjects {
-            if object.status == .ongoing{
-                self.projectList.append(try convertToProjectDTO(data: object, registLimit: self.coreValue.todoRegistLimit))
-            }
-        }
-    }
-    
-    private func checkProjectStatus(with: ProjectObject) throws {
-        // TODO: sort project by status
-        // TODO: define project status by deadline, if exceed change status
+        let projectObjects = try projectCD.getObjects(with: userId)
+        
+        self.projectList = try projectObjects
+            .filter { $0.status == .ongoing }
+            .map { try convertToProjectDTO(data: $0, registLimit: self.coreValue.todoRegistLimit) }
+            .sorted { $0.period < $1.period }
     }
     
     private func getStatDashBoard() throws {
@@ -155,7 +146,6 @@ extension ProjectService {
     // Convert inputDrop to newDeadLine
     func calcDeadLineWithDrop(projectId: Int, inputDrop: Int) throws -> Date {
         let convertRatio = coreValue.dropConvertRatio
-        let storedDrop = statData.drop
         let index = try searchProjectIndex(with: projectId)
         
         let currentDeadline = self.projectList[index].deadline
@@ -171,7 +161,6 @@ extension ProjectService {
     // Convert newDeadLine to needDrop
     func calcDeadlineWithDate(with projectId: Int, and newDate: Date) throws -> Int {
         let convertRatio = coreValue.dropConvertRatio
-        let storedDrop = statData.drop
         let index = try searchProjectIndex(with: projectId)
         
         let currentDeadline = self.projectList[index].deadline
@@ -299,7 +288,7 @@ extension ProjectService {
             startAt: data.startedAt,
             deadline: data.deadline,
             todoRemain: calcTodoRemain(registedTodo: data.totalRegistedTodo, finishedTodo: data.finishedTodo),
-            todoCanRegist: calcTodoCanRegist(registLimit: registLimit, dailyRegisted: data.dailyRegistedTodo),
+            todoCanRegist: data.dailyRegistedTodo,
             todoList: todoList
         )
         return dto
@@ -344,8 +333,8 @@ extension ProjectService {
         
         switch type {
         case .newTodo:
-            updated.newTotalRegistedTodo = data.totalRegistedTodo + 1
-            updated.newDailyRegistedTodo = data.dailyRegistedTodo + 1
+            updated.newTotalRegistedTodo = data.totalRegistedTodo - 1
+            updated.newDailyRegistedTodo = data.dailyRegistedTodo - 1
         case .extend(let newDeadline, let newTitle):
             updated.newDeadline = newDeadline
             updated.newTitle = newTitle

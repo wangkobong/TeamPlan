@@ -18,25 +18,20 @@ enum CoredataConfig {
     static let defaultModel = "Coredata"
 }
 
-final class CoredataController: CoredataProtocol {
-    private let modelName: String
-    
-    // only initialize when it needed
-    lazy var container: NSPersistentContainer = {
-        let container = NSPersistentContainer(name: modelName)
-        container.loadPersistentStores { storeDescription, error in
-            if let error = error as NSError? {
-                fatalError("[Coredata] Unable to load persistent container: \(error)")
-            }
-        }
-        return container
-    }()
+final class CoredataMainController: CoredataProtocol {
+    static let shared = CoredataMainController()
+    var container: NSPersistentContainer
     var context: NSManagedObjectContext {
         return container.viewContext
     }
     
-    init(modelName: String = CoredataConfig.defaultModel) {
-        self.modelName = modelName
+    private init(){
+        container = NSPersistentContainer(name: CoredataConfig.defaultModel)
+        container.loadPersistentStores{ storeDescription, error in
+            if let error = error as NSError? {
+                fatalError("[Coredata] Unable to load persistent container: \(error)")
+            }
+        }
     }
 }
 
@@ -66,6 +61,7 @@ protocol FullObjectManage: BasicObjectManage {
     func setObject(with object: Object) throws
     func updateObject(with dto: DTO) throws
     func deleteObject(with userId: String) throws
+    func isObjectExist(with userId: String) -> Bool
 }
 
 
@@ -75,6 +71,7 @@ protocol CoreValueObjectManage: BasicObjectManage {
     func setObject(with object: Object) throws
     func getObject(with userId: String) throws -> Object
     func deleteObject(with userId: String) throws
+    func isObjectExist(with userId: String) -> Bool
 }
 
 
@@ -82,11 +79,14 @@ protocol CoreValueObjectManage: BasicObjectManage {
 protocol ChallengeObjectManage: BasicObjectManage {
     associatedtype DTO
     
-    func setObject(with object: Object) throws
-    func getObject(with challengeId: Int, and userId: String) throws -> Object
+    func setObject(with object: Object) async throws
+    func getObject(with challengeId: Int, and userId: String) async throws -> Object
+    func getObjects(with userId: String) async throws -> [Object]
+    
     func getObjects(with userId: String) throws -> [Object]
-    func updateObject(with dto: DTO) throws
     func deleteObject(with userId: String) throws
+    func updateObject(with dto: DTO) throws
+    func isObjectExist(with userId: String) -> Bool
 }
 
 
@@ -94,10 +94,13 @@ protocol ChallengeObjectManage: BasicObjectManage {
 protocol LogObjectManage: BasicObjectManage {
     
     func setObject(with object: Object) throws
-    func getSingleObject(with userId: String) throws -> Object
+    
+    func getLatestObject(with userId: String) throws -> Object
     func getFullObjects(with userId: String) throws -> [Object]
     func getPartialObjects(with userId: String, and syncedAt: Date) throws -> [Object]
+    
     func deleteObject(with userId: String) throws
+    func isObjectExist(with userId: String) -> Bool
 }
 
 
@@ -107,9 +110,11 @@ protocol ProjectObjectManage: BasicObjectManage {
     associatedtype CardDTO
     
     func setObject(with object: Object) throws
+    
     func getDTO(with userId: String) throws -> [CardDTO]
     func getObject(with userId: String, and projectId: Int) throws -> Object
     func getObjects(with userId: String) throws -> [Object]
+    
     func updateObject(with dto: DTO) throws
     func deleteObject(with userId: String, and projectId: Int) throws
     func deleteAllObject(with userId: String) throws
@@ -133,7 +138,7 @@ enum EntityPredicate {
     case coreValue
     case user
     case stat
-    case multiChallenge
+    case fullChallenge
     case accessLog
     case projectList
     case project
@@ -142,7 +147,7 @@ enum EntityPredicate {
     
     var format: String {
         switch self {
-        case .coreValue, .user, .stat, .multiChallenge, .accessLog, .projectList:
+        case .coreValue, .user, .stat, .fullChallenge, .accessLog, .projectList:
             return "user_id == %@"
         case .project:
             return "user_id == %@ AND project_id == %d"

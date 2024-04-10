@@ -104,6 +104,13 @@ extension LogDocsManage {
         return try await query.getDocuments().documents
     }
     
+    func fetchFullDocsReference(with userId: String) async throws -> DocumentReference {
+        let query = getFirestoreInstance()
+            .collection(CollectionType.accessLog.rawValue)
+            .document(userId)
+        return try await query.getDocument().reference
+    }
+    
     func fetchCollectionReference(with userId: String, and logHead: Int) -> CollectionReference {
         return getFirestoreInstance()
             .collection(CollectionType.accessLog.rawValue)
@@ -123,6 +130,13 @@ protocol ProjectDocsManage: BasicDocsManage {
 }
 
 extension ProjectDocsManage {
+    
+    func fetchFullDocsReference(with userId: String) async throws -> DocumentReference {
+        let query = getFirestoreInstance()
+            .collection(CollectionType.project.rawValue)
+            .document(userId)
+        return try await query.getDocument().reference
+    }
     
     func fetchSingleDocsSnapshot(userId: String, projectId: Int, type: CollectionType) async throws -> DocumentSnapshot {
         let query = getFirestoreInstance()

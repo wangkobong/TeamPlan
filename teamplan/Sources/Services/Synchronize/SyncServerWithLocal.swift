@@ -12,11 +12,11 @@ import FirebaseFirestoreSwift
 
 final class SyncServerWithLocal {
     
-    private let userCD: UserServicesCoredata
-    private let statCD: StatisticsServicesCoredata
-    private let challengeCD: ChallengeServicesCoredata
-    private let accessLogCD: AccessLogServicesCoredata
-    private let projectCD: ProjectServicesCoredata
+    private let userCD = UserServicesCoredata()
+    private let statCD = StatisticsServicesCoredata()
+    private let challengeCD = ChallengeServicesCoredata()
+    private let accessLogCD = AccessLogServicesCoredata()
+    private let projectCD = ProjectServicesCoredata()
     
     private let userFS = UserServicesFirestore()
     private let statFS = StatisticsServicesFirestore()
@@ -29,22 +29,16 @@ final class SyncServerWithLocal {
     private var logHead: Int
     private var previousSyncedAt: Date
     
-    init(with userId: String, controller: CoredataController = CoredataController()) {
+    init(with userId: String) {
         self.userId = userId
         self.logHead = 0
         self.previousSyncedAt = Date()
-        
-        self.userCD = UserServicesCoredata(coredataController: controller)
-        self.statCD = StatisticsServicesCoredata(coredataController: controller)
-        self.challengeCD = ChallengeServicesCoredata(coredataController: controller)
-        self.accessLogCD = AccessLogServicesCoredata(coredataController: controller)
-        self.projectCD = ProjectServicesCoredata(coredataController: controller)
     }
     
+    // MARK: - Sync Executor
     func syncExecutor(with userId: String, and syncDate: Date) async throws {
         self.userId = userId
         let batch = self.instance.batch()
-        
         // User
         try await updateServerUser(with: batch)
 
@@ -70,10 +64,38 @@ final class SyncServerWithLocal {
         try applyStatSyncedAt(with: syncDate)
         try deleteLegacyAccessLog()
     }
+    
+    // MARK: - Delete Executor
+    func deleteExecutor(with userId: String) async throws {
+        self.userId = userId
+        let batch = self.instance.batch()
+        
+        // User
+        try deleteUserAtLocal()
+        try await deleteUserAtServer(with: batch)
+        
+        // Statistics
+        try deleteStatAtLocal()
+        try await deleteStatAtServer(with: batch)
+        
+        // Challenge
+        try deleteChallengeAtLocal()
+        try await deleteChallengeAtServer(with: batch)
+        
+        // Project
+        try deleteProjectAtLocal()
+        try await deleteProjectAtServer(with: batch)
+        
+        // AccessLog
+        try deleteAccessLogAtLocal()
+        try await deleteAccessLogAtServer(with: batch)
+        
+        try await batch.commit()
+    }
 }
 
 
-// MARK: - Fetch Local Data
+// MARK: - Fetch Data from local
 extension SyncServerWithLocal{
     
     // User
@@ -190,5 +212,64 @@ extension SyncServerWithLocal{
     // log
     private func deleteLegacyAccessLog() throws {
         try accessLogCD.deleteObject(with: userId)
+    }
+}
+
+
+// MARK: - Delete Data at local
+extension SyncServerWithLocal{
+    
+    // User
+    private func deleteUserAtLocal() throws {
+        try userCD.deleteObject(with: userId)
+    }
+    
+    // Statistics
+    private func deleteStatAtLocal() throws {
+        try statCD.deleteObject(with: userId)
+    }
+    
+    // Access Log
+    private func deleteAccessLogAtLocal() throws {
+        try accessLogCD.deleteObject(with: userId)
+    }
+    
+    // Challenge
+    private func deleteChallengeAtLocal() throws {
+        try challengeCD.deleteObject(with: userId)
+    }
+    
+    // project
+    private func deleteProjectAtLocal() throws {
+        try projectCD.deleteAllObject(with: userId)
+    }
+}
+
+// MARK: - Delete Data from Server
+extension SyncServerWithLocal{
+    
+    private func deleteUserAtServer(with batch: WriteBatch) async throws {
+        let userRef = try await userFS.fetchDocsReference(with: userId, and: .user)
+        batch.deleteDocument(userRef)
+    }
+    
+    private func deleteStatAtServer(with batch: WriteBatch) async throws {
+        let statRef = try await statFS.fetchDocsReference(with: userId, and: .stat)
+        batch.deleteDocument(statRef)
+    }
+    
+    private func deleteChallengeAtServer(with batch: WriteBatch) async throws {
+        let challengeStatusRef = try await challengeFS.fetchStatusReference(with: userId)
+        batch.deleteDocument(challengeStatusRef)
+    }
+    
+    private func deleteProjectAtServer(with batch: WriteBatch) async throws {
+        let projectRef = try await projectFS.fetchFullDocsReference(with: userId)
+        batch.deleteDocument(projectRef)
+    }
+    
+    private func deleteAccessLogAtServer(with batch: WriteBatch) async throws {
+        let accessLogRef = try await accessLogFS.fetchFullDocsReference(with: userId)
+        batch.deleteDocument(accessLogRef)
     }
 }

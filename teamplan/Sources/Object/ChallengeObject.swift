@@ -8,9 +8,7 @@
 
 import Foundation
 
-//============================
 // MARK: Entity
-//============================
 public struct ChallengeObject: Hashable {
 
     var challengeId: Int
@@ -68,9 +66,7 @@ public struct ChallengeObject: Hashable {
     }
 }
 
-//============================
 // MARK: Type
-//============================
 enum ChallengeType: Int{
     case onboarding = 0
     case serviceTerm = 1

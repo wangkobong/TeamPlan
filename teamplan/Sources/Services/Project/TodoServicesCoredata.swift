@@ -15,7 +15,7 @@ final class TodoServiceCoredata: TodoObjectManage {
     typealias DTO = TodoUpdateDTO
 
     var context: NSManagedObjectContext
-    init(coredataController: CoredataProtocol) {
+    init(coredataController: CoredataProtocol = CoredataMainController.shared) {
         self.context = coredataController.context
     }
     

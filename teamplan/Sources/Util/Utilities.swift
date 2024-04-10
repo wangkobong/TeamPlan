@@ -44,7 +44,7 @@ final class Utilities {
         guard let period = components.day else {
             throw UtilError.UnexpectedTimeCalculateError
         }
-        return period + 1
+        return period
     }
     
     // Update Check

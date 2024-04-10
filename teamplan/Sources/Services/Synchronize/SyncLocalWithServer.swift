@@ -10,12 +10,12 @@ import Foundation
 
 final class SyncLocalWithServer{
     
-    private let userCD: UserServicesCoredata
-    private let statCD: StatisticsServicesCoredata
-    private let coreValueCD: CoreValueServicesCoredata
-    private let challengeCD: ChallengeServicesCoredata
-    private let accessLogCD: AccessLogServicesCoredata
-    private let projectCD: ProjectServicesCoredata
+    private let userCD = UserServicesCoredata()
+    private let statCD = StatisticsServicesCoredata()
+    private let coreValueCD = CoreValueServicesCoredata()
+    private let challengeCD = ChallengeServicesCoredata()
+    private let accessLogCD = AccessLogServicesCoredata()
+    private let projectCD = ProjectServicesCoredata()
     
     private let userFS = UserServicesFirestore()
     private let statFS = StatisticsServicesFirestore()
@@ -27,14 +27,8 @@ final class SyncLocalWithServer{
     private var userId: String
     private var rollbackStack: [() throws -> Void ] = []
     
-    init(with userId: String, controller: CoredataController = CoredataController()) {
+    init(with userId: String) {
         self.userId = userId
-        self.userCD = UserServicesCoredata(coredataController: controller)
-        self.statCD = StatisticsServicesCoredata(coredataController: controller)
-        self.coreValueCD = CoreValueServicesCoredata(coredataController: controller)
-        self.challengeCD = ChallengeServicesCoredata(coredataController: controller)
-        self.accessLogCD = AccessLogServicesCoredata(coredataController: controller)
-        self.projectCD = ProjectServicesCoredata(coredataController: controller)
     }
 }
 
@@ -49,24 +43,19 @@ extension SyncLocalWithServer{
             try resetLocalUser(with: user)
             rollbackStack.append(rollbackResetUser)
             
-            let stat = try await getStatFromServer()
-            try resetLocalStat(with: stat)
+            try resetLocalStat(with: try await getStatFromServer())
             rollbackStack.append(rollbackResetStat)
             
-            let coreValue = try await getCoreValueFromServer()
-            try resetLocalCoreValue(with: coreValue)
+            try resetLocalCoreValue(with: try await getCoreValueFromServer())
             rollbackStack.append(rollbackResetCoreValue)
             
-            let accessLogList = try await getAccessLogFromServer(with: user.accessLogHead)
-            try resetLocalAccessLog(with: accessLogList)
+            try resetLocalAccessLog(with: try await getAccessLogFromServer(with: user.accessLogHead))
             rollbackStack.append(rollbackResetAccessLog)
             
-            let projectList = try await getProjectFromServer()
-            try resetLocalProject(with: projectList)
+            try resetLocalProject(with: try await getProjectFromServer())
             rollbackStack.append(rollbackResetProject)
-            
-            let challengeList = try await getChallengeFromServer()
-            try resetLocalChallenge(with: challengeList)
+        
+            try await resetLocalChallenge(with: try await getChallengeFromServer())
             rollbackStack.append(rollbackResetChallenge)
             
             rollbackStack.removeAll()
@@ -133,9 +122,9 @@ extension SyncLocalWithServer{
     }
     
     // Challenge
-    private func resetLocalChallenge(with challengeList: [ChallengeObject]) throws {
+    private func resetLocalChallenge(with challengeList: [ChallengeObject]) async throws {
         for challenge in challengeList {
-            try challengeCD.setObject(with: challenge)
+            try await challengeCD.setObject(with: challenge)
         }
     }
     private func rollbackResetChallenge() throws {

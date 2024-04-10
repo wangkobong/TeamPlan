@@ -10,12 +10,12 @@ import Foundation
 
 final class LoginLoadingService{
     
-    private let userCD: UserServicesCoredata
-    private let statCD: StatisticsServicesCoredata
-    private let challengeCD: ChallengeServicesCoredata
-    private let accessLogCD: AccessLogServicesCoredata
-    private let coreValueCD: CoreValueServicesCoredata
-    private let projectCD: ProjectServicesCoredata
+    private let userCD = UserServicesCoredata()
+    private let statCD = StatisticsServicesCoredata()
+    private let challengeCD = ChallengeServicesCoredata()
+    private let accessLogCD = AccessLogServicesCoredata()
+    private let coreValueCD = CoreValueServicesCoredata()
+    private let projectCD = ProjectServicesCoredata()
     
     private var syncLocalWithServer: SyncLocalWithServer
     private var syncServerWithLocal: SyncServerWithLocal
@@ -36,19 +36,12 @@ final class LoginLoadingService{
     /// - 사용자 데이터와 통계 데이터를 각각 `UserInfoDTO`와 `StatLoginDTO`의 기본 인스턴스로 초기화합니다.
     ///
     /// 이 과정은 앱 내에서 로그인 과정을 시작하기 위한 기본 설정을 제공합니다.
-    init(controller: CoredataController = CoredataController()){
+    init(){
         self.loginDate = Date()
         self.userId = "Unknown"
         self.userData = UserInfoDTO()
         self.userTerm = 0
         self.syncTerm = 0
-        
-        self.userCD = UserServicesCoredata(coredataController: controller)
-        self.statCD = StatisticsServicesCoredata(coredataController: controller)
-        self.challengeCD = ChallengeServicesCoredata(coredataController: controller)
-        self.accessLogCD = AccessLogServicesCoredata(coredataController: controller)
-        self.coreValueCD = CoreValueServicesCoredata(coredataController: controller)
-        self.projectCD = ProjectServicesCoredata(coredataController: controller)
         
         self.syncLocalWithServer = SyncLocalWithServer(with: userId)
         self.syncServerWithLocal = SyncServerWithLocal(with: userId)
@@ -68,7 +61,7 @@ final class LoginLoadingService{
             try await getUserDataFromServer()
         }
         
-        // Filitering 're-login' & 'first-login'
+        // Filtering 're-login' & 'first-login'
         if try filteringUser() {
             return UserInfoDTO(with: try userCD.getObject(with: userId))
         }
@@ -134,15 +127,15 @@ extension LoginLoadingService{
     private func doesDataExistInLocal(with userId: String, for type: CheckCase) -> Bool {
         switch type {
         case .user:
-            return (try? userCD.getObject(with: userId)) != nil
+            return userCD.isObjectExist(with: userId)
         case .stat:
-            return (try? statCD.getObject(with: userId)) != nil
+            return statCD.isObjectExist(with: userId)
         case .coreValue:
-            return (try? coreValueCD.getObject(with: userId)) != nil
+            return coreValueCD.isObjectExist(with: userId)
         case .accessLog:
-            return (try? accessLogCD.getFullObjects(with: userId)).map { !$0.isEmpty } ?? false
+            return accessLogCD.isObjectExist(with: userId)
         case .challenge:
-            return (try? challengeCD.getObjects(with: userId)).map { !$0.isEmpty } ?? false
+            return challengeCD.isObjectExist(with: userId)
         }
     }
     
@@ -152,13 +145,14 @@ extension LoginLoadingService{
     /// - Throws: `LoginLoadingServiceError.EmptyAccessLog` 접속로그가 비어 있을 경우 발생합니다.
     private func filteringUser() throws -> Bool {
         
-        let log = try accessLogCD.getSingleObject(with: userId)
+        let log = try accessLogCD.getLatestObject(with: userId)
         return util.compareTime(currentTime: loginDate, lastTime: log.accessRecord)
     }
     // Test: Erase All Local Data
     private func resetLocalData() throws {
         try userCD.deleteObject(with: userId)
         try statCD.deleteObject(with: userId)
+        try coreValueCD.deleteObject(with: userId)
         try challengeCD.deleteObject(with: userId)
         try accessLogCD.deleteObject(with: userId)
     }
@@ -237,11 +231,13 @@ extension LoginLoadingService {
     }
     
     private func updateServiceTerm() throws {
-        try statCD.updateObject(with: StatUpdateDTO(userId: userId, newTerm: userTerm + 1))
+        let updated = StatUpdateDTO(userId: userId, newTerm: userTerm + 1)
+        try statCD.updateObject(with: updated)
     }
     
     private func updateLoginAt(with loginDate: Date) throws {
-        try accessLogCD.setObject(with: AccessLog(userId: userId, accessDate: loginDate))
+        let log = AccessLog(userId: userId, accessDate: loginDate)
+        try accessLogCD.setObject(with: log)
     }
     
     private func resetDailyRegistTodo() throws {
