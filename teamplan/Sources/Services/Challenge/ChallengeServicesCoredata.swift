@@ -15,38 +15,59 @@ final class ChallengeServicesCoredata: ChallengeObjectManage {
     typealias DTO = ChallengeUpdateDTO
     
     var context: NSManagedObjectContext
-    init(coredataController: CoredataProtocol) {
+    init(coredataController: CoredataProtocol = CoredataMainController.shared) {
         self.context = coredataController.context
     }
     
-    func setObject(with object: Object) throws {
-        createEntity(with: object)
-        try self.context.save()
+    func setObject(with object: Object) async throws {
+        try await self.context.perform {
+            self.createEntity(with: object)
+            try self.context.save()
+        }
     }
     
-    func getObject(with challengeId: Int, and userId: String) throws -> Object {
-        let entity = try getEntity(with: challengeId, onwer: userId)
-        return try convertToObject(with: entity)
+    func getObject(with challengeId: Int, and userId: String) async throws -> Object {
+        try await self.context.perform {
+            let entity = try self.getSingleEntity(with: challengeId, onwer: userId)
+            return try self.convertToObject(with: entity)
+        }
+    }
+    
+    func getObjects(with userId: String) async throws -> [Object] {
+        try await self.context.perform {
+            let entities = try self.getFullEntity(owner: userId)
+            return try entities.compactMap{ try self.convertToObject(with: $0) }
+        }
     }
     
     func getObjects(with userId: String) throws -> [Object] {
-        let entities = try getEntities(owner: userId)
-        return try entities.compactMap{ try convertToObject(with: $0) }
+        let entities = try self.getFullEntity(owner: userId)
+        return try entities.compactMap{ try self.convertToObject(with: $0) }
+    }
+    
+    func deleteObject(with userId: String) throws {
+        let entities = try self.getFullEntity(owner: userId)
+        for entity in entities {
+            self.context.delete(entity)
+        }
+        try self.context.save()
     }
     
     func updateObject(with dto: DTO) throws {
-        let entity = try getEntity(with: dto.challengeId, onwer: dto.userId)
+        let entity = try getSingleEntity(with: dto.challengeId, onwer: dto.userId)
         if checkUpdate(from: entity, to: dto) {
             try self.context.save()
         }
     }
     
-    func deleteObject(with userId: String) throws {
-        let entities = try getEntities(owner: userId)
-        for entity in entities {
-            self.context.delete(entity)
+    func isObjectExist(with userId: String) -> Bool {
+        let request = getFullFetchRequest(with: userId)
+        do {
+            let count = try context.count(for: request)
+            return count > 0
+        } catch {
+            return false
         }
-        try self.context.save()
     }
 }
 
@@ -79,23 +100,36 @@ extension ChallengeServicesCoredata{
 // MARK: - Get Extension
 extension ChallengeServicesCoredata{
 
-    private func getEntity(with challengeId: Int, onwer userId: String) throws -> Entity {
-        let fetchReq: NSFetchRequest<Entity> = Entity.fetchRequest()
-        fetchReq.predicate = NSPredicate(format: EntityPredicate.singleChallenge.format, challengeId, userId)
-        fetchReq.fetchLimit = 1
+    // signle entity
+    private func getSingleFetchRequest(with challengeId: Int, onwer userId: String) -> NSFetchRequest<Entity> {
+        let fetchRequest: NSFetchRequest<Entity> = Entity.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: EntityPredicate.singleChallenge.format, userId, challengeId)
+        fetchRequest.fetchLimit = 1
         
-        guard let entity = try self.context.fetch(fetchReq).first else {
+        return fetchRequest
+    }
+    
+    private func getSingleEntity(with challengeId: Int, onwer userId: String) throws -> Entity {
+        let request = getSingleFetchRequest(with: challengeId, onwer: userId)
+        guard let entity = try context.fetch(request).first else {
             throw CoredataError.fetchFailure(serviceName: .challenge)
         }
         return entity
     }
     
-    private func getEntities(owner userId: String) throws -> [Entity] {
-        let fetchReq: NSFetchRequest<Entity> = Entity.fetchRequest()
-        print(EntityPredicate.multiChallenge.format, userId)
-        fetchReq.predicate = NSPredicate(format: EntityPredicate.multiChallenge.format, userId)
-        return try self.context.fetch(fetchReq)
+    // full entity
+    private func getFullFetchRequest(with userId: String) -> NSFetchRequest<Entity> {
+        let fetchRequest: NSFetchRequest<Entity> = Entity.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: EntityPredicate.fullChallenge.format, userId)
+        
+        return fetchRequest
     }
+    
+    private func getFullEntity(owner userId: String) throws -> [Entity] {
+        let request = getFullFetchRequest(with: userId)
+        return try context.fetch(request)
+    }
+    
     
     private func convertToObject(with entity: Entity) throws -> Object {
         guard let userId = entity.user_id,
@@ -135,13 +169,13 @@ struct ChallengeUpdateDTO {
     
     let challengeId: Int
     let userId: String
-    let newStatus: Bool?
-    let newLock: Bool?
-    let newProgress: Int?
-    let newSelectStatus: Bool?
-    let newSelectedAt: Date?
-    let newUnSelectedAt: Date?
-    let newFinishedAt: Date?
+    var newStatus: Bool?
+    var newLock: Bool?
+    var newProgress: Int?
+    var newSelectStatus: Bool?
+    var newSelectedAt: Date?
+    var newUnSelectedAt: Date?
+    var newFinishedAt: Date?
     
     init(challengeId: Int, 
          userId: String,

@@ -79,8 +79,10 @@ struct HomeView: View {
         .onAppear {
             isExistProject = false
             pageControlCount = max(homeViewModel.myChallenges.count, 1)
-            homeViewModel.configureData()
-            isChallenging = !homeViewModel.myChallenges.isEmpty
+            Task {
+                await homeViewModel.configureData()
+                isChallenging = !homeViewModel.myChallenges.isEmpty
+            }
         }
         .onChange(of: homeViewModel.myChallenges) { newValue in
             isChallenging = !homeViewModel.myChallenges.isEmpty

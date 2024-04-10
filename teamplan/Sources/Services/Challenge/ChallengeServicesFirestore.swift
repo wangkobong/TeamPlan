@@ -91,6 +91,13 @@ extension ChallengeServicesFirestore {
             .document(String(challengeId))
         return try await query.getDocument().reference
     }
+    
+    func fetchStatusReference(with userId: String) async throws -> DocumentReference {
+        let query = getFirestoreInstance()
+            .collection(CollectionType.challengeStatus.rawValue)
+            .document(userId)
+        return try await query.getDocument().reference
+    }
 }
 
 

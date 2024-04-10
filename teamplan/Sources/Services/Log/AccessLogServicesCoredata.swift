@@ -14,7 +14,7 @@ final class AccessLogServicesCoredata: LogObjectManage {
     typealias Object = AccessLog
     
     var context: NSManagedObjectContext
-    init(coredataController: CoredataProtocol) {
+    init(coredataController: CoredataProtocol = CoredataMainController.shared) {
         self.context = coredataController.context
     }
     
@@ -24,29 +24,39 @@ final class AccessLogServicesCoredata: LogObjectManage {
     }
     
     // Single Log
-    func getSingleObject(with userId: String) throws -> Object {
-        let entity = try getSingleEntity(with: userId)
+    func getLatestObject(with userId: String) throws -> Object {
+        let entity = try getLatestEntity(with: userId)
         return try convertToObject(with: entity)
     }
     
     // Full Log
     func getFullObjects(with userId: String) throws -> [Object] {
-        let entities = try getFullEntities(with: userId)
+        let entities = try getFullEntity(with: userId)
         return try convertToObjects(with: entities)
     }
     
     // SyncedAt ~ Recent Log
     func getPartialObjects(with userId: String, and syncedAt: Date) throws -> [Object] {
-        let entities = try getPartialEntities(with: userId, and: syncedAt)
+        let entities = try getPartialEntity(with: userId, at: syncedAt)
         return try convertToObjects(with: entities)
     }
     
     func deleteObject(with userId: String) throws {
-        let entities = try getFullEntities(with: userId)
+        let entities = try getFullEntity(with: userId)
         for entity in entities {
             self.context.delete(entity)
         }
         try self.context.save()
+    }
+    
+    func isObjectExist(with userId: String) -> Bool {
+        let request = getFullFetchRequest(with: userId)
+        do {
+            let count = try context.count(for: request)
+            return count > 0
+        } catch {
+            return false
+        }
     }
 }
 
@@ -59,35 +69,48 @@ extension AccessLogServicesCoredata{
         entity.access_record = log.accessRecord
     }
     
-    private func getSingleEntity(with userId: String) throws -> Entity {
+    
+    // Single & Full entity
+    private func getFullFetchRequest(with userId: String) -> NSFetchRequest<Entity> {
+        let fetchRequest: NSFetchRequest<Entity> = Entity.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: EntityPredicate.accessLog.format, userId)
+        fetchRequest.sortDescriptors = [NSSortDescriptor(key: EntitySortBy.date.rawValue, ascending: false)]
         
-        let fetchReq: NSFetchRequest<Entity> = Entity.fetchRequest()
-        fetchReq.predicate = NSPredicate(format: EntityPredicate.accessLog.format, userId)
-        fetchReq.sortDescriptors = [NSSortDescriptor(key: EntitySortBy.date.rawValue, ascending: false)]
-        fetchReq.fetchLimit = 1
+        return fetchRequest
+    }
+    
+    private func getLatestEntity(with userId: String) throws -> Entity {
+        let request = getFullFetchRequest(with: userId)
+        request.fetchLimit = 1
         
-        guard let entity = try self.context.fetch(fetchReq).first else {
+        guard let entity = try self.context.fetch(request).first else {
             throw CoredataError.fetchFailure(serviceName: .log)
         }
         return entity
     }
     
-    private func getFullEntities(with userId: String) throws -> [Entity] {
-        
-        let fetchReq: NSFetchRequest<Entity> = Entity.fetchRequest()
-        fetchReq.predicate = NSPredicate(format: EntityPredicate.accessLog.format, userId)
-        fetchReq.sortDescriptors = [NSSortDescriptor(key: EntitySortBy.date.rawValue, ascending: false)]
-        return try self.context.fetch(fetchReq)
+    private func getFullEntity(with userId: String) throws -> [Entity] {
+        let request = getFullFetchRequest(with: userId)
+        return try self.context.fetch(request)
     }
     
-    private func getPartialEntities(with userId: String, and syncedAt: Date) throws -> [Entity] {
+    
+    // Partial entity
+    private func getPartialFetchRequest(with userId: String, at syncedAt: Date) -> NSFetchRequest<Entity> {
+        let fetchRequest: NSFetchRequest<Entity> = Entity.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: EntityPredicate.targetLog.format, userId, syncedAt as NSDate)
+        fetchRequest.sortDescriptors = [NSSortDescriptor(key: EntitySortBy.date.rawValue, ascending: false)]
         
-        let fetchReq: NSFetchRequest<Entity> = Entity.fetchRequest()
-        fetchReq.predicate = NSPredicate(format: EntityPredicate.targetLog.format, userId, syncedAt as NSDate)
-        fetchReq.sortDescriptors = [NSSortDescriptor(key: EntitySortBy.date.rawValue, ascending: false)]
-        return try self.context.fetch(fetchReq)
+        return fetchRequest
+    }
+
+    private func getPartialEntity(with userId: String, at syncedAt: Date) throws -> [Entity] {
+        let request = getPartialFetchRequest(with: userId, at: syncedAt)
+        return try self.context.fetch(request)
     }
     
+    
+    // Converter
     private func convertToObject(with entity: Entity) throws -> Object {
         guard let userId = entity.user_id,
               let accessRecord = entity.access_record

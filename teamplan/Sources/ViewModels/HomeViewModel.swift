@@ -26,8 +26,8 @@ final class HomeViewModel: ObservableObject {
         self.addSubscribers()
         Task {
             await self.getUserName()
+            await self.configureData()
         }
-        configureData()
     }
     
     private func addSubscribers() {
@@ -60,9 +60,9 @@ final class HomeViewModel: ObservableObject {
         self.userName = userDefaultManager?.userName ?? "Unkown"
     }
     
-    func configureData() {
+    func configureData() async {
         do {
-            try homeService.readyService()
+            try await homeService.readyService()
         } catch let error {
             print(error.localizedDescription)
         }

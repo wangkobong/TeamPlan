@@ -15,7 +15,7 @@ final class StatisticsServicesCoredata: FullObjectManage {
     typealias DTO = StatUpdateDTO
     
     var context: NSManagedObjectContext
-    init(coredataController: CoredataProtocol) {
+    init(coredataController: CoredataProtocol = CoredataMainController.shared) {
         self.context = coredataController.context
     }
     
@@ -29,11 +29,6 @@ final class StatisticsServicesCoredata: FullObjectManage {
         return try convertToObject(with: entity)
     }
     
-    func getDTO(with userId: String, and type: DTOType) throws -> Any {
-        let entity = try getEntity(with: userId)
-        return try convertToDTO(entity: entity, type: type)
-    }
-    
     func updateObject(with dto: DTO) throws {
         let entity = try getEntity(with: dto.userId)
         if try checkUpdate(from: entity, to: dto) {
@@ -45,6 +40,16 @@ final class StatisticsServicesCoredata: FullObjectManage {
         let entity = try getEntity(with: userId)
         self.context.delete(entity)
         try self.context.save()
+    }
+    
+    func isObjectExist(with userId: String) -> Bool {
+        let reqeust = getFetchRequest(with: userId)
+        do {
+            let count = try context.count(for: reqeust)
+            return count > 0
+        } catch {
+            return false
+        }
     }
 }
 
@@ -74,11 +79,17 @@ extension StatisticsServicesCoredata{
 
 // MARK: - Get Extension
 extension StatisticsServicesCoredata {
-    private func getEntity(with userId: String) throws -> Entity {
+    
+    private func getFetchRequest(with userId: String) -> NSFetchRequest<Entity> {
         let fetchRequest: NSFetchRequest<Entity> = Entity.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: EntityPredicate.stat.format, userId)
         
-        guard let entity = try fetchEntity(with: fetchRequest, and: self.context) else {
+        return fetchRequest
+    }
+    
+    private func getEntity(with userId: String) throws -> Entity {
+        let request = getFetchRequest(with: userId)
+        guard let entity = try fetchEntity(with: request, and: self.context) else {
             throw CoredataError.fetchFailure(serviceName: .stat)
         }
         return entity
@@ -109,23 +120,6 @@ extension StatisticsServicesCoredata {
             mychallenges: myChallenges,
             syncedAt: entity.synced_at ?? Date()
         )
-    }
-    
-    private func convertToDTO(entity: StatisticsEntity, type: DTOType) throws -> Any {
-        guard let userId = entity.user_id,
-              let challengeStepStatusString = entity.challenge_step_status,
-              let myChallengesString = entity.mychallenges
-        else {
-            throw CoredataError.convertFailure(serviceName: .stat)
-        }
-        let challengeStepStatus = try Utilities().convertFromJSON(jsonString: challengeStepStatusString, type: [Int: Int].self)
-        let myChallenges = try Utilities().convertFromJSON(jsonString: myChallengesString, type: [Int].self)
-        
-        switch type {
-        case .challenge:
-            return StatChallengeDTO(
-                with: userId, ans: Int(entity.drop), chlgStep: challengeStepStatus, mychlg: myChallenges)
-        }
     }
 }
     

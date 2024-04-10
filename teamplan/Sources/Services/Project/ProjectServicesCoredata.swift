@@ -16,7 +16,7 @@ final class ProjectServicesCoredata: ProjectObjectManage {
     typealias CardDTO = ProjectCardDTO
     
     var context: NSManagedObjectContext
-    init(coredataController: CoredataProtocol) {
+    init(coredataController: CoredataProtocol = CoredataMainController.shared) {
         self.context = coredataController.context
     }
     

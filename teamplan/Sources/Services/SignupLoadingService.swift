@@ -10,11 +10,11 @@ import Foundation
 
 final class SignupLoadingService{
     
-    private let userCD: UserServicesCoredata
-    private let statCD: StatisticsServicesCoredata
-    private let challengeCD: ChallengeServicesCoredata
-    private let accessLogCD: AccessLogServicesCoredata
-    private let coreValueCD: CoreValueServicesCoredata
+    private let userCD = UserServicesCoredata()
+    private let statCD = StatisticsServicesCoredata()
+    private let challengeCD = ChallengeServicesCoredata()
+    private let accessLogCD = AccessLogServicesCoredata()
+    private let coreValueCD = CoreValueServicesCoredata()
     
     private let userFS = UserServicesFirestore()
     private let statFS = StatisticsServicesFirestore()
@@ -42,13 +42,7 @@ final class SignupLoadingService{
     /// - 신규 `AccessLog`와 `ChallengeLog`생성을 위해  'LogManager' 를 초기화합니다.
     ///
     /// 이 과정은 사용자가 앱에 가입할 때 필요한 기능들의 기본 설정을 제공합니다.
-    init(newUser: UserSignupDTO, controller: CoredataController = CoredataController()){
-        self.userCD = UserServicesCoredata(coredataController: controller)
-        self.statCD = StatisticsServicesCoredata(coredataController: controller)
-        self.challengeCD = ChallengeServicesCoredata(coredataController: controller)
-        self.accessLogCD = AccessLogServicesCoredata(coredataController: controller)
-        self.coreValueCD = CoreValueServicesCoredata(coredataController: controller)
-        
+    init(newUser: UserSignupDTO){
         self.logHead = newUser.logHead
         self.userId = newUser.userId
         self.signupDate = Date()
@@ -228,7 +222,7 @@ extension SignupLoadingService{
         let challengeInfo = try await challengeFS.getInfoDocsList()
         for challenge in challengeInfo {
             let object = prepareNewChallengeStatus(with: challenge)
-            try challengeCD.setObject(with: object)
+            try await challengeCD.setObject(with: object)
         }
     }
     private func rollbackSetNewChallengeAtLocal() throws {
@@ -237,7 +231,7 @@ extension SignupLoadingService{
     
     // : Firestore
     private func setNewChallengeStatusAtServer() async throws {
-        let challenges = try challengeCD.getObjects(with: userId)
+        let challenges = try await challengeCD.getObjects(with: userId)
         try await challengeFS.setDocs(with: challenges, and: userId)
     }
     private func rollbackSetNewChallengeStatusAtServer() async throws {

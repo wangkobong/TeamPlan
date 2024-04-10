@@ -15,13 +15,13 @@ final class UserServicesCoredata: FullObjectManage {
     typealias DTO = UserUpdateDTO
     
     var context: NSManagedObjectContext
-    init(coredataController: CoredataProtocol) {
+    init(coredataController: CoredataProtocol = CoredataMainController.shared) {
         self.context = coredataController.context
     }
     
     func setObject(with object: UserObject) throws {
         createEntity(with: object, and: object.createdAt)
-        try self.context.save()
+        try context.save()
     }
     
     func getObject(with userId: String) throws -> UserObject {
@@ -40,6 +40,16 @@ final class UserServicesCoredata: FullObjectManage {
         let entity = try getEntity(with: userId)
         context.delete(entity)
         try context.save()
+    }
+    
+    func isObjectExist(with userId: String) -> Bool {
+        let reqeust = getFetchRequest(with: userId)
+        do {
+            let count = try context.count(for: reqeust)
+            return count > 0
+        } catch {
+            return false
+        }
     }
 }
 
@@ -66,11 +76,16 @@ extension UserServicesCoredata{
 // MARK: - Get Extension
 extension UserServicesCoredata{
     
-    private func getEntity(with userId: String) throws -> UserEntity {
-        let fetchRequest: NSFetchRequest<UserEntity> = UserEntity.fetchRequest()
+    private func getFetchRequest(with userId: String) -> NSFetchRequest<Entity> {
+        let fetchRequest: NSFetchRequest<Entity> = UserEntity.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: EntityPredicate.user.format, userId)
         
-        guard let entity = try fetchEntity(with: fetchRequest, and: self.context) else {
+        return fetchRequest
+    }
+    
+    private func getEntity(with userId: String) throws -> Entity {
+        let request = getFetchRequest(with: userId)
+        guard let entity = try fetchEntity(with: request, and: self.context) else {
             throw CoredataError.fetchFailure(serviceName: .user)
         }
         return entity

@@ -10,8 +10,8 @@ import Foundation
 
 final class HomeService {
     
-    private let userCD: UserServicesCoredata
-    private let projectCD: ProjectServicesCoredata
+    private let userCD = UserServicesCoredata()
+    private let projectCD = ProjectServicesCoredata()
     private let userId: String
     let challenge: ChallengeService
     
@@ -20,18 +20,16 @@ final class HomeService {
     //===============================
     /// 사용자 ID를 기반으로 `HomeService` 및 `ChallengeService` 인스턴스를 생성합니다.
     /// - Parameter userId: 사용자 ID입니다.
-    init(with userId: String, controller: CoredataController = CoredataController()){
+    init(with userId: String){
         self.userId = userId
         self.challenge = ChallengeService(with: userId)
-        self.userCD = UserServicesCoredata(coredataController: controller)
-        self.projectCD = ProjectServicesCoredata(coredataController: controller)
     }
     
     /// `HomeService`에서 사용되는 `ChallengeService` 인스턴스의 필수적인 추가 초기화 작업을 수행합니다,
     /// - Throws: 서비스 초기화 중 예상치 못한 오류가 발생한 경우 `HomeServiceError.UnexpectedInitError`가 발생합니다.
-    func readyService() throws {
+    func readyService() async throws {
         do {
-            try self.challenge.readyService()
+            try await self.challenge.prepareService()
         } catch {
             throw HomeServiceError.UnexpectedInitError
         }
@@ -81,7 +79,7 @@ extension HomeService{
     /// - Returns: 조회된 '나의 도전과제' 정보를 '[MyChallengeDTO]' 형태로 반환합니다. 단, 사용자가 '나의 도전과제' 를 지정하지 않은경우 '[]' 가 반환됩니다.
     /// - Throws: 챌린지 조회 중 오류가 발생한 경우 해당 오류를 던집니다.
     func getMyChallenge() throws -> [MyChallengeDTO] {
-        challenge.getMyChallenges()
+        try challenge.getMyChallenges()
     }
 }
 

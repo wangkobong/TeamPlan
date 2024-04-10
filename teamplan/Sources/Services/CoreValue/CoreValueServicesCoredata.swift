@@ -14,7 +14,7 @@ final class CoreValueServicesCoredata: CoreValueObjectManage {
     typealias Object = CoreValueObject
     
     var context: NSManagedObjectContext
-    init(coredataController: CoredataProtocol) {
+    init(coredataController: CoredataProtocol = CoredataMainController.shared) {
         self.context = coredataController.context
     }
     
@@ -32,6 +32,16 @@ final class CoreValueServicesCoredata: CoreValueObjectManage {
         let entity = try getEntity(with: userId)
         self.context.delete(entity)
         try self.context.save()
+    }
+    
+    func isObjectExist(with userId: String) -> Bool {
+        let request = getFetchReqeust(with: userId)
+        do {
+            let count = try context.count(for: request)
+            return count > 0
+        } catch {
+            return false
+        }
     }
 }
 
@@ -59,11 +69,16 @@ extension CoreValueServicesCoredata {
             syncCycle:  Int(entity.sync_cycle))
     }
     
-    private func getEntity(with userId: String) throws -> CoreValueEntity {
+    private func getFetchReqeust(with userId: String) -> NSFetchRequest<Entity> {
         let fetchRequest: NSFetchRequest<Entity> = Entity.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: EntityPredicate.coreValue.format, userId)
         
-        guard let entity = try fetchEntity(with: fetchRequest, and: self.context) else {
+        return fetchRequest
+    }
+    
+    private func getEntity(with userId: String) throws -> CoreValueEntity {
+        let reqeust = getFetchReqeust(with: userId)
+        guard let entity = try fetchEntity(with: reqeust, and: self.context) else {
             throw CoredataError.fetchFailure(serviceName: .coreValue)
         }
         return entity

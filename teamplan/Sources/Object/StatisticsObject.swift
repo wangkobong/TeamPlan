@@ -71,8 +71,3 @@ struct StatisticsObject{
         self.syncedAt = Date()
     }
 }
-
-// MARK: - Enum
-enum DTOType {
-    case challenge
-}
