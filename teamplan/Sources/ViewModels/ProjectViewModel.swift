@@ -81,6 +81,12 @@ final class ProjectViewModel: ObservableObject {
         }
     }
     
+    func initAddingProjectProperty() {
+        self.startDate = .none
+        self.duration = .none
+        self.projectName = ""
+    }
+    
     
     // MARK: - ToDo METHOD
     func addNewTodo(projectId: Int) {
