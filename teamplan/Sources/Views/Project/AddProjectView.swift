@@ -108,6 +108,9 @@ struct AddProjectView: View {
         .onReceive(Publishers.CombineLatest3(projectViewModel.$projectName, projectViewModel.$startDate, projectViewModel.$duration)) { _ in
              checkValidationAddButton()
          }
+        .onDisappear {
+            projectViewModel.initAddingProjectProperty()
+        }
     }
 }
 
@@ -237,7 +240,7 @@ extension AddProjectView {
         
                 
                 ZStack {
-                    Text("📍목표 마감일이 11월 04일이 맞나요?")
+                    Text(showDurationInfo())
                         .foregroundColor(Color.theme.darkGreyColor)
                         .font(.appleSDGothicNeo(.regular, size: 12))
                         
@@ -407,5 +410,10 @@ extension AddProjectView {
     
     private func checkValidationAddButton() {
         isValidate = !projectViewModel.projectName.isEmpty && projectViewModel.startDate != .none && projectViewModel.duration != .none
+    }
+    
+    private func showDurationInfo() -> String {
+        let deadlineDate = projectViewModel.duration.futureDate(from: Date())
+        return "📍목표 마감일이 \(deadlineDate.monthDayNoLeadingZeros)이 맞나요?"
     }
 }

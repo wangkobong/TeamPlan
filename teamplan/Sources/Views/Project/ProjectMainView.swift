@@ -26,8 +26,7 @@ struct ProjectMainView: View {
         ScrollView {
             VStack {
                 NavigationLink(
-                    destination: ProjectDetailView(project: $projectViewModel.projectList[projectDetailViewIndex])
-                        .environmentObject(projectViewModel),
+                    destination: ProjectDetailView(projectViewModel: projectViewModel, project: $projectViewModel.projectList[projectDetailViewIndex]),
                     isActive: $isPushProjectDetailView) {
                     
                 }
@@ -186,7 +185,7 @@ extension ProjectMainView {
         VStack {
             VStack {
                 ForEach(Array(projectViewModel.projectList.enumerated()), id: \.1.projectId) { index, project in
-                    ProjectCardView(project: $projectViewModel.projectList[index])
+                    ProjectCardView(projectViewModel: projectViewModel,project: $projectViewModel.projectList[index])
                         .onTapGesture {
                             projectDetailViewIndex = index
                             isPushProjectDetailView.toggle()

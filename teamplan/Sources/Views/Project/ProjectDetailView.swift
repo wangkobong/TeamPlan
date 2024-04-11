@@ -11,13 +11,14 @@ import SwiftUI
 struct ProjectDetailView: View {
     
     @Environment(\.dismiss) var dismiss
-    @EnvironmentObject var projectViewModel: ProjectViewModel
+    @ObservedObject var projectViewModel: ProjectViewModel
     
     @Binding var project: ProjectDTO
     
     @State private var isShowAddToDo: Bool = false
     @State private var isShowEmptyView: Bool = true
     @State private var isAdding: Bool = false
+    @State private var isPresented: Bool = false
     
     var body: some View {
         VStack {
@@ -30,8 +31,6 @@ struct ProjectDetailView: View {
             
             button
         }
-        .navigationBarBackButtonHidden(true)
-        .navigationTitle("막걸리 브랜딩어쩌구")
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
 
@@ -43,10 +42,17 @@ struct ProjectDetailView: View {
                 }
             }
         }
-//        .navigationTitle("\(projectViewModel.projects[index].name)")
+        .navigationTitle("\(project.title)")
+        .navigationBarBackButtonHidden(true)
         .onAppear {
-//            print("\(projectViewModel.projects[safe: index]?.toDos.count)")
-//            print("테스트: \(projectViewModel.projects[index].toDos)")
+
+        }
+        .projectCompleteAlert(isPresented: $isPresented) {
+            ProjectCompleteAlertView(isPresented: $isPresented) {
+                Task {
+                    await self.completeProject()
+                }
+            }
         }
     }
 }
@@ -97,24 +103,29 @@ extension ProjectDetailView {
             
             HStack {
                 Spacer()
-                HStack() {
-                    Image(systemName: "plus")
-                        .foregroundColor(.theme.mainPurpleColor)
-                        .imageScale(.small)
-                    Text("할 일")
-                        .font(.appleSDGothicNeo(.semiBold, size: 14))
-                        .foregroundColor(.theme.mainPurpleColor)
-                        .offset(x: -3)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(isAvailableAddingToDo() ? ColorTheme().mainPurpleColor : .clear, lineWidth: 1)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(isAvailableAddingToDo() ? .clear : Color(hex: "E5E5E5"))
+                        )
                     
+                    HStack {
+                        Image(systemName: "plus")
+                            .foregroundColor(isAvailableAddingToDo() ? .theme.mainPurpleColor : Color.theme.greyColor)
+                            .imageScale(.small)
+                        Text("할 일")
+                            .font(.appleSDGothicNeo(.semiBold, size: 14))
+                            .foregroundColor(isAvailableAddingToDo() ? .theme.mainPurpleColor : Color.theme.greyColor)
+                            .offset(x: -3)
+                    }
                 }
                 .frame(width: 72, height: 38)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(Color.theme.greyColor, lineWidth: 1)
-                )
-                .offset(x: 0)
                 .onTapGesture {
-                    self.addTodo()
+                    if isAvailableAddingToDo() {
+                        self.addTodo()
+                    }
                 }
             }
         }
@@ -188,12 +199,14 @@ extension ProjectDetailView {
                 .foregroundColor(.white)
                 .frame(height: 48)
                 .frame(maxWidth: .infinity)
-                .background(Color.theme.greyColor)
+                .background(isCompletedToDo() ? Color.theme.mainPurpleColor : Color.theme.greyColor)
                 .cornerRadius(8)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 16)
                 .onTapGesture {
-                    print("프로젝트 완료")
+                    if isCompletedToDo() {
+                        self.showProjectDonePopup()
+                    }
                 }
         }
     }
@@ -206,5 +219,22 @@ extension ProjectDetailView {
             self.projectViewModel.addNewTodo(projectId: self.project.projectId)
             self.isShowEmptyView = false
         }
+    }
+    
+    private func isCompletedToDo() -> Bool {
+        return project.todoList.count > 0 && project.todoList.allSatisfy { $0.status == .finish }
+    }
+    
+    private func completeProject() async {
+        await projectViewModel.completeProject(with: project.projectId)
+        dismiss.callAsFunction()
+    }
+    
+    private func isAvailableAddingToDo() -> Bool {
+        return project.todoCanRegist == 0 ? false : true
+    }
+    
+    private func showProjectDonePopup() {
+        self.isPresented = true
     }
 }

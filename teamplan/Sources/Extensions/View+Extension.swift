@@ -12,6 +12,10 @@ extension View {
     public func challengeAlert(isPresented: Binding<Bool>, challengeAlert: @escaping () -> ChallengeAlertView) -> some View {
         return modifier(ChallengeAlertModifier(isPresent: isPresented, alert: challengeAlert()))
     }
+    
+    public func projectCompleteAlert(isPresented: Binding<Bool>, projectCompleteAlert: @escaping () -> ProjectCompleteAlertView) -> some View {
+        return modifier(ProjectCompleteAlertModifier(isPresent: isPresented, alert: projectCompleteAlert()))
+    }
 }
 
 struct ClearBackground: UIViewRepresentable {
