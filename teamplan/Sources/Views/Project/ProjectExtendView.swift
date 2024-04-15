@@ -12,7 +12,14 @@ struct ProjectExtendView: View {
     
     @Environment(\.dismiss) var dismiss
 //    @ObservedObject var projectViewModel: ProjectViewModel
-    @State private var text = ""
+    @State private var numberOfDay = ""
+    @State private var day = ""
+    @State private var waterDrop = ""
+    
+    // 픽커
+    @State var day1: String? = nil
+    @State var days = ["1","2","3"]
+    @State var selectionIndex = 0
     
     var body: some View {
         VStack {
@@ -122,13 +129,25 @@ extension ProjectExtendView {
                     .frame(height: 16)
                 
                 ZStack {
-                    TextField("일 연장", text: $text) { editing in
-//                        self.isEditing = editing
-                    }
-                    .padding(.horizontal, 16)
-                    .font(.appleSDGothicNeo(.regular, size: 14))
-    
-
+//                    TextField("일 연장", text: $day) { editing in
+//                        //                        self.isEditing = editing
+//                    }
+//                    .foregroundStyle(Gen.Colors.greyColor.swiftUIColor)
+//                    .disableAutocorrection(true)
+//                    .keyboardType(.phonePad)
+//                    .padding(.horizontal, 16)
+//                    .font(.appleSDGothicNeo(.bold, size: 17))
+//                    .onSubmit {
+//                        self.numberOfDay = day
+//                        self.day = self.addUnitText(day: Int(day) ?? 0)
+//                        self.waterDrop = self.addNumberText(day: Int(numberOfDay) ?? 0)
+//                    }
+                    TextFieldWithInputView(data: self.days, placeholder: "일 연장", textColor: .gray, placeholderColor: .gray, selectionIndex: self.$selectionIndex, selectedText: self.$day1)
+                        .padding(.horizontal, 16)
+                        .frame(height: 38)
+                        .frame(maxWidth: .infinity)
+                    
+                    
                     RoundedRectangle(cornerRadius: 24)
                         .stroke(Gen.Colors.whiteGreyColor.swiftUIColor, lineWidth: 1)
                     
@@ -147,23 +166,34 @@ extension ProjectExtendView {
                 }
                 
                 ZStack {
-                    Text("0개")
-                        .foregroundColor(Gen.Colors.mainPurpleColor.swiftUIColor)
-                        .font(.appleSDGothicNeo(.bold, size: 17))
-                        .frame(height: 42)
+//                    TextField("", text: $waterDrop) { editing in
+//                        //                        self.isEditing = editing
+//                    }
+//                    .foregroundStyle(Gen.Colors.mainPurpleColor.swiftUIColor)
+//                    .disableAutocorrection(true)
+//                    .keyboardType(.phonePad)
+//                    .padding(.horizontal, 16)
+//                    .font(.appleSDGothicNeo(.bold, size: 17))
+//                    .multilineTextAlignment(.center)
+//                    .onSubmit {
+//                        self.numberOfDay = day
+//                        self.day = self.addUnitText(day: Int(numberOfDay) ?? 0)
+//                        self.waterDrop = self.addNumberText(day: Int(waterDrop) ?? 0)
+//                    }
+                    
+                    TextFieldWithInputView(data: self.days, placeholder: "0개", textColor: .purple, placeholderColor: .purple, selectionIndex: self.$selectionIndex, selectedText: self.$day1)
+                        .foregroundStyle(Gen.Colors.mainPurpleColor.swiftUIColor)
+                        .padding(.horizontal, 16)
+                        .frame(height: 38)
                         .frame(maxWidth: .infinity)
-                        .cornerRadius(24)
-                        .background(Gen.Colors.whiteColor.swiftUIColor)
-//                        .onTapGesture {
-//                            projectViewModel.duration = .fourteenDays
-//                        }
+                    
                     RoundedRectangle(cornerRadius: 24)
                         .stroke(Gen.Colors.mainPurpleColor.swiftUIColor, lineWidth: 1)
-//                        .opacity(projectViewModel.duration == .fourteenDays ? 0 : 1)
+                    
                 }
-                .cornerRadius(24)
-                .frame(height: 42)
-                .frame(maxWidth: .infinity)            }
+                .frame(height: 38)
+                .frame(maxWidth: .infinity)
+            }
         }
     }
     
@@ -184,3 +214,12 @@ extension ProjectExtendView {
             }
 }
 
+extension ProjectExtendView {
+    private func addUnitText(day: Int) -> String {
+        return "\(day)일 연장"
+    }
+    
+    private func addNumberText(day: Int) -> String {
+        return "\(day)개"
+    }
+}

@@ -12,6 +12,8 @@ struct ProjectCardView: View {
     
     @ObservedObject var projectViewModel: ProjectViewModel
     @Binding var project: ProjectDTO
+    @State private var isExtendProjectViewActive = false
+    
     var body: some View {
         VStack {
             Spacer()
@@ -40,7 +42,7 @@ struct ProjectCardView: View {
                         projectViewModel.deleteProject(projectId: project.projectId)
                     })
                     Button("수정 및 기한 연장", action: {
-                     
+                        isExtendProjectViewActive.toggle()
                     })
 
                 } label: {
@@ -102,6 +104,9 @@ struct ProjectCardView: View {
                 .fill(Color.white)
                 .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
         )
+        .sheet(isPresented: $isExtendProjectViewActive) {
+            ProjectExtendView()
+        }
         
     }
 }
