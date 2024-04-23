@@ -27,19 +27,27 @@ struct TextFieldWithInputView : UIViewRepresentable {
     }
     
     func makeUIView(context: UIViewRepresentableContext<TextFieldWithInputView>) -> UITextField {
-        picker.delegate = context.coordinator
-        picker.dataSource = context.coordinator
-        picker.backgroundColor = .gray
-        picker.tintColor = textColor
-        textField.placeholder = placeholder
-        textField.inputView = picker
-        textField.delegate = context.coordinator
-        textField.textColor = textColor
-        let placeholderAttributes: [NSAttributedString.Key: Any] = [
-               .foregroundColor: placeholderColor, // 플레이스홀더 색상 변경
-           ]
-           textField.attributedPlaceholder = NSAttributedString(string: placeholder, attributes: placeholderAttributes)
-        return textField
+        if data.isEmpty {
+             // data 배열이 비어 있으면 빈 UITextField를 반환
+            textField.isUserInteractionEnabled = false
+            textField.placeholder = "보유한 물방울이 없습니다."
+             return textField
+         } else {
+             // data 배열이 비어 있지 않으면 픽커뷰를 생성하여 반환
+             picker.delegate = context.coordinator
+             picker.dataSource = context.coordinator
+             picker.backgroundColor = .gray
+             picker.tintColor = textColor
+             textField.placeholder = placeholder
+             textField.inputView = picker
+             textField.delegate = context.coordinator
+             textField.textColor = textColor
+             let placeholderAttributes: [NSAttributedString.Key: Any] = [
+                 .foregroundColor: placeholderColor,
+             ]
+             textField.attributedPlaceholder = NSAttributedString(string: placeholder, attributes: placeholderAttributes)
+             return textField
+         }
     }
     
     func updateUIView(_ uiView: UITextField, context: UIViewRepresentableContext<TextFieldWithInputView>) {

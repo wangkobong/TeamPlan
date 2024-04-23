@@ -11,14 +11,13 @@ import SwiftUI
 struct ProjectExtendView: View {
     
     @Environment(\.dismiss) var dismiss
-//    @ObservedObject var projectViewModel: ProjectViewModel
-    @State private var numberOfDay = ""
-    @State private var day = ""
-    @State private var waterDrop = ""
+    @ObservedObject var projectViewModel: ProjectViewModel
+    @Binding var project: ProjectDTO
     
+    @State var isValidate: Bool = false
+
     // 픽커
     @State var day1: String? = nil
-    @State var days = ["1","2","3"]
     @State var selectionIndex = 0
     
     var body: some View {
@@ -41,9 +40,9 @@ struct ProjectExtendView: View {
     }
 }
 
-#Preview {
-    ProjectExtendView()
-}
+//#Preview {
+//    ProjectExtendView()
+//}
 
 
 extension ProjectExtendView {
@@ -84,7 +83,7 @@ extension ProjectExtendView {
             .padding(.bottom, 4)
             
             HStack {
-                Text("⏱️ 현재 1570일동안 진행중인 목표에요")
+                Text("⏱️ 현재 \(abs(project.startAt.days(from: Date())))일동안 진행중인 목표에요")
                     .foregroundColor(Gen.Colors.darkGreyColor.swiftUIColor)
                     .font(.appleSDGothicNeo(.regular, size: 14))
                 Spacer()
@@ -104,7 +103,7 @@ extension ProjectExtendView {
                     HStack {
                         Image(uiImage: Gen.Images.waterdrop.image)
                             .frame(width: 14, height: 18)
-                        Text("10")
+                        Text("\(projectViewModel.projectService.statData.drop)")
                             .foregroundColor(.black)
                             .font(.appleSDGothicNeo(.bold, size: 17))
                         Text("개")
@@ -114,7 +113,7 @@ extension ProjectExtendView {
                 }
                 
                 HStack {
-                    Text("목표 마감일이 11월 04일이 맞나요?")
+                    Text(showDurationInfo())
                         .foregroundColor(Gen.Colors.darkGreyColor.swiftUIColor)
                         .font(.appleSDGothicNeo(.regular, size: 12))
                         .background(
@@ -129,23 +128,13 @@ extension ProjectExtendView {
                     .frame(height: 16)
                 
                 ZStack {
-//                    TextField("일 연장", text: $day) { editing in
-//                        //                        self.isEditing = editing
-//                    }
-//                    .foregroundStyle(Gen.Colors.greyColor.swiftUIColor)
-//                    .disableAutocorrection(true)
-//                    .keyboardType(.phonePad)
-//                    .padding(.horizontal, 16)
-//                    .font(.appleSDGothicNeo(.bold, size: 17))
-//                    .onSubmit {
-//                        self.numberOfDay = day
-//                        self.day = self.addUnitText(day: Int(day) ?? 0)
-//                        self.waterDrop = self.addNumberText(day: Int(numberOfDay) ?? 0)
-//                    }
-                    TextFieldWithInputView(data: self.days, placeholder: "일 연장", textColor: .gray, placeholderColor: .gray, selectionIndex: self.$selectionIndex, selectedText: self.$day1)
+                    TextFieldWithInputView(data: projectViewModel.waterDrop, placeholder: "일 연장", textColor: .gray, placeholderColor: .gray, selectionIndex: self.$selectionIndex, selectedText: self.$day1)
                         .padding(.horizontal, 16)
                         .frame(height: 38)
                         .frame(maxWidth: .infinity)
+                        .onChange(of: selectionIndex) { _ in
+                            self.isValidate = true
+                        }
                     
                     
                     RoundedRectangle(cornerRadius: 24)
@@ -157,61 +146,33 @@ extension ProjectExtendView {
                 
                 Spacer()
                     .frame(height: 18)
-                
-                HStack {
-                    Spacer()
-                    Image(uiImage: Gen.Images.projectExchange.image)
-                        .foregroundStyle(Gen.Colors.mainPurpleColor.swiftUIColor)
-                    Spacer()
-                }
-                
-                ZStack {
-//                    TextField("", text: $waterDrop) { editing in
-//                        //                        self.isEditing = editing
-//                    }
-//                    .foregroundStyle(Gen.Colors.mainPurpleColor.swiftUIColor)
-//                    .disableAutocorrection(true)
-//                    .keyboardType(.phonePad)
-//                    .padding(.horizontal, 16)
-//                    .font(.appleSDGothicNeo(.bold, size: 17))
-//                    .multilineTextAlignment(.center)
-//                    .onSubmit {
-//                        self.numberOfDay = day
-//                        self.day = self.addUnitText(day: Int(numberOfDay) ?? 0)
-//                        self.waterDrop = self.addNumberText(day: Int(waterDrop) ?? 0)
-//                    }
-                    
-                    TextFieldWithInputView(data: self.days, placeholder: "0개", textColor: .purple, placeholderColor: .purple, selectionIndex: self.$selectionIndex, selectedText: self.$day1)
-                        .foregroundStyle(Gen.Colors.mainPurpleColor.swiftUIColor)
-                        .padding(.horizontal, 16)
-                        .frame(height: 38)
-                        .frame(maxWidth: .infinity)
-                    
-                    RoundedRectangle(cornerRadius: 24)
-                        .stroke(Gen.Colors.mainPurpleColor.swiftUIColor, lineWidth: 1)
-                    
-                }
-                .frame(height: 38)
-                .frame(maxWidth: .infinity)
             }
         }
     }
     
     private var bottomButtonArea: some View {
         Text("변경 적용하기")
-            .foregroundColor(Gen.Colors.greyColor.swiftUIColor)
+            .foregroundColor(isValidate ? Color.theme.whiteColor : Gen.Colors.greyColor.swiftUIColor)
             .frame(height: 48)
             .frame(maxWidth: .infinity)
-//            .background(isValidate ? Color.theme.mainPurpleColor : Color.theme.greyColor)
-            .background(Gen.Colors.whiteGreyColor.swiftUIColor)
+            .background(isValidate ? Color.theme.mainPurpleColor : Color.theme.whiteGreyColor)
             .cornerRadius(8)
             .padding(.horizontal, 16)
             .onTapGesture {
-//                if self.isValidate == true {
-//                    projectViewModel.addNewProject()
-//                    dismiss.callAsFunction()
+                    if self.isValidate == true {
+                        let usedDrop = self.selectionIndex + 1
+                        if usedDrop == 0 {
+                            return
+                        }
+                        guard let newDeadLine = self.getNewDeadLine(addDay: usedDrop) else { return }
+                        projectViewModel.extendProjectDay(projectId: project.projectId,
+                                                          usedDrop: selectionIndex,
+                                                          newDeadline: newDeadLine,
+                                                          newTitle: project.title)
+                        dismiss.callAsFunction()
                 }
             }
+        }
 }
 
 extension ProjectExtendView {
@@ -221,5 +182,16 @@ extension ProjectExtendView {
     
     private func addNumberText(day: Int) -> String {
         return "\(day)개"
+    }
+    
+    private func showDurationInfo() -> String {
+        let deadlineDate = projectViewModel.duration.futureDate(from: Date())
+        return "📍목표 마감일이 \(deadlineDate.monthDayNoLeadingZeros)이 맞나요?"
+    }
+    
+    private func getNewDeadLine(addDay: Int) -> Date? {
+        let currentDate = Date()
+        let addedDaysDate = Calendar.current.date(byAdding: .day, value: addDay, to: currentDate)
+        return addedDaysDate
     }
 }
