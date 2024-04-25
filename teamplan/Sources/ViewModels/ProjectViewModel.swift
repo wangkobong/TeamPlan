@@ -24,6 +24,8 @@ final class ProjectViewModel: ObservableObject {
     @Published var projectName: String = ""
     @Published var startDate: StartDateSelection = .none
     @Published var duration: DurationSelection = .none
+    // ExtendProjectView에 필요한 프로퍼티
+    @Published var waterDrop: [String] = []
 
     init() {
         let userDefaultManager = UserDefaultManager.loadWith(key: "user")
@@ -33,6 +35,7 @@ final class ProjectViewModel: ObservableObject {
         Task {
             await self.getUserName()
         }
+        self.createWaterDropArray(upTo: projectService.statData.drop)
     }
     
     private func addSubscribers() {
@@ -123,6 +126,22 @@ final class ProjectViewModel: ObservableObject {
     func completeProject(with projectId: Int) async {
         do {
             try projectService.completeProject(projectId: projectId)
+        } catch {
+            print("error: \(error)")
+        }
+    }
+    
+    func createWaterDropArray(upTo number: Int) {
+        guard number > 0 else {
+            return
+        }
+        let waterDrops = Array(1...number)
+        self.waterDrop = waterDrops.map { String($0) + "일 연장하기" }
+    }
+    
+    func extendProjectDay(projectId: Int, usedDrop: Int, newDeadline: Date, newTitle: String) {
+        do {
+            try projectService.extendProject(projectId: projectId, usedDrop: usedDrop, newDeadline: newDeadline, newTitle: newTitle)
         } catch {
             print("error: \(error)")
         }

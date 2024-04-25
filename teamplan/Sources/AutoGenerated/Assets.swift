@@ -95,6 +95,7 @@ internal enum Gen {
     internal static let checkBoxNone = ImageAsset(name: "checkBox_none")
     internal static let projectBombSmile = ImageAsset(name: "project_bomb_smile")
     internal static let projectEmpty = ImageAsset(name: "project_empty")
+    internal static let projectExchange = ImageAsset(name: "project_exchange")
     internal static let projectMenuBtn = ImageAsset(name: "project_menu_btn")
   }
 }
