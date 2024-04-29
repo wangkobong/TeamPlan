@@ -30,15 +30,14 @@ final class AuthenticationViewModel: ObservableObject {
     
     
     // MARK: - published properties
-    @Published var nickName: String = ""
     @Published var signupUser: AuthSocialLoginResDTO?
     @Published var nonce: String?
 
     
     // MARK: - private properties
     private let keychain = KeychainSwift()
-    private lazy var loginLoadingService = LoginLoadingService()
     private let signupService = SignupService()
+    private lazy var loginLoadingService = LoginLoadingService()
     
     private let loginService = LoginService(
         authGoogleService: AuthGoogleService(),
@@ -46,33 +45,7 @@ final class AuthenticationViewModel: ObservableObject {
     )
     
     
-    // MARK: - method
-    func signInGoogle() async throws -> AuthSocialLoginResDTO {
-        do {
-            let user = try await loginService.loginGoogle()
-            
-            switch user.status {
-            case .exist:
-                self.signupUser = user
-            case .new:
-                self.signupUser = user
-            }
-            guard let idToken = user.idToken else {
-                throw SignupError.invalidAccountInfo
-            }
-            self.keychain.set(idToken, forKey: "idToken")
-            self.keychain.set(user.accessToken, forKey: "accessToken")
-            
-            return user
-        } catch {
-            throw error
-        }
-    }
-    
-    func requestNonceSignInApple() -> String {
-        return self.loginService.requestNonceSignInApple()
-    }
-    
+    // MARK: - Login & Signup
     func tryLogin() async -> Bool {
         if let loginUser = self.signupUser {
             do {
@@ -92,28 +65,53 @@ final class AuthenticationViewModel: ObservableObject {
     
     func trySignup(userName: String) async throws -> UserInfoDTO {
         
-        /*
-        // 혼란을 드려 죄송합니다ㅠ
-        // 과정을 요약드리자면
-        // 1. getAccountInfo() 여기서는 social 로그인결과로 UserProfile 뼈대(UserSignupDTO)를 제작합니다
-        // 2. 단, getAccountInfo() 에는 사용자입력을 받아 구성되는 'nickname' 정보가 누락되어 있습니다.
-        // 3. View에서 nickname 값을 받아, UserProfile 뼈대(UserSignupDTO) 추가하는 작업이 필요합니다
-        // 3-1. SignupService에 'setNickName' 함수가 구현되어 있습니다.
-        // 4. NickName 까지 받아졌다면, 'SignupLoadingService' 로 UserProfile 뼈대(UserSignupDTO)를 넘겨주시면 됩니다
-         
-        // 아래 identifier은 이제 getAccountInfo 함수에 추가되어 아래과정은 불필요합니다!
-        */
-        
         guard let signupUser = self.signupUser else { throw SignupError.invalidUser }
-
-        
         var finalUserInfo = try self.signupService.getAccountInfo(newUser: signupUser)
         finalUserInfo.updateNickName(with: userName)
+        
         let signupService = SignupLoadingService(newUser: finalUserInfo)
         let signedUser = try await signupService.executor()
+        
         let userDefaultManager = UserDefaultManager.loadWith(key: "user")
         userDefaultManager?.userName = signedUser.nickName
         userDefaultManager?.identifier = signedUser.userId
+        
         return signedUser
     }
 }
+
+// MARK: Social Login
+extension AuthenticationViewModel {
+    
+    // Apple
+    func requestNonceSignInApple() -> String {
+        self.nonce = loginService.requestNonce()
+        return loginService.reqeustNonceEncode(nonce: self.nonce!)
+    }
+    
+    func signInApple(with authResult: ASAuthorization) async throws -> AuthSocialLoginResDTO {
+        guard let nonce = self.nonce else { throw SignupError.signupFailed }
+        let userInfo = try await loginService.loginApple(appleAuthResult: authResult, nonce: nonce)
+        try registKeyChain(with: userInfo)
+        return userInfo
+    }
+    
+    // Google
+    func signInGoogle() async throws -> AuthSocialLoginResDTO {
+        let userInfo = try await loginService.loginGoogle()
+        try registKeyChain(with: userInfo)
+        return userInfo
+    }
+    
+    // Support
+    private func registKeyChain(with dto: AuthSocialLoginResDTO) throws {
+        self.signupUser = dto
+        let idToken = dto.idToken
+
+        self.keychain.set(idToken, forKey: "idToken")
+        self.keychain.set(dto.accessToken, forKey: "accessToken")
+    }
+}
+
+
+

@@ -27,6 +27,7 @@ let project = Project(
             infoPlist: "teamplan/Info.plist",
             sources: ["teamplan/Sources/**"],
             resources: ["teamplan/Resources/**"],
+            entitlements: "teamplan/teamplan.entitlements",
             scripts: [
                 .pre(script: "${PROJECT_DIR}/teamplan/Tools/swiftgen config run --config \"${PROJECT_DIR}/teamplan/Resources/swiftgen.yml\"", name: "Gen")
             ],

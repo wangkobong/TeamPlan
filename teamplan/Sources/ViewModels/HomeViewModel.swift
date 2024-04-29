@@ -35,14 +35,12 @@ final class HomeViewModel: ObservableObject {
         homeService.challenge.$myChallenges
             .receive(on: DispatchQueue.main)
             .sink { [weak self] myChallenges in
-                print("myChallenges: \(myChallenges)")
                 self?.myChallenges = myChallenges
             }
             .store(in: &cancellables)
         
         homeService.challenge.$statDTO
             .sink { [weak self] statistics in
-                print("statistics: \(String(describing: statistics))")
                 self?.statistics = statistics
             }
             .store(in: &cancellables)

@@ -23,18 +23,44 @@ final class AuthGoogleService {
             throw GoogleSocialLoginError.topViewControllerSearchFailure(serviceName: .googleLogin)
         }
         let loginResult = try await GIDSignIn.sharedInstance.signIn(withPresenting: topVC)
-        let userType = try await firebaseAuth(loginResult: loginResult)
-        let dto = AuthSocialLoginResDTO(loginResult: loginResult, userType: userType)
-        return dto
+        let tokenInfo = try extractIdToken(with: loginResult.user)
+        let authResult = try await registFirebaseAuth(with: loginResult, and: tokenInfo)
+        return AuthSocialLoginResDTO(
+            identifier: authResult.identifier,
+            email: authResult.email,
+            provider: .google,
+            idToken: tokenInfo,
+            accessToken: loginResult.user.accessToken.tokenString,
+            status: authResult.status
+        )
     }
     
-    private func firebaseAuth(loginResult: GIDSignInResult) async throws -> UserType {
+    // TODO: Need Custom Exception
+    private func extractIdToken(with user: GIDGoogleUser) throws -> String {
+        guard let idToken = user.idToken?.tokenString else {
+            throw GoogleSocialLoginError.topViewControllerSearchFailure(serviceName: .googleLogin)
+        }
+        return idToken
+    }
+    
+    private func registFirebaseAuth(with loginResult: GIDSignInResult, and idToken: String) async throws -> FirebaseAuthRegistResultDTO {
         let credential = GoogleAuthProvider.credential(
-            withIDToken: loginResult.user.idToken!.tokenString,
+            withIDToken: idToken,
             accessToken: loginResult.user.accessToken.tokenString
         )
-        let authResult = try await Auth.auth().signIn(with: credential)
-        return authResult.additionalUserInfo?.isNewUser == true ? UserType.new : UserType.exist
+        do {
+            let authResult = try await Auth.auth().signIn(with: credential)
+            guard let loginInfo = authResult.additionalUserInfo,
+                  let userEmail = authResult.user.email
+            else {
+                throw AppleSocialLoginError.signInFailed(serviceName: .appleLogin)
+            }
+            let identifier = authResult.user.uid
+            return FirebaseAuthRegistResultDTO(identifier: identifier, email: userEmail, status: loginInfo.isNewUser ? .new : .exist)
+        } catch {
+            print("Firebase Auth sign-in error: \(error.localizedDescription)")
+            throw error
+        }
     }
     
     func logout() throws {

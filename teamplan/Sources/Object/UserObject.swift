@@ -15,8 +15,8 @@ enum UserStatus: String{
 }
 
 enum Providers: String{
-    case apple = "Apple"
-    case google = "Google"
+    case apple = "apple.com"
+    case google = "google.com"
     case unknown = "Unknown Providers"
 }
 

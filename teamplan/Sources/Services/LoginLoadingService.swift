@@ -55,7 +55,7 @@ final class LoginLoadingService{
     func executor(with dto: AuthSocialLoginResDTO) async throws -> UserInfoDTO {
         
         self.loginDate = Date()
-        self.userId = try util.getIdentifier(from: dto)
+        self.userId = dto.identifier
         
         if !checkLocalData() {
             try await getUserDataFromServer()

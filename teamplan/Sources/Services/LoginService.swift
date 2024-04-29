@@ -23,44 +23,61 @@ final class LoginService{
     }
     
     // MARK: - method
+    // Google Login
     func loginGoogle() async throws -> AuthSocialLoginResDTO {
         return try await google.login()
     }
     
-    func requestNonceSignInApple() -> String {
+    // Apple Login
+    func loginApple(appleAuthResult: ASAuthorization, nonce: String) async throws -> AuthSocialLoginResDTO {
+        return try await apple.login(loginResult: appleAuthResult, nonce: nonce)
+    }
+    
+    func requestNonce() -> String {
         return self.apple.randomNonce()
     }
+    
+    func reqeustNonceEncode(nonce: String) -> String {
+        return self.apple.sha256(nonce)
+    }
+    
+    // Local Login
 }
 
 // MARK: - AuthDTO
 struct AuthSocialLoginResDTO {
     
-    let email: String?
+    let identifier: String
+    let email: String
     let provider: Providers
-    let idToken: String?
+    let idToken: String
     let accessToken: String
     var status: UserType
     
-    // Google
-    init(loginResult: GIDSignInResult, userType: UserType){
-        self.provider = .google
-        self.email = loginResult.user.profile?.email
-        self.idToken = loginResult.user.idToken?.tokenString
-        self.accessToken = loginResult.user.accessToken.tokenString
-        self.status = userType
-    }
-    
-    // Apple
-    init(loginResult: User?, idToken: String, userType: UserType){
-        self.provider = .apple
-        self.email = loginResult?.email
+    init(identifier: String, email: String, provider: Providers, idToken: String, accessToken: String, status: UserType) {
+        self.identifier = identifier
+        self.email = email
+        self.provider = provider
         self.idToken = idToken
-        self.accessToken = ""
-        self.status = userType
+        self.accessToken = accessToken
+        self.status = status
     }
 }
 
-enum UserType: String{
-    case new = "New User"
-    case exist = "Exist User"
+// MARK: FirebaseAuthDTO
+struct FirebaseAuthRegistResultDTO {
+    let identifier: String
+    let email: String
+    let status: UserType
+    
+    init(identifier: String, email: String, status: UserType) {
+        self.identifier = identifier
+        self.email = email
+        self.status = status
+    }
+}
+
+enum UserType {
+    case new
+    case exist
 }

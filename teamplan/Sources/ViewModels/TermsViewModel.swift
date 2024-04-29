@@ -47,8 +47,6 @@ final class TermsViewModel: ObservableObject {
                 self?.wholeTermsButton = allAgree
             }
             .store(in: &cancellables)
-        
-        
     }
     
     func didTapAllAgreeButton() {
@@ -62,8 +60,6 @@ final class TermsViewModel: ObservableObject {
         
         self.isAgree = wholeTermsButton?.isSelected == true ? true : false
         self.requiredTermsCount = wholeTermsButton?.isSelected == true ? 2 : 0
-        print("isAgree: \(isAgree)")
-        print("requiredTermsCount: \(requiredTermsCount)")
     }
     
     func didTapOptionalTermsButton(terms: TermsModel) {
@@ -75,8 +71,6 @@ final class TermsViewModel: ObservableObject {
         } else {
             wholeTermsButton?.isSelected = false
         }
-        print("isAgree: \(isAgree)")
-        print("requiredTermsCount: \(requiredTermsCount)")
     }
     
     func didTapRequiredTermsButton(terms: TermsModel) {
@@ -91,7 +85,5 @@ final class TermsViewModel: ObservableObject {
         }
         
         isAgree = requiredTermsCount == requiredTermsArray.count ? true : false
-        print("isAgree: \(isAgree)")
-        print("requiredTermsCount: \(requiredTermsCount)")
     }
 }
