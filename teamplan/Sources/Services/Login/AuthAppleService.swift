@@ -11,37 +11,64 @@ import CryptoKit
 import FirebaseAuth
 import AuthenticationServices
 
-final class AuthAppleService {
 
-    // MARK: - Login
-//
-//    func login(
-//        appleCredential: ASAuthorizationAppleIDCredential,
-//        completion: @escaping(Result<AuthSocialLoginResDTO, Error>) -> Void
-//    ) async {
-//        guard let appleIDToken = appleCredential.identityToken else {
-//            completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unable to fetch identity token"])))
-//            return
-//        }
-//        guard let idTokenString = String(data: appleIDToken, encoding: .utf8) else {
-//            completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unable to serialize token string from data"])))
-//            return
-//        }
-//        let credential = OAuthProvider.credential(
-//            withProviderID: "apple.com",
-//            idToken: idTokenString,
-//            rawNonce: randomNonceString()
-//        )
-//        
-//        do {
-//            let authResult = try await Auth.auth().signIn(with: credential)
-//            let userType = authResult.additionalUserInfo?.isNewUser == true ? UserType.new : UserType.exist
-//            
-//            completion(.success(AuthSocialLoginResDTO(loginResult: authResult.user, idToken: idTokenString, userType: userType)))
-//        } catch {
-//            completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unknown error occurred"])))
-//        }
-//    }
+// MARK: Apple Social Login
+final class AuthAppleService {
+    
+    func login(loginResult: ASAuthorization, nonce: String) async throws -> AuthSocialLoginResDTO {
+        
+        // Authentication
+        let idToken = try extractIdTokenString(loginResult: loginResult)
+        let authResult = try await registFirebaseAuth(idToken: idToken, nonce: nonce)
+
+        // Extract Additional Information
+        return AuthSocialLoginResDTO(
+            identifier: authResult.identifier,
+            email: authResult.email,
+            provider: .apple,
+            idToken: idToken,
+            accessToken: idToken,
+            status: authResult.status
+        )
+    }
+    
+    private func extractIdTokenString(loginResult: ASAuthorization) throws -> String {
+        guard let appleIdCredential = loginResult.credential as? ASAuthorizationAppleIDCredential,
+              let appleIdToken = appleIdCredential.identityToken,
+              let appleIdTokenString = String(data: appleIdToken, encoding: .utf8) else {
+            throw AppleSocialLoginError.tokenCreationFailed(serviceName: .appleLogin)
+        }
+        return appleIdTokenString
+    }
+    
+    private func registFirebaseAuth(idToken: String, nonce: String) async throws -> FirebaseAuthRegistResultDTO {
+        
+        let credential = OAuthProvider.credential(
+            withProviderID: Providers.apple.rawValue,
+            idToken: idToken,
+            rawNonce: nonce
+        )
+        do {
+            let authResult = try await Auth.auth().signIn(with: credential)
+            guard let loginInfo = authResult.additionalUserInfo,
+                  let userEmail = authResult.user.email else {
+                throw AppleSocialLoginError.signInFailed(serviceName: .appleLogin)
+            }
+            let identifier = authResult.user.uid
+            return FirebaseAuthRegistResultDTO(
+                identifier: identifier,
+                email: userEmail,
+                status: loginInfo.isNewUser ? .new : .exist
+            )
+        } catch {
+            print("Firebase Auth sign-in error: \(error.localizedDescription)")
+            throw error
+        }
+    }
+}
+
+// MARK: Nonce
+extension AuthAppleService {
     
     func randomNonce(length: Int = 32) -> String {
         precondition(length > 0)
@@ -71,10 +98,10 @@ final class AuthAppleService {
                 }
             }
         }
-        return self.sha256(result)
+        return result
     }
 
-    private func sha256(_ input: String) -> String {
+    func sha256(_ input: String) -> String {
         let inputData = Data(input.utf8)
         let hashedData = SHA256.hash(data: inputData)
         let hashString = hashedData.compactMap {

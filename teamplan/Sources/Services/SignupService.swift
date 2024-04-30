@@ -14,7 +14,7 @@ final class SignupService{
     
     func getAccountInfo(newUser: AuthSocialLoginResDTO) throws -> UserSignupDTO {
         
-        return UserSignupDTO(with: try util.getIdentifier(from: newUser), and: newUser)
+        return UserSignupDTO(with: newUser)
     }
 }
 
@@ -26,9 +26,9 @@ struct UserSignupDTO{
     let logHead : Int
     var nickName: String
     
-    init(with userId: String, and dto: AuthSocialLoginResDTO) {
-        self.userId = userId
-        self.email = dto.email ?? ""
+    init(with dto: AuthSocialLoginResDTO) {
+        self.userId = dto.identifier
+        self.email = dto.email
         self.provider = dto.provider
         self.logHead = 1
         self.nickName = ""

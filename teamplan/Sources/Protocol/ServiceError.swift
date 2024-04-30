@@ -16,8 +16,9 @@ enum ErrorLocation: String {
     case coredata = "Coredata"
     case firestore = "Firestore"
     case google = "GoogleSocialLogin"
+    case apple = "AppleSocialLogin"
     case signup = "Signup"
-    case login = "LoginLoading"
+    case login = "Login Loading"
 }
 
 enum ServiceType: String {
@@ -29,6 +30,7 @@ enum ServiceType: String {
     case todo = "todo"
     case log = "AccessLog"
     case googleLogin = "GoogleSocialLogin"
+    case appleLogin = "AppleSocialLogin"
     case signup = "SignupLoading"
     case login = "LoginLoading"
 }
@@ -68,6 +70,28 @@ enum FirestoreError: ServiceErrorProtocol {
     
     var errorLocation: ErrorLocation {
         return .firestore
+    }
+    
+    var errorDescription: String {
+        return getErrorDescription(for: self)
+    }
+}
+
+// MARK: - Apple Social Login
+enum AppleSocialLoginError: ServiceErrorProtocol {
+    case invalidCredentials(serviceName: ServiceType)
+    case tokenCreationFailed(serviceName: ServiceType)
+    case signInFailed(serviceName: ServiceType)
+    
+    var serviceName: ServiceType {
+        switch self {
+        case .invalidCredentials(let serviceName), .tokenCreationFailed(let serviceName), .signInFailed(let serviceName):
+            return serviceName
+        }
+    }
+    
+    var errorLocation: ErrorLocation {
+        return .apple
     }
     
     var errorDescription: String {
@@ -154,6 +178,16 @@ func getErrorDescription(for error: ServiceErrorProtocol) -> String {
             return baseMessage + "to fetch '\(serviceName.rawValue)' document."
         case .convertFailure(let serviceName):
             return baseMessage + "to convert '\(serviceName.rawValue)' document to object."
+        }
+        
+    case let error as AppleSocialLoginError:
+        switch error {
+        case .invalidCredentials(let serviceName):
+            return baseMessage + "to get valid credentials"
+        case .tokenCreationFailed(let serviceName):
+            return baseMessage + "to create AuthToken"
+        case .signInFailed(let serviceName):
+            return baseMessage + "to apple social login"
         }
         
     case let error as GoogleSocialLoginError:
