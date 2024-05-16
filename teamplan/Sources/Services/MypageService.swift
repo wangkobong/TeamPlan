@@ -13,20 +13,20 @@ final class MypageService {
     private let userCD = UserServicesCoredata()
     private let statCD = StatisticsServicesCoredata()
     private let challengeCD = ChallengeServicesCoredata()
+    private let loginService = LoginService()
     private var syncServerWithLocal: SyncServerWithLocal
-    private let authGoogle = AuthGoogleService()
     
-    private var userId: String = ""
-    private var completedChallenges: [ChallengeObject] = []
+    private var userId: String
+    private var completedChallenges: Int
     
     init(userId: String) {
         self.userId = userId
+        self.completedChallenges = 0
         self.syncServerWithLocal = SyncServerWithLocal(with: userId)
     }
     
     func prepareService() async throws {
-        let challenges = try await challengeCD.getObjects(with: userId)
-        completedChallenges = challenges.filter { $0.status == true }
+        self.completedChallenges = try await challengeCD.getCompleteObjects(with: self.userId)
     }
     
     func getMypageDTO() throws -> MypageDTO {
@@ -36,14 +36,15 @@ final class MypageService {
             nickName: user.name,
             protected: stat.totalFinishedProjects,
             destroyed: stat.totalFailedProjects,
+            serviceTerm: stat.term,
             completedProjects: stat.totalFinishedProjects,
-            completedChallenges: completedChallenges.count,
+            completedChallenges: completedChallenges,
             completedTodos: stat.totalFinishedTodos
         )
     }
     
     func logout() throws {
-        try authGoogle.logout()
+        loginService.logoutUser()
     }
     
     // Delete every user data at local & server
@@ -58,6 +59,7 @@ struct MypageDTO {
     let nickName: String
     let protected: Int
     let destroyed: Int
+    let serviceTerm: Int
     let completedProjects: Int
     let completedChallenges: Int
     let completedTodos : Int
@@ -65,6 +67,7 @@ struct MypageDTO {
     init(nickName: String, 
          protected: Int,
          destroyed: Int,
+         serviceTerm: Int,
          completedProjects: Int,
          completedChallenges: Int,
          completedTodos: Int)
@@ -72,8 +75,27 @@ struct MypageDTO {
         self.nickName = nickName
         self.protected = protected
         self.destroyed = destroyed
+        self.serviceTerm = serviceTerm
         self.completedProjects = completedProjects
         self.completedChallenges = completedChallenges
         self.completedTodos = completedTodos
     }
+    
+    init() {
+        self.nickName = "unknown"
+        self.protected = 0
+        self.destroyed = 0
+        self.serviceTerm = 0
+        self.completedProjects = 0
+        self.completedChallenges = 0
+        self.completedTodos = 0
+    }
+}
+
+
+enum MypageMenu: String {
+    case guide = "가이드북"
+    case logout = "로그아웃"
+    case withdraw = "회원탈퇴"
+    case version = "앱버젼"
 }

@@ -30,6 +30,7 @@ final class SignupLoadingService{
     private let newStat: StatisticsObject
     private let newLog: AccessLog
     
+    private var challengeIdSet = Set<Int>()
     private var rollbackStack: [() async throws -> Void ] = []
     
     
@@ -220,7 +221,8 @@ extension SignupLoadingService{
     private func setNewChallengeAtLocal() async throws {
         
         let challengeInfo = try await challengeFS.getInfoDocsList()
-        for challenge in challengeInfo {
+        for challenge in challengeInfo where !challengeIdSet.contains(challenge.challengeId) {
+            challengeIdSet.insert(challenge.challengeId)
             let object = prepareNewChallengeStatus(with: challenge)
             try await challengeCD.setObject(with: object)
         }

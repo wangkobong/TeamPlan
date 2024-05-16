@@ -13,53 +13,71 @@ import KeychainSwift
 
 final class AuthGoogleService {
     
-    
-    // MARK: - private properties
     private var keychain = KeychainSwift()
+    
+    // MARK: Main Func
     
     @MainActor
     func login() async throws -> AuthSocialLoginResDTO {
         guard let topVC = GoogleLoginHelper.shared.topViewController() else {
-            throw GoogleSocialLoginError.topViewControllerSearchFailure(serviceName: .googleLogin)
+            throw GoogleSocialLoginError.topViewControllerSearchFailed(serviceName: .google)
         }
-        let loginResult = try await GIDSignIn.sharedInstance.signIn(withPresenting: topVC)
-        let tokenInfo = try extractIdToken(with: loginResult.user)
-        let authResult = try await registFirebaseAuth(with: loginResult, and: tokenInfo)
-        return AuthSocialLoginResDTO(
-            identifier: authResult.identifier,
-            email: authResult.email,
-            provider: .google,
-            idToken: tokenInfo,
-            accessToken: loginResult.user.accessToken.tokenString,
-            status: authResult.status
-        )
+        do {
+            // FirebaseAuth Authentication
+            let loginResult = try await GIDSignIn.sharedInstance.signIn(withPresenting: topVC)
+            let tokenInfo = try extractIdToken(with: loginResult.user)
+            let authResult = try await registFirebaseAuth(with: loginResult, and: tokenInfo)
+            
+            // Auth Result
+            return AuthSocialLoginResDTO(
+                identifier: authResult.identifier,
+                email: authResult.email,
+                provider: .google,
+                idToken: tokenInfo,
+                accessToken: loginResult.user.accessToken.tokenString,
+                status: authResult.status
+            )
+            // Excpetion Handling
+        } catch {
+            print("[GoogleLogin] Failed to SignIn with GoogleSocialLogin: \(error.localizedDescription)")
+            throw error
+        }
     }
     
-    // TODO: Need Custom Exception
+    // MARK: Support Func
     private func extractIdToken(with user: GIDGoogleUser) throws -> String {
         guard let idToken = user.idToken?.tokenString else {
-            throw GoogleSocialLoginError.topViewControllerSearchFailure(serviceName: .googleLogin)
+            throw GoogleSocialLoginError.tokenExtractionFalied(serviceName: .google)
         }
         return idToken
     }
     
     private func registFirebaseAuth(with loginResult: GIDSignInResult, and idToken: String) async throws -> FirebaseAuthRegistResultDTO {
+        // Create Credential
         let credential = GoogleAuthProvider.credential(
             withIDToken: idToken,
             accessToken: loginResult.user.accessToken.tokenString
         )
         do {
+            // Regist FirebaseAuth
             let authResult = try await Auth.auth().signIn(with: credential)
             guard let loginInfo = authResult.additionalUserInfo,
                   let userEmail = authResult.user.email
             else {
-                throw AppleSocialLoginError.signInFailed(serviceName: .appleLogin)
+                throw AppleSocialLoginError.invalidFirebaseAuthUserInfo(serviceName: .google)
             }
+            
+            // Authentication Result
             let identifier = authResult.user.uid
-            return FirebaseAuthRegistResultDTO(identifier: identifier, email: userEmail, status: loginInfo.isNewUser ? .new : .exist)
+            return FirebaseAuthRegistResultDTO(
+                identifier: identifier,
+                email: userEmail,
+                status: loginInfo.isNewUser ? .new : .exist
+            )
         } catch {
-            print("Firebase Auth sign-in error: \(error.localizedDescription)")
-            throw error
+            throw GoogleSocialLoginError.firebaseAuthRegistrationFailed(
+                serviceName: .google, firebaseError: error.localizedDescription
+            )
         }
     }
     
@@ -70,18 +88,5 @@ final class AuthGoogleService {
         let userDefaultManager = UserDefaultManager.loadWith(key: "user")
         userDefaultManager?.identifier = ""
         userDefaultManager?.userName = ""
-    }
-}
-
-// MARK: Exception
-
-enum AuthGoogleError: LocalizedError {
-    case UnexpectedTopViewControllerError
-    
-    var errorDescription: String?{
-        switch self {
-        case .UnexpectedTopViewControllerError:
-            return "[Critical]AuthGoogle - Throw: There was an unexpected error while get TopView Controller"
-        }
     }
 }

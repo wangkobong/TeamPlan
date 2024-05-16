@@ -21,7 +21,7 @@ final class StatisticsServicesFirestore: SingleDocsManage {
     
     func getDocs(with userId: String) async throws -> Object {
         guard let data = try await fetchDocsSnapshot(with: userId, and: .stat).data() else {
-            throw FirestoreError.fetchFailure(serviceName: .stat)
+            throw FirestoreError.fetchFailure(serviceName: .fs, dataType: .stat)
         }
         return try convertToObject(with: data)
     }
@@ -73,7 +73,7 @@ extension StatisticsServicesFirestore {
               let stringSyncedAt = data["synced_at"] as? String,
               let syncedAt = DateFormatter.standardFormatter.date(from: stringSyncedAt)
         else {
-            throw FirestoreError.convertFailure(serviceName: .stat)
+            throw FirestoreError.convertFailure(serviceName: .fs, dataType: .stat)
         }
         
         let challengeStepStatus = try Utilities().convertFromJSON(jsonString: challengeStepStatusString, type: [Int: Int].self)

@@ -43,7 +43,7 @@ struct ProjectView_Previews: PreviewProvider {
 extension ProjectView {
     private var navigationArea: some View {
         HStack {
-            Text("프로젝트")
+            Text("목표")
                 .font(.archivoBlack(.regular, size: 20))
                 .foregroundColor(.theme.mainPurpleColor)
             Spacer()

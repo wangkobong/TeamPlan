@@ -105,14 +105,10 @@ extension HomeView {
             Spacer()
             
             Button {
-                do {
-                    let google = AuthGoogleService()
-                    try google.logout()
-                    withAnimation(.easeIn(duration: 10)) {
-                        mainViewState = .login
-                    }
-                } catch {
-                    print(error)
+                let service = LoginService()
+                service.logoutUser()
+                withAnimation(.easeIn(duration: 10)) {
+                    mainViewState = .login
                 }
             } label: {
                 Text("로그아웃")

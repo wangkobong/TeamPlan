@@ -56,7 +56,7 @@ extension AccessLogServicesFirestore {
               let stringAccessRecord = data["access_record"] as? String,
               let accessRecord = DateFormatter.standardFormatter.date(from: stringAccessRecord)
         else {
-            throw FirestoreError.convertFailure(serviceName: .log)
+            throw FirestoreError.convertFailure(serviceName: .fs, dataType: .log)
         }
         return AccessLog(userId: userId, accessDate: accessRecord)
     }

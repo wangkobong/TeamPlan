@@ -59,15 +59,18 @@ final class LoginLoadingService{
         
         if !checkLocalData() {
             try await getUserDataFromServer()
+            print("[LoginLoading] Successfully get data from Server")
         }
         
         // Filtering 're-login' & 'first-login'
         if try filteringUser() {
+            print("[LoginLoading] Confirm Re-Login User")
             return UserInfoDTO(with: try userCD.getObject(with: userId))
         }
         
         self.userTerm = try statCD.getObject(with: userId).term
         self.syncTerm = try coreValueCD.getObject(with: userId).syncCycle
+        
         try await updateBasedOnSorter(with: UpdateSorter())
         return UserInfoDTO(with: try userCD.getObject(with: userId))
     }
@@ -211,36 +214,39 @@ extension LoginLoadingService {
     private func updateBasedOnSorter(with type: UpdateType) async throws {
         switch type {
         case .daily:
-            try dailyUpdateProcess(with: loginDate)
+            try await dailyUpdateProcess(with: loginDate)
+            print("[LoginLoading] Complete daily update")
         case .weekly:
-            try dailyUpdateProcess(with: loginDate)
+            try await dailyUpdateProcess(with: loginDate)
             try await weeklyUpdateProcess(with: loginDate)
+            print("[LoginLoading] Complete weekly update")
         case .quarterly:
-            try dailyUpdateProcess(with: loginDate)
-            try quarterlyUpdateProcess(with: loginDate)
+            try await dailyUpdateProcess(with: loginDate)
+            try await quarterlyUpdateProcess(with: loginDate)
+            print("[LoginLoading] Complete quarterly update")
         }
     }
     
     // Daily Update
     // : Update ServiceTerm & Append New AccessLog
-    private func dailyUpdateProcess(with loginDate: Date) throws {
+    private func dailyUpdateProcess(with loginDate: Date) async throws {
         
-        try updateServiceTerm()
-        try updateLoginAt(with: loginDate)
-        try resetDailyRegistTodo()
+        try await updateServiceTerm()
+        try await updateLoginAt(with: loginDate)
+        try await resetDailyRegistTodo()
     }
     
-    private func updateServiceTerm() throws {
+    private func updateServiceTerm() async throws {
         let updated = StatUpdateDTO(userId: userId, newTerm: userTerm + 1)
         try statCD.updateObject(with: updated)
     }
     
-    private func updateLoginAt(with loginDate: Date) throws {
+    private func updateLoginAt(with loginDate: Date) async throws {
         let log = AccessLog(userId: userId, accessDate: loginDate)
         try accessLogCD.setObject(with: log)
     }
     
-    private func resetDailyRegistTodo() throws {
+    private func resetDailyRegistTodo() async throws {
         let projectList = try projectCD.getObjects(with: userId)
         for project in projectList {
             let updated = ProjectUpdateDTO(projectId: project.projectId, userId: userId, newDailyRegistedTodo: 0)
@@ -255,8 +261,7 @@ extension LoginLoadingService {
     }
     
     // Quarterly Update
-    private func quarterlyUpdateProcess(with syncDate: Date, attempCount: Int = 0) throws {
-        
+    private func quarterlyUpdateProcess(with syncDate: Date, attempCount: Int = 0) async throws {
         let user = try userCD.getObject(with: userId)
         let updated = UserUpdateDTO(userId: userId, newLogHead: user.accessLogHead + 1)
         try userCD.updateObject(with: updated)

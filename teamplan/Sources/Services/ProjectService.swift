@@ -10,6 +10,7 @@ import Foundation
 
 final class ProjectService {
     
+    // Service Propertise
     private let coreValueCD = CoreValueServicesCoredata()
     private let statCD = StatisticsServicesCoredata()
     private let projectCD = ProjectServicesCoredata()
@@ -20,9 +21,11 @@ final class ProjectService {
     var statData: StatisticsObject = StatisticsObject()
     var coreValue: CoreValueObject = CoreValueObject()
     
+    // Shared DTO
     @Published var statDashBoard: ProjectStatDTO = ProjectStatDTO()
     @Published var projectList: [ProjectDTO] = []
     
+    // Initializer
     init(userId: String) {
         self.userId = userId
     }
@@ -144,6 +147,7 @@ extension ProjectService {
     }
     
     // Convert inputDrop to newDeadLine
+    // TODO: Need Custom Exception
     func calcDeadLineWithDrop(projectId: Int, inputDrop: Int) throws -> Date {
         let convertRatio = coreValue.dropConvertRatio
         let index = try searchProjectIndex(with: projectId)
@@ -152,13 +156,13 @@ extension ProjectService {
         let extend = inputDrop * Int(convertRatio)
         
         guard let updatedDeadline = Calendar.current.date(byAdding: .day, value: extend, to: currentDeadline) else {
-            // TODO: Custom Error
-            throw CoredataError.convertFailure(serviceName: .project)
+            throw CoredataError.convertFailure(serviceName: .project, dataType: .project)
         }
         return updatedDeadline
     }
     
     // Convert newDeadLine to needDrop
+    // TODO: Need Custom Exception
     func calcDeadlineWithDate(with projectId: Int, and newDate: Date) throws -> Int {
         let convertRatio = coreValue.dropConvertRatio
         let index = try searchProjectIndex(with: projectId)
@@ -167,8 +171,7 @@ extension ProjectService {
         let component = Calendar.current.dateComponents([.day], from: currentDeadline, to: newDate)
         
         guard let extendDays = component.day else {
-            // TODO: Custom Error
-            throw CoredataError.convertFailure(serviceName: .project)
+            throw CoredataError.convertFailure(serviceName: .project, dataType: .project)
         }
         return extendDays * Int(convertRatio)
     }
@@ -249,18 +252,19 @@ extension ProjectService {
         return 0
     }
     
+    // TODO: Need Custom Exception
     private func searchProjectIndex(with projectId: Int) throws -> Int {
         guard let index = self.projectList.firstIndex(where: { $0.projectId == projectId }) else {
-            // TODO: Custom Error
-            throw CoredataError.fetchFailure(serviceName: .project)
+            throw CoredataError.convertFailure(serviceName: .project, dataType: .project)
         }
         return index
     }
     
+    // TODO: Need Custom Exception
     private func searchTodoIndex(with projectIndex: Int, and todoId: Int) throws -> Int  {
         guard let index = self.projectList[projectIndex].todoList.firstIndex(where: { $0.todoId == todoId }) else {
             // TODO: Custom Error
-            throw CoredataError.fetchFailure(serviceName: .project)
+            throw CoredataError.convertFailure(serviceName: .project, dataType: .project)
         }
         return index
     }

@@ -35,7 +35,6 @@ final class CoredataMainController: CoredataProtocol {
     }
 }
 
-
 // MARK: - Basic
 protocol BasicObjectManage {
     associatedtype Entity: NSManagedObject
@@ -81,11 +80,12 @@ protocol ChallengeObjectManage: BasicObjectManage {
     
     func setObject(with object: Object) async throws
     func getObject(with challengeId: Int, and userId: String) async throws -> Object
-    func getObjects(with userId: String) async throws -> [Object]
-    
-    func getObjects(with userId: String) throws -> [Object]
     func deleteObject(with userId: String) throws
     func updateObject(with dto: DTO) throws
+    
+    func getObjects(with userId: String) throws -> [Object]
+    func getObjects(with userId: String) async throws -> [Object]
+    func getCompleteObjects(with userId: String) async throws -> Int
     func isObjectExist(with userId: String) -> Bool
 }
 
@@ -97,7 +97,6 @@ protocol LogObjectManage: BasicObjectManage {
     
     func getLatestObject(with userId: String) throws -> Object
     func getFullObjects(with userId: String) throws -> [Object]
-    func getPartialObjects(with userId: String, and syncedAt: Date) throws -> [Object]
     
     func deleteObject(with userId: String) throws
     func isObjectExist(with userId: String) -> Bool
@@ -138,11 +137,12 @@ enum EntityPredicate {
     case coreValue
     case user
     case stat
-    case fullChallenge
     case accessLog
     case projectList
     case project
+    case fullChallenge
     case singleChallenge
+    case completeChallenge
     case targetLog
     
     var format: String {
@@ -153,6 +153,8 @@ enum EntityPredicate {
             return "user_id == %@ AND project_id == %d"
         case .singleChallenge:
             return "user_id == %@ AND challenge_id == %d"
+        case .completeChallenge:
+            return "user_id == %@ AND status == %@"
         case .targetLog:
             return "user_id == %@ AND access_record > %@"
         }

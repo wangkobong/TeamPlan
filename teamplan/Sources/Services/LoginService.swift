@@ -9,20 +9,23 @@
 import Foundation
 import GoogleSignIn
 import FirebaseAuth
+import KeychainSwift
 import AuthenticationServices
 
 final class LoginService{
 
     private let google: AuthGoogleService
     private let apple: AuthAppleService
+    private var keyChain = KeychainSwift()
 
     // MARK: - life cycle
-    init(authGoogleService: AuthGoogleService, authAppleService: AuthAppleService) {
-        self.google = authGoogleService
-        self.apple = authAppleService
+    init() {
+        self.google = AuthGoogleService()
+        self.apple = AuthAppleService()
     }
     
-    // MARK: - method
+    // MARK: - Login
+    
     // Google Login
     func loginGoogle() async throws -> AuthSocialLoginResDTO {
         return try await google.login()
@@ -42,6 +45,32 @@ final class LoginService{
     }
     
     // Local Login
+    
+    
+    // MARK: - Logout
+    
+    func logoutUser() {
+        do {
+            try Auth.auth().signOut()   // logout from firebaseAuth
+            try resetUserDefault()      // reset userDefault
+            deleteFromKeyChain()        // reset keyChain
+        } catch let error as NSError {
+            print("Logout Error : \(error.localizedDescription)")
+        }
+    }
+    
+    private func deleteFromKeyChain() {
+        keyChain.delete(KeyChainArgs.id.rawValue)
+        keyChain.delete(KeyChainArgs.access.rawValue)
+    }
+    
+    private func resetUserDefault() throws {
+        guard let userDefault = UserDefaultManager.loadWith(key: UserDefaultKey.user.rawValue) else {
+            //TODO: Custom Error
+            throw LoginLoadingError.getAccessLogFailure(serviceName: .login)
+        }
+        userDefault.clear(key: UserDefaultKey.user.rawValue)
+    }
 }
 
 // MARK: - AuthDTO
@@ -80,4 +109,9 @@ struct FirebaseAuthRegistResultDTO {
 enum UserType {
     case new
     case exist
+}
+
+enum KeyChainArgs: String {
+    case id = "idToken"
+    case access = "accessToken"
 }

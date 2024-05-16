@@ -75,7 +75,7 @@ extension TodoServiceCoredata{
         fetchReq.fetchLimit = 1
         
         guard let entity = try self.context.fetch(fetchReq).first else {
-            throw CoredataError.fetchFailure(serviceName: .todo)
+            throw CoredataError.fetchFailure(serviceName: .cd, dataType: .project)
         }
         return entity
     }
@@ -85,7 +85,7 @@ extension TodoServiceCoredata{
         let projectEntity = try getProjectEntity(userId: userId, projectId: projectId)
         
         guard let todoEntities = projectEntity.todo_relationship as? Set<Entity> else {
-            throw TodoErrorCD.UnexpectedFetchError
+            throw CoredataError.fetchFailure(serviceName: .cd, dataType: .todo)
         }
         return Array(todoEntities)
     }
@@ -93,7 +93,7 @@ extension TodoServiceCoredata{
     // Fetch: Single Todo
     private func getEntity(userId: String, projectId: Int, todoId: Int) throws -> TodoEntity {
         guard let entity = try getEntities(userId: userId, projectId: projectId).first(where: { $0.todo_id == todoId }) else {
-            throw TodoErrorCD.UnexpectedSearchError
+            throw CoredataError.searchFailure(serviceName: .cd, dataType: .todo)
         }
         return entity
     }
@@ -103,7 +103,7 @@ extension TodoServiceCoredata{
         guard let userId = entity.user_id,
               let desc = entity.desc,
               let status = TodoStatus(rawValue: Int(entity.status)) else {
-            throw CoredataError.convertFailure(serviceName: .todo)
+            throw CoredataError.convertFailure(serviceName: .cd, dataType: .todo)
         }
         return TodoObject(
             projectId: Int(entity.project_id),
@@ -154,29 +154,5 @@ struct TodoUpdateDTO{
         self.newDesc = newDesc
         self.newStatus = newStatus
         self.newPinned = newPinned
-    }
-}
-
-
-//===============================
-// MARK: - Exception
-//===============================
-enum TodoErrorCD: LocalizedError {
-    case UnexpectedFetchError
-    case UnexpectedConvertError
-    case UnexpectedSearchError
-    case UnexpectedNilError
-    
-    var errorDescription: String?{
-        switch self {
-        case .UnexpectedFetchError:
-            return "Coredata: There was an unexpected error while Fetch 'Todo' details"
-        case .UnexpectedConvertError:
-            return "Coredata: There was an unexpected error while Convert 'Todo' details"
-        case .UnexpectedSearchError:
-            return "Coredata: There was an unexpected error while Search 'Todo' details"
-        case .UnexpectedNilError:
-            return "Coredata: There was an unexpected Nil error while Get 'TodoId'"
-        }
     }
 }

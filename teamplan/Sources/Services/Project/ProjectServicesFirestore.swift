@@ -28,7 +28,7 @@ final class ProjectServicesFirestore: ProjectDocsManage {
     
     func getDocs(with projectId: Int, and userId: String) async throws -> ProjectObject {
         guard let data = try await fetchSingleDocsSnapshot(userId: userId, projectId: projectId, type: .project).data() else {
-            throw FirestoreError.fetchFailure(serviceName: .project)
+            throw FirestoreError.fetchFailure(serviceName: .fs, dataType: .project)
         }
         return try convertToObject(with: data)
     }
@@ -94,7 +94,7 @@ extension ProjectServicesFirestore {
               let stringSyncedAt = data["synced_at"] as? String,
               let syncedAt = DateFormatter.standardFormatter.date(from: stringSyncedAt)
         else {
-            throw FirestoreError.convertFailure(serviceName: .project)
+            throw FirestoreError.convertFailure(serviceName: .fs, dataType: .project)
         }
         return ProjectObject(
             projectId: projectId,

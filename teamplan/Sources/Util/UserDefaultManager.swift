@@ -8,16 +8,40 @@
 
 import Foundation
 
-class UserDefaultManager: Codable {
+final class UserDefaultManager {
     
-    private var key: String = ""
+    private let key: String
     
-    var userName: String? {didSet { save() }}
-    var identifier: String? {didSet { save() }}
+    var userName: String?
+    var identifier: String?
     
-    enum CodingKeys: String, CodingKey {
-        case userName
-        case identifier
+    private init(key: String, name: String?, identifier: String?) {
+        self.key = key
+        self.userName = name
+        self.identifier = identifier
+    }
+    
+    static func loadWith(key: String) -> UserDefaultManager? {
+        guard let data = UserDefaults.standard.data(forKey: key),
+              let decoded = try? JSONDecoder().decode(UserDefaultManager.self, from: data) else {
+            return nil
+        }
+        return decoded
+    }
+    
+    static func createWith(key: String) -> UserDefaultManager {
+        let newUserDefaultManager = UserDefaultManager(key: key)
+        newUserDefaultManager.save()
+        return newUserDefaultManager
+    }
+    
+    func save() {
+        guard let data = try? JSONEncoder().encode(self) else { return }
+        UserDefaults.standard.set(data, forKey: self.key)
+    }
+    
+    func clear(key: String) {
+        UserDefaults.standard.removeObject(forKey: key)
     }
 
     private init(key: String) {
@@ -25,35 +49,26 @@ class UserDefaultManager: Codable {
     }
 }
 
-// MARK: Creation
-extension UserDefaultManager {
+extension UserDefaultManager: Codable {
+    enum CodingKeys: CodingKey {
+        case userName, identifier
+    }
     
-    static func loadWith(key: String) -> UserDefaultManager? {
-        var item = UserDefaultManager.loadForKey(key)
-        item?.key = key
-        if item == nil { item = UserDefaultManager(key: key) }
-        return item
+    convenience init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let userName = try container.decodeIfPresent(String.self, forKey: .userName)
+        let identifier = try container.decodeIfPresent(String.self, forKey: .identifier)
+        let key = UserDefaults.standard.string(forKey: "key") ?? UUID().uuidString
+        self.init(key: key, name: userName, identifier: identifier)
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(self.userName, forKey: .userName)
+        try container.encodeIfPresent(self.identifier, forKey: .identifier)
     }
 }
 
-// MARK: Load and Save
-private extension UserDefaultManager {
-    
-    static func loadForKey(_ key: String) -> Self? {
-        let defaults = UserDefaults.standard
-        let decoder = JSONDecoder()
-        if let savedObject = defaults.object(forKey: key) as? Data,
-           let loadedObject = try? decoder.decode(Self.self, from: savedObject) {
-            return loadedObject
-        }
-        return nil
-    }
-    
-    func save() {
-        let defaults = UserDefaults.standard
-        let encoder = JSONEncoder()
-        if let encoded = try? encoder.encode(self) {
-            defaults.set(encoded, forKey: key)
-        }
-    }
+enum UserDefaultKey: String {
+    case user = "user"
 }

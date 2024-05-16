@@ -26,6 +26,7 @@ final class SyncLocalWithServer{
     
     private var userId: String
     private var rollbackStack: [() throws -> Void ] = []
+    private var challengeIdSet = Set<Int>()
     
     init(with userId: String) {
         self.userId = userId
@@ -163,28 +164,53 @@ extension SyncLocalWithServer{
     
     // Challenge
     private func getChallengeFromServer() async throws -> [ChallengeObject] {
-        async let getInfoList = try await challengeFS.getInfoDocsList()
-        async let getStatusList = try await challengeFS.getStatusDocsList(with: userId)
-        let (infoList, statusList) = try await (getInfoList, getStatusList)
-    
-        let (infoDict, statusDict) = convertToDictionary(infoList, statusList)
-        let challengeList = try createChallengeObjects(infoDict, statusDict)
-        return challengeList
+        do {
+            let infoList = try await getChallengeInfoDocs()
+            let statusList = try await getChallengeStatusDocs()
+            let challengeList = try convertToObject(infoList, statusList)
+            
+            return challengeList
+        } catch {
+            print("[Sync] Struct Challenge Object Failed at Synchronize: \(error)")
+            throw error
+        }
     }
     
-    private func convertToDictionary(_ infoList: [ChallengeInfoDTO], _ statusList: [ChallengeStatusDTO]) -> (infoDict: [Int: ChallengeInfoDTO], statusDict: [Int: ChallengeStatusDTO]) {
-        let infoDict = Dictionary(uniqueKeysWithValues: infoList.map { ($0.challengeId, $0) })
-        let statusDict = Dictionary(uniqueKeysWithValues: statusList.map { ($0.challengeId, $0) })
-        return (infoDict, statusDict)
+    private func getChallengeInfoDocs() async throws -> [ChallengeInfoDTO] {
+        let rawInfoList = try await challengeFS.getInfoDocsList()
+        var refineInfoList: [ChallengeInfoDTO] = []
+        
+        for challenge in rawInfoList where !challengeIdSet.contains(challenge.challengeId) {
+            challengeIdSet.insert(challenge.challengeId)
+            refineInfoList.append(challenge)
+        }
+        
+        return refineInfoList
     }
-
-    private func createChallengeObjects(_ infoDict: [Int: ChallengeInfoDTO], _ statusDict: [Int: ChallengeStatusDTO]) throws -> [ChallengeObject] {
-        var challengeList = [ChallengeObject]()
-        for (challengeId, info) in infoDict {
-            guard let status = statusDict[challengeId] else {
-                throw FirestoreError.convertFailure(serviceName: .challenge) // 대응되는 status 정보가 없는 경우 예외 처리
+    
+    private func getChallengeStatusDocs() async throws -> [ChallengeStatusDTO] {
+        let rawStatusList = try await challengeFS.getStatusDocsList(with: userId)
+        var refineStatusList: [ChallengeStatusDTO] = []
+        
+        for challenge in rawStatusList where challengeIdSet.contains(challenge.challengeId) {
+            refineStatusList.append(challenge)
+        }
+        
+        return refineStatusList
+    }
+    
+    private func convertToObject(_ infoList: [ChallengeInfoDTO], _ statusList: [ChallengeStatusDTO]) throws -> [ChallengeObject] {
+        var challengeObject: ChallengeObject
+        var challengeList: [ChallengeObject] = []
+        
+        for challengeId in challengeIdSet {
+            guard let info = infoList.first(where: { $0.challengeId == challengeId }) else {
+                throw ChallengeError.UnexpectedChallengeArrayError
             }
-            let challengeObject = prepareChallenge(with: info, and: status)
+            guard let status = statusList.first(where: { $0.challengeId == challengeId }) else {
+                throw ChallengeError.UnexpectedChallengeArrayError
+            }
+            challengeObject = prepareChallenge(with: info, and: status)
             challengeList.append(challengeObject)
         }
         return challengeList

@@ -15,20 +15,53 @@ final class HomeViewModel: ObservableObject {
     @Published var myChallenges: [MyChallengeDTO] = []
     @Published var challengeArray: [ChallengeObject] = []
     @Published var statistics: StatChallengeDTO?
-    let identifier: String
-    lazy var homeService = HomeService(with: self.identifier)
+    
+    private let identifier: String
     private var cancellables = Set<AnyCancellable>()
+    lazy var homeService = HomeService(with: self.identifier)
     
     init() {
-        let userDefaultManager = UserDefaultManager.loadWith(key: "user")
-        let identifier = userDefaultManager?.identifier
-        self.identifier = identifier ?? ""
+        if let userDefault = UserDefaultManager.loadWith(key: UserDefaultKey.user.rawValue),
+           let identifier = userDefault.identifier {
+            self.identifier = identifier
+        } else {
+            self.identifier = "unknown"
+            print("[HomeViewModel] Initialize Failed")
+        }
         self.addSubscribers()
+        self.loadData()
+    }
+
+    private func loadData() {
         Task {
             await self.getUserName()
             await self.configureData()
         }
     }
+    
+    @MainActor
+    private func getUserName() {
+        if let userDefault = UserDefaultManager.loadWith(key: UserDefaultKey.user.rawValue),
+           let userName = userDefault.userName {
+            self.userName = userName
+        } else {
+            self.userName = "unknown"
+            print("[HomeViewModel] UserDefault Data load Failed")
+        }
+    }
+    
+    func configureData() async {
+        do {
+            try await homeService.readyService()
+        } catch let error {
+            print("[HomeViewModel] Failed to Initialize Service: \(error.localizedDescription)")
+        }
+    }
+}
+
+// MARK: Challenge
+
+extension HomeViewModel {
     
     private func addSubscribers() {
         
@@ -52,26 +85,13 @@ final class HomeViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    @MainActor
-    private func getUserName() async {
-        let userDefaultManager = UserDefaultManager.loadWith(key: "user")
-        self.userName = userDefaultManager?.userName ?? "Unkown"
-    }
-    
-    func configureData() async {
-        do {
-            try await homeService.readyService()
-        } catch let error {
-            print(error.localizedDescription)
-        }
-    }
-    
     func tryChallenge(with challengeId: Int) {
         do {
+            print(challengeId)
             try homeService.challenge.setMyChallenges(with: challengeId)
         } catch let error {
             // Handle the error here
-            print("Error: \(error)")
+            print("[HomeViewModel] Failed to Set Challenge: \(error.localizedDescription)")
         }
     }
     
@@ -80,8 +100,7 @@ final class HomeViewModel: ObservableObject {
             try homeService.challenge.disableMyChallenge(with: challengeId)
         } catch let error {
             // Handle the error here
-            print("Error: \(error)")
+            print("[HomeViewModel] Failed to Disable Challenge: \(error.localizedDescription)")
         }
     }
-    
 }

@@ -12,8 +12,10 @@ final class ChallengeService {
 
     private let statCD = StatisticsServicesCoredata()
     private let challengeCD = ChallengeServicesCoredata()
-    private var challengeDict: [Int : ChallengeObject] = [:]
+    
     private var userId: String
+    private var challengeDict: [Int : ChallengeObject] = [:]
+    private var challengeIdSet = Set<Int>()
     
     // shared
     @Published var statDTO: StatChallengeDTO
@@ -44,24 +46,30 @@ extension ChallengeService {
 
     // main executor
     func prepareService() async throws {
-        let array = try await challengeCD.getObjects(with: userId)
-        challengeDict = Dictionary(uniqueKeysWithValues: array.map{ ($0.challengeId, $0) })
+        let challenges = try await challengeCD.getObjects(with: userId)
+        var tempDict = [Int: ChallengeObject]()
+        
+        for challenge in challenges where !challengeIdSet.contains(challenge.challengeId) {
+            challengeIdSet.insert(challenge.challengeId)
+            tempDict[challenge.challengeId] = challenge
+        }
+        challengeDict = tempDict
         statDTO = StatChallengeDTO(with: try statCD.getObject(with: userId))
         
-        try prepareChallenges()
-        try prepareMyChallenges()
+        try await prepareChallenges()
+        try await prepareMyChallenges()
         
         // legacy: must be replace to 'challengesDTO'
-        self.challengeArray = array
+        self.challengeArray = challenges
     }
     
     // myChallenges
-    private func prepareMyChallenges() throws {
+    private func prepareMyChallenges() async throws {
         // reset array
         myChallenges.removeAll()
-        if statDTO.myChallenges.isEmpty {
-            return
-        }
+        if statDTO.myChallenges.isEmpty { return }
+        
+        // fill array
         for idx in statDTO.myChallenges {
             guard let data = challengeDict[idx] else {
                 throw ChallengeError.UnexpectedMyChallengeSearchError
@@ -71,7 +79,7 @@ extension ChallengeService {
     }
     
     // challenges
-    private func prepareChallenges() throws {
+    private func prepareChallenges() async throws {
         challengesDTO = try challengeDict.values.map { challenge in
             if challenge.step == 1 {
                 return mapFirstStepChallenge(with: challenge)
@@ -81,6 +89,7 @@ extension ChallengeService {
         }
     }
      
+    // Struct ChallengeInfo: first step
     private func mapFirstStepChallenge(with object: ChallengeObject) -> ChallengeDTO {
         return ChallengeDTO(
                 challengeId: object.challengeId,
@@ -97,6 +106,7 @@ extension ChallengeService {
             )
     }
     
+   // Struct ChallengeInfo: other step (need previous info)
     private func mapOtherStepChallenges(with object: ChallengeObject) throws -> ChallengeDTO {
         guard let previous = challengeDict[object.challengeId - 1] else {
             throw ChallengeError.UnexpectedPrevChallengeSearchError
@@ -123,7 +133,7 @@ extension ChallengeService {
 
 
 
-// MARK: - CRUD Service
+// MARK: - MyChallenge CRUD
 extension ChallengeService {
     
     /// 특정 도전과제를 '나의 도전과제'로 등록합니다.
@@ -154,7 +164,18 @@ extension ChallengeService {
     /// - Returns:사용자의 챌린지 목록을 `MyChallengeDTO` 배열로 반환합니다.
     /// - 단, '나의 도전과제'를 지정하지 않은경우 '[]' 형태로 반환됩니다.
     func getMyChallenges() throws -> [MyChallengeDTO] {
-        try prepareMyChallenges()
+        // myChallenge check
+        if statDTO.myChallenges.isEmpty { return [] }
+        var updatedArray: [MyChallengeDTO] = []
+        
+        // fill array
+        for idx in statDTO.myChallenges {
+            guard let data = challengeDict[idx] else {
+                throw ChallengeError.UnexpectedMyChallengeSearchError
+            }
+            updatedArray.append(MyChallengeDTO(with: data))
+        }
+        myChallenges = updatedArray
         return myChallenges
     }
     

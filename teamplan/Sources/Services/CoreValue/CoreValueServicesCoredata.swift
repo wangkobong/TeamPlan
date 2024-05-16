@@ -59,7 +59,7 @@ extension CoreValueServicesCoredata {
     
     private func convertToObject(with entity: CoreValueEntity) throws -> CoreValueObject {
         guard let userId = entity.user_id else {
-            throw CoredataError.convertFailure(serviceName: .coreValue)
+            throw CoredataError.convertFailure(serviceName: .cd, dataType: .coreValue)
         }
         return CoreValueObject(
             userId: userId,
@@ -79,7 +79,7 @@ extension CoreValueServicesCoredata {
     private func getEntity(with userId: String) throws -> CoreValueEntity {
         let reqeust = getFetchReqeust(with: userId)
         guard let entity = try fetchEntity(with: reqeust, and: self.context) else {
-            throw CoredataError.fetchFailure(serviceName: .coreValue)
+            throw CoredataError.fetchFailure(serviceName: .cd, dataType: .coreValue)
         }
         return entity
     }
