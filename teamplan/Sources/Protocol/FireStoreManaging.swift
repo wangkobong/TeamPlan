@@ -65,11 +65,13 @@ extension SingleDocsManage {
         let query = getFirestoreInstance()
             .collection(type.rawValue)
             .document(userId)
-        return try await query.getDocument()
+        let snapshot = try await query.getDocument()
+        return snapshot
     }
     
     func fetchDocsReference(with userId: String, and type: CollectionType) async throws -> DocumentReference {
-        return try await fetchDocsSnapshot(with: userId, and: type).reference
+        let snapshot = try await fetchDocsSnapshot(with: userId, and: type).reference
+        return snapshot
     }
 }
 

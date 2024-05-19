@@ -22,11 +22,7 @@ final class ProjectServicesCoredata: ProjectObjectManage {
     
     func setObject(with object: ProjectObject) throws {
         createEntity(with: object)
-        do {
-            try context.save()
-        } catch {
-            print("error: \(error)")
-        }
+        try context.save()
     }
     
     func getDTO(with userId: String) throws -> [CardDTO] {
@@ -77,19 +73,17 @@ extension ProjectServicesCoredata{
         fetchReq.fetchLimit = 1
         
         guard let entity = try fetchEntity(with: fetchReq, and: self.context) else {
-            throw CoredataError.fetchFailure(serviceName: .project)
+            throw CoredataError.fetchFailure(serviceName: .cd, dataType: .project)
         }
         return entity
     }
     
     private func getEntities(with userId: String) throws -> [ProjectEntity] {
-
+        
         let fetchReq: NSFetchRequest<Entity> = Entity.fetchRequest()
         fetchReq.predicate = NSPredicate(format: EntityPredicate.projectList.format, userId)
         return try self.context.fetch(fetchReq)
     }
-    
-    
 }
 
 //MARK: - Set
@@ -129,7 +123,7 @@ extension ProjectServicesCoredata {
               let finishedAt = entity.finished_at,
               let syncedAt = entity.synced_at
         else {
-            throw CoredataError.convertFailure(serviceName: .project)
+            throw CoredataError.convertFailure(serviceName: .cd, dataType: .project)
         }
         let todoEntities = entity.todo_relationship?.allObjects as? [TodoEntity] ?? []
         let todos = try convertTodoEntity(with: todoEntities, projectId: Int(entity.project_id), userId: userId)
@@ -157,7 +151,7 @@ extension ProjectServicesCoredata {
         let todoObjects: [TodoObject] = todos.isEmpty ? [] : try todos.map { todoEntity in
             guard let desc = todoEntity.desc,
                   let status = TodoStatus(rawValue: Int(todoEntity.status)) else {
-                throw CoredataError.convertFailure(serviceName: .project)
+                throw CoredataError.convertFailure(serviceName: .cd, dataType: .todo)
             }
             return TodoObject(
                 projectId: projectId,
@@ -205,27 +199,22 @@ struct ProjectCardDTO{
 extension ProjectServicesCoredata {
     
     private func convertToDTO(with entity: Entity) throws -> ProjectCardDTO {
-        var status: Bool?
         guard let title = entity.title,
               let type = ProjectStatus(rawValue: Int(entity.status)),
               let startedAt = entity.started_at,
               let deadline = entity.deadline
         else {
-            throw CoredataError.convertFailure(serviceName: .project)
+            throw CoredataError.convertFailure(serviceName: .cd, dataType: .project)
         }
         
-        if type == .ongoing {
-            status = false
-        } else {
-            status = true
-        }
+        let isFinished = (type != .ongoing)
         
         return ProjectCardDTO(
             projectId: Int(entity.project_id),
             title: title,
             startedAt: startedAt,
             deadline: deadline,
-            finished: status!,
+            finished: isFinished,
             registedTodo: Int(entity.total_registed_todo),
             finishedTodo: Int(entity.finished_todo)
         )
@@ -322,22 +311,3 @@ extension ProjectServicesCoredata {
     }
 }
 
-//===============================
-// MARK: - Exception
-//===============================
-enum ProjectErrorCD: LocalizedError {
-    case ProjectRetrievalByIdentifierFailed
-    case UnexpectedObjectConvertError
-    case UnexpectedDTOConvertError
-    
-    var errorDescription: String?{
-        switch self {
-        case .ProjectRetrievalByIdentifierFailed:
-            return "Coredata: Unable to retrieve 'Project' data using the provided identifier."
-        case .UnexpectedObjectConvertError:
-            return "Coredata: There was an unexpected error while Convert 'Project' Entity to Object"
-        case .UnexpectedDTOConvertError:
-            return "Coredata: There was an unexpected error while Convert 'Project' Entity to DTO"
-        }
-    }
-}

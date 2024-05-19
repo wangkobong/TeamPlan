@@ -28,55 +28,71 @@ final class AuthenticationViewModel: ObservableObject {
         case loginApple
     }
     
+    // MARK: - properties
     
-    // MARK: - published properties
+    // published
     @Published var signupUser: AuthSocialLoginResDTO?
     @Published var nonce: String?
 
-    
-    // MARK: - private properties
+    // private
     private let keychain = KeychainSwift()
     private let signupService = SignupService()
+    private let loginService = LoginService()
     private lazy var loginLoadingService = LoginLoadingService()
     
-    private let loginService = LoginService(
-        authGoogleService: AuthGoogleService(),
-        authAppleService: AuthAppleService()
-    )
     
-    
-    // MARK: - Login & Signup
+    // MARK: - Login
     func tryLogin() async -> Bool {
-        if let loginUser = self.signupUser {
-            do {
-                let user = try await self.loginLoadingService.executor(with: loginUser)
-                let userDefaultManager = UserDefaultManager.loadWith(key: "user")
-                userDefaultManager?.userName = user.nickName
-                userDefaultManager?.identifier = user.userId
-                return true
-            } catch {
-                print("Login error: \(error.localizedDescription)")
-                return false
-            }
+        // check: user data
+        guard let loginUser = self.signupUser else { return false }
+    
+        do {
+            // process: execute login process
+            let user = try await self.loginLoadingService.executor(with: loginUser)
+            
+            // get: UserDefault
+            getUserDefault(with: user.userId, and: user.nickName)
+            return true
+            
+            // TODO: Need Custom Error
+        } catch {
+            print("[AuthenticationViewModel] Failed to set UserDefault : \(error.localizedDescription)")
+            return false
         }
-        
-        return false
     }
     
+    //MARK: - Signup
     func trySignup(userName: String) async throws -> UserInfoDTO {
-        
+        // check: user data
         guard let signupUser = self.signupUser else { throw SignupError.invalidUser }
+        
+        // struct: add user nickName to signup data
         var finalUserInfo = try self.signupService.getAccountInfo(newUser: signupUser)
         finalUserInfo.updateNickName(with: userName)
         
+        // set: new user data at Local & Server
         let signupService = SignupLoadingService(newUser: finalUserInfo)
         let signedUser = try await signupService.executor()
         
-        let userDefaultManager = UserDefaultManager.loadWith(key: "user")
-        userDefaultManager?.userName = signedUser.nickName
-        userDefaultManager?.identifier = signedUser.userId
-        
+        // set: UserDefault
+        setUserDefault(with: signedUser.userId, and: signedUser.nickName)
+     
         return signedUser
+    }
+    
+    // support
+    private func getUserDefault(with userId: String, and name: String) {
+        let userDefault = UserDefaultManager.loadWith(key: UserDefaultKey.user.rawValue) ??         UserDefaultManager.createWith(key: UserDefaultKey.user.rawValue)
+        userDefault.identifier = userId
+        userDefault.userName = name
+        userDefault.save()
+    }
+    
+    private func setUserDefault(with userId: String, and name: String) {
+        let userDefault = UserDefaultManager.createWith(key: UserDefaultKey.user.rawValue)
+        userDefault.identifier = userId
+        userDefault.userName = name
+        userDefault.save()
     }
 }
 
@@ -107,9 +123,10 @@ extension AuthenticationViewModel {
     private func registKeyChain(with dto: AuthSocialLoginResDTO) throws {
         self.signupUser = dto
         let idToken = dto.idToken
+        let accessToken = dto.accessToken
 
-        self.keychain.set(idToken, forKey: "idToken")
-        self.keychain.set(dto.accessToken, forKey: "accessToken")
+        self.keychain.set(idToken, forKey: KeyChainArgs.id.rawValue)
+        self.keychain.set(accessToken, forKey: KeyChainArgs.access.rawValue)
     }
 }
 

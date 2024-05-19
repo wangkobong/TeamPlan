@@ -86,7 +86,7 @@ extension UserServicesCoredata{
     private func getEntity(with userId: String) throws -> Entity {
         let request = getFetchRequest(with: userId)
         guard let entity = try fetchEntity(with: request, and: self.context) else {
-            throw CoredataError.fetchFailure(serviceName: .user)
+            throw CoredataError.fetchFailure(serviceName: .cd, dataType: .user)
         }
         return entity
     }
@@ -103,7 +103,7 @@ extension UserServicesCoredata{
               let changedAt = entity.changed_at,
               let syncedAt = entity.synced_at
         else {
-            throw CoredataError.convertFailure(serviceName: .user)
+            throw CoredataError.convertFailure(serviceName: .cd, dataType: .user)
         }
         return UserObject(
             userId: userId,

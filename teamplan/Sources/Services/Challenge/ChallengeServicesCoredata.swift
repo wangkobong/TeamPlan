@@ -19,6 +19,9 @@ final class ChallengeServicesCoredata: ChallengeObjectManage {
         self.context = coredataController.context
     }
     
+    //MARK: Function
+    
+    // Set
     func setObject(with object: Object) async throws {
         try await self.context.perform {
             self.createEntity(with: object)
@@ -26,6 +29,7 @@ final class ChallengeServicesCoredata: ChallengeObjectManage {
         }
     }
     
+    // Get
     func getObject(with challengeId: Int, and userId: String) async throws -> Object {
         try await self.context.perform {
             let entity = try self.getSingleEntity(with: challengeId, onwer: userId)
@@ -45,6 +49,7 @@ final class ChallengeServicesCoredata: ChallengeObjectManage {
         return try entities.compactMap{ try self.convertToObject(with: $0) }
     }
     
+    // Delete
     func deleteObject(with userId: String) throws {
         let entities = try self.getFullEntity(owner: userId)
         for entity in entities {
@@ -53,6 +58,7 @@ final class ChallengeServicesCoredata: ChallengeObjectManage {
         try self.context.save()
     }
     
+    // Update
     func updateObject(with dto: DTO) throws {
         let entity = try getSingleEntity(with: dto.challengeId, onwer: dto.userId)
         if checkUpdate(from: entity, to: dto) {
@@ -60,6 +66,15 @@ final class ChallengeServicesCoredata: ChallengeObjectManage {
         }
     }
     
+    // Support
+    // : count complete challenges
+    func getCompleteObjects(with userId: String) async throws -> Int {
+        try await self.context.perform {
+            return try self.getEntityCount(owner: userId)
+        }
+    }
+    
+    // : count every challenges
     func isObjectExist(with userId: String) -> Bool {
         let request = getFullFetchRequest(with: userId)
         do {
@@ -112,7 +127,7 @@ extension ChallengeServicesCoredata{
     private func getSingleEntity(with challengeId: Int, onwer userId: String) throws -> Entity {
         let request = getSingleFetchRequest(with: challengeId, onwer: userId)
         guard let entity = try context.fetch(request).first else {
-            throw CoredataError.fetchFailure(serviceName: .challenge)
+            throw CoredataError.fetchFailure(serviceName: .cd, dataType: .challenge)
         }
         return entity
     }
@@ -130,6 +145,13 @@ extension ChallengeServicesCoredata{
         return try context.fetch(request)
     }
     
+    // entity count
+    private func getEntityCount(owner userId: String) throws -> Int {
+        let fetchRequest: NSFetchRequest<Entity> = Entity.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: EntityPredicate.completeChallenge.format, userId, NSNumber(booleanLiteral: true))
+        return try context.count(for: fetchRequest)
+    }
+    
     
     private func convertToObject(with entity: Entity) throws -> Object {
         guard let userId = entity.user_id,
@@ -140,7 +162,7 @@ extension ChallengeServicesCoredata{
               let unselectedAt = entity.unselected_at,
               let finishedAt = entity.finished_at 
         else {
-            throw CoredataError.convertFailure(serviceName: .challenge)
+            throw CoredataError.convertFailure(serviceName: .cd, dataType: .challenge)
         }
         return ChallengeObject(
             challengeId: Int(entity.challenge_id),

@@ -16,27 +16,31 @@ import AuthenticationServices
 final class AuthAppleService {
     
     func login(loginResult: ASAuthorization, nonce: String) async throws -> AuthSocialLoginResDTO {
-        
-        // Authentication
-        let idToken = try extractIdTokenString(loginResult: loginResult)
-        let authResult = try await registFirebaseAuth(idToken: idToken, nonce: nonce)
+        do {
+            // Authentication
+            let idToken = try extractIdTokenString(loginResult: loginResult)
+            let authResult = try await registFirebaseAuth(idToken: idToken, nonce: nonce)
 
-        // Extract Additional Information
-        return AuthSocialLoginResDTO(
-            identifier: authResult.identifier,
-            email: authResult.email,
-            provider: .apple,
-            idToken: idToken,
-            accessToken: idToken,
-            status: authResult.status
-        )
+            // Extract Additional Information
+            return AuthSocialLoginResDTO(
+                identifier: authResult.identifier,
+                email: authResult.email,
+                provider: .apple,
+                idToken: idToken,
+                accessToken: idToken,
+                status: authResult.status
+            )
+        } catch {
+            print("[AppleLogin] Failed to SignIn with AppleSocialLogin: \(error.localizedDescription)")
+            throw error
+        }
     }
     
     private func extractIdTokenString(loginResult: ASAuthorization) throws -> String {
         guard let appleIdCredential = loginResult.credential as? ASAuthorizationAppleIDCredential,
               let appleIdToken = appleIdCredential.identityToken,
               let appleIdTokenString = String(data: appleIdToken, encoding: .utf8) else {
-            throw AppleSocialLoginError.tokenCreationFailed(serviceName: .appleLogin)
+            throw AppleSocialLoginError.tokenExtractionFalied(serviceName: .apple)
         }
         return appleIdTokenString
     }
@@ -49,20 +53,24 @@ final class AuthAppleService {
             rawNonce: nonce
         )
         do {
+            // FirebaseAuth Process
             let authResult = try await Auth.auth().signIn(with: credential)
             guard let loginInfo = authResult.additionalUserInfo,
                   let userEmail = authResult.user.email else {
-                throw AppleSocialLoginError.signInFailed(serviceName: .appleLogin)
+                throw AppleSocialLoginError.invalidFirebaseAuthUserInfo(serviceName: .apple)
             }
+            // Result
             let identifier = authResult.user.uid
             return FirebaseAuthRegistResultDTO(
                 identifier: identifier,
                 email: userEmail,
                 status: loginInfo.isNewUser ? .new : .exist
             )
+            // Excpetion Handling
         } catch {
-            print("Firebase Auth sign-in error: \(error.localizedDescription)")
-            throw error
+            throw AppleSocialLoginError.firebaseAuthRegistrationFailed(
+                serviceName: .apple, firebaseError: error.localizedDescription
+            )
         }
     }
 }

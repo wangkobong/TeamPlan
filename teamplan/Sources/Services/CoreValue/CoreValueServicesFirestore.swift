@@ -15,7 +15,7 @@ final class CoreValueServicesFirestore: BasicDocsManage {
     
     func getDocs(with userId: String) async throws -> CoreValueObject {
         guard let data = try await fetchDocument(with: .coreValue).data() else {
-            throw FirestoreError.fetchFailure(serviceName: .coreValue)
+            throw FirestoreError.fetchFailure(serviceName: .fs, dataType: .coreValue)
         }
         return try convertToObject(with: userId, and: data)
     }
@@ -29,7 +29,7 @@ extension CoreValueServicesFirestore {
               let dropRation = data["drop_ratio"] as? Float,
               let syncCycle = data["sync_cycle"] as? Int
         else {
-            throw FirestoreError.convertFailure(serviceName: .coreValue)
+            throw FirestoreError.convertFailure(serviceName: .fs, dataType: .coreValue)
         }
         return CoreValueObject(
             userId: userId,

@@ -10,22 +10,6 @@ import Foundation
 
 final class Utilities {
     
-    // MARK: Extract Identifier
-    func getIdentifier(from authRes: AuthSocialLoginResDTO) throws -> String {
-        
-        let accountName = try getAccountName(from: authRes.email ?? "")
-        return "\(accountName)_\(authRes.provider.rawValue)"
-    }
-    // Account Name
-    private func getAccountName(from userEmail: String) throws -> String {
-        
-        guard let atIndex = userEmail.firstIndex(of: "@"), atIndex != userEmail.startIndex else {
-            throw UtilError.InvalidEmailFormat
-        }
-        return (String(userEmail.prefix(upTo: atIndex)))
-    }
-
-    
     // MARK: Time Calculator
     // Compare
     func compareTime(currentTime: Date, lastTime: Date) -> Bool {

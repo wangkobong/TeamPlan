@@ -90,7 +90,7 @@ extension StatisticsServicesCoredata {
     private func getEntity(with userId: String) throws -> Entity {
         let request = getFetchRequest(with: userId)
         guard let entity = try fetchEntity(with: request, and: self.context) else {
-            throw CoredataError.fetchFailure(serviceName: .stat)
+            throw CoredataError.fetchFailure(serviceName: .cd, dataType: .stat)
         }
         return entity
     }
@@ -100,7 +100,7 @@ extension StatisticsServicesCoredata {
               let challengeStepStatusString = entity.challenge_step_status,
               let myChallengesString = entity.mychallenges 
         else {
-            throw CoredataError.convertFailure(serviceName: .stat)
+            throw CoredataError.convertFailure(serviceName: .cd, dataType: .stat)
         }
         let challengeStepStatus = try Utilities().convertFromJSON(jsonString: challengeStepStatusString, type: [Int: Int].self)
         let myChallenges = try Utilities().convertFromJSON(jsonString: myChallengesString, type: [Int].self)

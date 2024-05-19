@@ -15,6 +15,11 @@ struct TeamPlanApp: App {
     @StateObject var authViewModel = AuthenticationViewModel()
     @StateObject var termsViewModel = TermsViewModel()
   
+    // App Initialization
+    init(){
+        FirebaseApp.configure()
+    }
+    
     // MARK: Main
     
     var body: some Scene {
@@ -22,20 +27,11 @@ struct TeamPlanApp: App {
             IntroView()
                 .environmentObject(authViewModel)
                 .environmentObject(termsViewModel)
-                .onAppear(perform: initializeApp)
                 .onOpenURL(perform: handelOpenURL)
         }
     }
     
     // MARK: - private method
-    
-    private func initializeApp() {
-        configureFirebase()
-    }
-    
-    private func configureFirebase(){
-        FirebaseApp.configure()
-    }
 
     private func handelOpenURL(_ url: URL){
         GIDSignIn.sharedInstance.handle(url)

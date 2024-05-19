@@ -6,114 +6,178 @@
 //  Copyright © 2024 team1os. All rights reserved.
 //
 
+import Foundation
+
 protocol ServiceErrorProtocol: Error {
-    var serviceName: ServiceType { get }
-    var errorLocation: ErrorLocation { get }
-    var errorDescription: String { get }
+    var errorService: ServiceType { get }
+    var errorData: DataType { get }
+    var errorMessage: String { get }
 }
 
-enum ErrorLocation: String {
-    case coredata = "Coredata"
-    case firestore = "Firestore"
-    case google = "GoogleSocialLogin"
-    case apple = "AppleSocialLogin"
-    case signup = "Signup"
-    case login = "Login Loading"
+extension ServiceErrorProtocol {
+    var errorDescription: String {
+        "[\(errorService.rawValue)] Failed \(errorMessage)"
+    }
 }
 
 enum ServiceType: String {
-    case coreValue = "CoreValue"
-    case user = "User"
-    case stat = "Statistics"
+    // Storage
+    case cd = "Coredata"
+    case fs = "Firestore"
+    
+    // Authentication
+    case signup = "Signup"
+    case login = "Login Loading"
+    case google = "GoogleSocialLogin"
+    case apple = "AppleSocialLogin"
+    
+    // Synchronize
+    case serverToLocal = "LocalSynchronizer"
+    case localToServer = "ServerSynchronizer"
+    
+    //Service
+    case home = "Home"
     case challenge = "Challenge"
     case project = "Project"
-    case todo = "todo"
+    case mypage = "MyPage"
+}
+
+enum DataType: String {
+    case null = "Null"
+    case user = "User"
     case log = "AccessLog"
-    case googleLogin = "GoogleSocialLogin"
-    case appleLogin = "AppleSocialLogin"
-    case signup = "SignupLoading"
-    case login = "LoginLoading"
+    case stat = "Statistics"
+    case coreValue = "CoreValue"
+    case challenge = "Challenge"
+    case todo = "todo"
+    case project = "Project"
 }
 
 // MARK: - Coredata
 enum CoredataError: ServiceErrorProtocol {
-    case fetchFailure(serviceName: ServiceType)
-    case convertFailure(serviceName: ServiceType)
+    case fetchFailure(serviceName: ServiceType, dataType: DataType)
+    case convertFailure(serviceName: ServiceType, dataType: DataType)
+    case searchFailure(serviceName: ServiceType, dataType: DataType)
     
-    var serviceName: ServiceType {
+    var errorService: ServiceType {
+            switch self {
+            case .fetchFailure(let service, _), 
+                    .convertFailure(let service, _),
+                    .searchFailure(serviceName: let service, _):
+                return service
+            }
+        }
+        
+    var errorData: DataType {
         switch self {
-        case .fetchFailure(let serviceName), .convertFailure(let serviceName):
-            return serviceName
+        case .fetchFailure(_, let data), 
+                .convertFailure(_, let data),
+                .searchFailure(_, let data):
+            return data
         }
     }
     
-    var errorLocation: ErrorLocation {
-        return .coredata
-    }
-    
-    var errorDescription: String {
-        return getErrorDescription(for: self)
+    var errorMessage: String {
+        switch self {
+        case .fetchFailure:
+            return "to fetch '\(errorData.rawValue)' entity from Coredata."
+        case .convertFailure:
+            return "to convert '\(errorData.rawValue)' entity to object."
+        case .searchFailure:
+            return "to search '\(errorData.rawValue)' entity at Coredata"
+        }
     }
 }
 
 // MARK: - Firestore
 enum FirestoreError: ServiceErrorProtocol {
-    case fetchFailure(serviceName: ServiceType)
-    case convertFailure(serviceName: ServiceType)
+    case fetchFailure(serviceName: ServiceType, dataType: DataType)
+    case convertFailure(serviceName: ServiceType, dataType: DataType)
     
-    var serviceName: ServiceType {
+    var errorService: ServiceType {
+            switch self {
+            case .fetchFailure(let service, _), .convertFailure(let service, _):
+                return service
+            }
+        }
+        
+    var errorData: DataType {
         switch self {
-        case .fetchFailure(let serviceName), .convertFailure(let serviceName):
-            return serviceName
+        case .fetchFailure(_, let data), .convertFailure(_, let data):
+            return data
         }
     }
     
-    var errorLocation: ErrorLocation {
-        return .firestore
-    }
-    
-    var errorDescription: String {
-        return getErrorDescription(for: self)
+    var errorMessage: String {
+        switch self {
+        case .fetchFailure:
+            return "to fetch '\(errorData.rawValue)' entity from Firestore."
+        case .convertFailure:
+            return "to convert '\(errorData.rawValue)' entity to object."
+        }
     }
 }
 
-// MARK: - Apple Social Login
+// MARK: - Apple Login
 enum AppleSocialLoginError: ServiceErrorProtocol {
-    case invalidCredentials(serviceName: ServiceType)
-    case tokenCreationFailed(serviceName: ServiceType)
-    case signInFailed(serviceName: ServiceType)
+    case tokenExtractionFalied(serviceName: ServiceType)
+    case invalidFirebaseAuthUserInfo(serviceName: ServiceType)
+    case firebaseAuthRegistrationFailed(serviceName: ServiceType, firebaseError: String)
     
-    var serviceName: ServiceType {
+    var errorService: ServiceType {
         switch self {
-        case .invalidCredentials(let serviceName), .tokenCreationFailed(let serviceName), .signInFailed(let serviceName):
+        case .tokenExtractionFalied(let serviceName), .invalidFirebaseAuthUserInfo(let serviceName), .firebaseAuthRegistrationFailed(let serviceName, _):
             return serviceName
         }
     }
     
-    var errorLocation: ErrorLocation {
-        return .apple
+    var errorData: DataType {
+        return .null
     }
     
-    var errorDescription: String {
-        return getErrorDescription(for: self)
+    var errorMessage: String {
+        switch self {
+        case .tokenExtractionFalied:
+            return "to extract TokenData from Apple Credential"
+        case .invalidFirebaseAuthUserInfo:
+            return "to get valid UserData from FirebaseAuth"
+        case .firebaseAuthRegistrationFailed(_, let error):
+            return "to regist UserData at FirebaseAuth: \(error)"
+        }
     }
 }
 
-// MARK: - Google Social Login
+// MARK: - Google Login
 enum GoogleSocialLoginError: ServiceErrorProtocol {
-    case topViewControllerSearchFailure(serviceName: ServiceType)
+    case topViewControllerSearchFailed(serviceName: ServiceType)
+    case tokenExtractionFalied(serviceName: ServiceType)
+    case invalidFirebaseAuthUserInfo(serviceName: ServiceType)
+    case firebaseAuthRegistrationFailed(serviceName: ServiceType, firebaseError: String)
     
-    var serviceName: ServiceType {
+    var errorService: ServiceType {
         switch self {
-        case .topViewControllerSearchFailure(let serviceName):
+        case .topViewControllerSearchFailed(let serviceName),
+                .tokenExtractionFalied(let serviceName),
+                .invalidFirebaseAuthUserInfo(let serviceName),
+                .firebaseAuthRegistrationFailed(let serviceName, _):
             return serviceName
         }
     }
-    var errorLocation: ErrorLocation {
-        return .google
+    
+    var errorData: DataType {
+        return .null
     }
-    var errorDescription: String {
-        return getErrorDescription(for: self)
+    var errorMessage: String {
+        switch self {
+        case .topViewControllerSearchFailed:
+            return "to search TopViewController"
+        case .tokenExtractionFalied:
+            return "to extract TokenData from GID Credential"
+        case .invalidFirebaseAuthUserInfo:
+            return "to get valid UserData from FirebaseAuth"
+        case .firebaseAuthRegistrationFailed(_, let error):
+            return "to regist UserData at FirebaseAuth: \(error)"
+        }
     }
 }
 
@@ -121,16 +185,16 @@ enum GoogleSocialLoginError: ServiceErrorProtocol {
 enum SignupLoadingError: ServiceErrorProtocol {
     case signupFailure(serviceName: ServiceType)
     
-    var serviceName: ServiceType {
+    var errorService: ServiceType {
         switch self {
         case .signupFailure(let serviceName):
             return serviceName
         }
     }
-    var errorLocation: ErrorLocation {
-        return .signup
+    var errorData: DataType {
+        return .null
     }
-    var errorDescription: String {
+    var errorMessage: String {
         return getErrorDescription(for: self)
     }
 }
@@ -141,7 +205,7 @@ enum LoginLoadingError: ServiceErrorProtocol {
     case syncServerWithLocalFailure(serviceName: ServiceType)
     case getAccessLogFailure(serviceName: ServiceType)
     
-    var serviceName: ServiceType {
+    var errorService: ServiceType {
         switch self {
         case .syncLocalWithServerFailure(let serviceName):
             return serviceName
@@ -151,51 +215,18 @@ enum LoginLoadingError: ServiceErrorProtocol {
             return serviceName
         }
     }
-    var errorLocation: ErrorLocation {
-        return .signup
+    var errorData: DataType {
+        return .null
     }
-    var errorDescription: String {
+    var errorMessage: String {
         return getErrorDescription(for: self)
     }
 }
 
 // MARK: - Description
 func getErrorDescription(for error: ServiceErrorProtocol) -> String {
-    let baseMessage = "[\(error.errorLocation.rawValue)] Failed "
+    let baseMessage = "[\(error.errorData.rawValue)] Failed "
     switch error {
-        
-    case let error as CoredataError:
-        switch error {
-        case .fetchFailure(let serviceName):
-            return baseMessage + "to fetch '\(serviceName.rawValue)' entity."
-        case .convertFailure(let serviceName):
-            return baseMessage + "to convert '\(serviceName.rawValue)' entity to object."
-        }
-        
-    case let error as FirestoreError:
-        switch error {
-        case .fetchFailure(let serviceName):
-            return baseMessage + "to fetch '\(serviceName.rawValue)' document."
-        case .convertFailure(let serviceName):
-            return baseMessage + "to convert '\(serviceName.rawValue)' document to object."
-        }
-        
-    case let error as AppleSocialLoginError:
-        switch error {
-        case .invalidCredentials(let serviceName):
-            return baseMessage + "to get valid credentials"
-        case .tokenCreationFailed(let serviceName):
-            return baseMessage + "to create AuthToken"
-        case .signInFailed(let serviceName):
-            return baseMessage + "to apple social login"
-        }
-        
-    case let error as GoogleSocialLoginError:
-        switch error {
-        case .topViewControllerSearchFailure(let serviceName):
-            return baseMessage + "to search 'topViewController' at '\(serviceName.rawValue)'"
-        }
-        
     case let error as SignupLoadingError:
         switch error {
         case .signupFailure(let serviceName):

@@ -23,21 +23,15 @@ final class AccessLogServicesCoredata: LogObjectManage {
         try self.context.save()
     }
     
-    // Single Log
+    // Get: Single Log
     func getLatestObject(with userId: String) throws -> Object {
         let entity = try getLatestEntity(with: userId)
         return try convertToObject(with: entity)
     }
     
-    // Full Log
+    // Get: Full Log
     func getFullObjects(with userId: String) throws -> [Object] {
         let entities = try getFullEntity(with: userId)
-        return try convertToObjects(with: entities)
-    }
-    
-    // SyncedAt ~ Recent Log
-    func getPartialObjects(with userId: String, and syncedAt: Date) throws -> [Object] {
-        let entities = try getPartialEntity(with: userId, at: syncedAt)
         return try convertToObjects(with: entities)
     }
     
@@ -84,7 +78,7 @@ extension AccessLogServicesCoredata{
         request.fetchLimit = 1
         
         guard let entity = try self.context.fetch(request).first else {
-            throw CoredataError.fetchFailure(serviceName: .log)
+            throw CoredataError.fetchFailure(serviceName: .cd, dataType: .log)
         }
         return entity
     }
@@ -95,27 +89,12 @@ extension AccessLogServicesCoredata{
     }
     
     
-    // Partial entity
-    private func getPartialFetchRequest(with userId: String, at syncedAt: Date) -> NSFetchRequest<Entity> {
-        let fetchRequest: NSFetchRequest<Entity> = Entity.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: EntityPredicate.targetLog.format, userId, syncedAt as NSDate)
-        fetchRequest.sortDescriptors = [NSSortDescriptor(key: EntitySortBy.date.rawValue, ascending: false)]
-        
-        return fetchRequest
-    }
-
-    private func getPartialEntity(with userId: String, at syncedAt: Date) throws -> [Entity] {
-        let request = getPartialFetchRequest(with: userId, at: syncedAt)
-        return try self.context.fetch(request)
-    }
-    
-    
     // Converter
     private func convertToObject(with entity: Entity) throws -> Object {
         guard let userId = entity.user_id,
               let accessRecord = entity.access_record
         else {
-            throw CoredataError.convertFailure(serviceName: .log)
+            throw CoredataError.convertFailure(serviceName: .cd, dataType: .log)
         }
         return AccessLog(userId: userId, accessDate: accessRecord)
     }

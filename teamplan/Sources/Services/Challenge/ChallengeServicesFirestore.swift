@@ -14,6 +14,8 @@ final class ChallengeServicesFirestore: ChallengeDocsManage {
     typealias infoDTO = ChallengeInfoDTO
     typealias statusDTO = ChallengeStatusDTO
     
+    //MARK: Function
+    
     func setDocs(with objects: [Object], and userId: String) async throws {
         let batch = getFirestoreInstance().batch()
         let collectionRef = fetchCollection(with:.challengeStatus)
@@ -119,7 +121,7 @@ extension ChallengeServicesFirestore {
               let stringFinishedAt = data["finished_at"] as? String,
               let finishedAt = DateFormatter.standardFormatter.date(from: stringFinishedAt)
         else {
-            throw FirestoreError.convertFailure(serviceName: .challenge)
+            throw FirestoreError.convertFailure(serviceName: .fs, dataType: .challenge)
         }
         return statusDTO (
             challengeId: challengeId,
@@ -145,7 +147,7 @@ extension ChallengeServicesFirestore {
               let reward = data["chlg_reward"] as? Int,
               let step = data["chlg_step"] as? Int
         else {
-            throw FirestoreError.convertFailure(serviceName: .challenge)
+            throw FirestoreError.convertFailure(serviceName: .fs, dataType: .challenge)
         }
         return infoDTO (
             challengeId: challengeId,

@@ -24,10 +24,10 @@ final class SyncServerWithLocal {
     private let accessLogFS = AccessLogServicesFirestore()
     private let projectFS = ProjectServicesFirestore()
     
-    private let instance = Firestore.firestore()
     private var userId: String
     private var logHead: Int
     private var previousSyncedAt: Date
+    private var updatedProject = Set<Int>()
     
     init(with userId: String) {
         self.userId = userId
@@ -37,8 +37,9 @@ final class SyncServerWithLocal {
     
     // MARK: - Sync Executor
     func syncExecutor(with userId: String, and syncDate: Date) async throws {
+        
         self.userId = userId
-        let batch = self.instance.batch()
+        let batch = Firestore.firestore().batch()
         // User
         try await updateServerUser(with: batch)
 
@@ -62,13 +63,14 @@ final class SyncServerWithLocal {
     private func updateSyncDate(with syncDate: Date) throws {
         try applyUserSyncedAt(with: syncDate)
         try applyStatSyncedAt(with: syncDate)
+        try applyProjectSyncedAt(with: syncDate)
         try deleteLegacyAccessLog()
     }
     
     // MARK: - Delete Executor
     func deleteExecutor(with userId: String) async throws {
         self.userId = userId
-        let batch = self.instance.batch()
+        let batch = Firestore.firestore().batch()
         
         // User
         try deleteUserAtLocal()
@@ -111,8 +113,8 @@ extension SyncServerWithLocal{
     }
     
     // Access Log
-    private func getAccessLogFromLocal(with syncedAt: Date) throws -> [AccessLog] {
-        return try accessLogCD.getPartialObjects(with: userId, and: syncedAt)
+    private func getAccessLogFromLocal() throws -> [AccessLog] {
+        return try accessLogCD.getFullObjects(with: userId)
     }
     
     // Challenge
@@ -161,30 +163,26 @@ extension SyncServerWithLocal{
     private func updateServerProject(with batch: WriteBatch) async throws {
         let projectList = try getProjectFromLocal()
         for project in projectList {
+            
             // prepare data & reference
             let projectRef = try await projectFS.fetchSingleDocsReference(userId, project.projectId, .project)
             let projectData = projectFS.convertToData(with: project)
             
-            // New Registed At Firestore
+            // set batch process
             if project.registedAt == project.syncedAt {
                 batch.setData(projectData, forDocument: projectRef)
             } else {
                 batch.updateData(projectData, forDocument: projectRef)
             }
             
-            // delete local project excpet ongoing or completable project
-            if shouldDeleteProjectAtLocal(with: project.status) {
-                try projectCD.deleteObject(with: userId, and: project.projectId)
-            }
+            // add updated projectId
+            self.updatedProject.insert(project.projectId)
         }
-    }
-    private func shouldDeleteProjectAtLocal(with status: ProjectStatus) -> Bool {
-        return status != .ongoing || status != .completable
     }
     
     // Access Log
     private func updateServerAccesslog(with batch: WriteBatch, at syncedAt: Date) async throws {
-        let accessLog = try getAccessLogFromLocal(with: syncedAt)
+        let accessLog = try getAccessLogFromLocal()
         for log in accessLog {
             let accessLogRef = accessLogFS.fetchCollectionReference(with: userId, and: self.logHead).document()
             let accessLogData = accessLogFS.convertToData(with: log)
@@ -207,6 +205,14 @@ extension SyncServerWithLocal{
     private func applyStatSyncedAt(with syncDate: Date) throws {
         let updated = StatUpdateDTO(userId: userId, newSyncedAt: syncDate)
         try statCD.updateObject(with: updated)
+    }
+    
+    // Project
+    private func applyProjectSyncedAt(with syncDate: Date) throws {
+        for projectId in updatedProject {
+            let updated = ProjectUpdateDTO(projectId: projectId, userId: userId, newSyncedAt: syncDate)
+            try projectCD.updateObject(with: updated)
+        }
     }
     
     // log

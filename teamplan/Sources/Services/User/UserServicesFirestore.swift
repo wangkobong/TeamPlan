@@ -21,7 +21,7 @@ final class UserServicesFirestore: SingleDocsManage {
     
     func getDocs(with userId: String) async throws -> UserObject {
         guard let data = try await fetchDocsSnapshot(with: userId, and: .user).data() else {
-            throw FirestoreError.fetchFailure(serviceName: .user)
+            throw FirestoreError.fetchFailure(serviceName: .fs, dataType: .user)
         }
         return try convertToObject(with: data)
     }
@@ -69,7 +69,7 @@ extension UserServicesFirestore{
               let stringSyncedAt = data["synced_at"] as? String,
               let syncedAt = DateFormatter.standardFormatter.date(from: stringSyncedAt)
         else {
-            throw FirestoreError.convertFailure(serviceName: .user)
+            throw FirestoreError.convertFailure(serviceName: .fs, dataType: .user)
         }
         return UserObject(
             userId: userId,
