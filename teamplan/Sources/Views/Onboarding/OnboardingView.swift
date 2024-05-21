@@ -8,16 +8,15 @@
 import SwiftUI
 
 struct OnboardingStep {
-    let title: String
-    let description: String
-    let imageName: String
+    let descriptionImageName: String
+    let exampleImageName: String
 }
 
 private let onBoardingSteps = [
-    OnboardingStep(title: "안녕하세요", description: "대학생부터 직장인까지! \n프로젝트 관리 서비스 TEAMPLAN이에요", imageName: "onboarding_1"),
-    OnboardingStep(title: "편하게", description: "언제 어디서든 \n팀원들의 진행률을 확인해요", imageName: "onboarding_2"),
-    OnboardingStep(title: "한눈에", description: "공유캘린더를 통해서 \n팀,개인의 일정을 한눈에 확인해요", imageName: "onboarding_3"),
-    OnboardingStep(title: "성장하는", description: "상호간의 간단한 피드백을 통해 \n프로젝트를 마무리하며 \n개인의 능력을 성장시켜요", imageName: "onboarding_4"),
+    OnboardingStep(descriptionImageName: "onboarding_description1", exampleImageName: "onboarding_image1"),
+    OnboardingStep(descriptionImageName: "onboarding_description2", exampleImageName: "onboarding_image2"),
+    OnboardingStep(descriptionImageName: "onboarding_description3", exampleImageName: "onboarding_image3"),
+    OnboardingStep(descriptionImageName: "onboarding_description4", exampleImageName: "onboarding_image4"),
 ]
 
 struct OnboardingView: View {
@@ -35,31 +34,28 @@ struct OnboardingView: View {
     
     var body: some View {
         VStack {
-            skipButton
-                .frame(height: 20)
+            Spacer()
+                .frame(height: 40)
             TabView(selection: $onboardingState) {
                 ForEach(0..<onBoardingSteps.count, id: \.self) { index in
                     VStack {
-                        Text(onBoardingSteps[index].title)
-                            .font(.appleSDGothicNeo(.bold, size: 30))
-                            .foregroundColor(.theme.mainPurpleColor)
-                            .padding(.bottom)
+                        Image(onBoardingSteps[index].descriptionImageName)
+                            .frame(height: 90)
                         
-                        Text(onBoardingSteps[index].description)
-                            .font(.appleSDGothicNeo(.semiBold, size: 20))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 34)
-                            .lineLimit(index == 3 ? 3 : 2)
+                        Spacer()
+                            .frame(height: 73)
                         
-                        Image(onBoardingSteps[index].imageName)
-                            .frame(height: 337)
+                        Image(onBoardingSteps[index].exampleImageName)
+                            .frame(height: 390)
                     }
                     .tag(index)
                 }
             }
             .tabViewStyle(PageTabViewStyle())
+            Spacer()
             pageControl
             Spacer()
+
             bottomButton
 
         } //: VSTACK
@@ -76,41 +72,80 @@ struct OnboardingView_Previews: PreviewProvider {
 extension OnboardingView {
     
    private var bottomButton: some View {
-       Button {
-           isOnboarding = false
-           isPressedButton = true
-       } label: {
-           Text(onboardingState == 3 ? "TEAMPLAN 시작하기" : "시작하기")
-               .font(.appleSDGothicNeo(.bold, size: 20))
-               .foregroundColor(.theme.whiteGreyColor)
-               .frame(height: 48)
-               .frame(maxWidth: .infinity)
-               .background(onboardingState == 3 ? SwiftUI.Color.theme.mainPurpleColor : .white)
-               .cornerRadius(10)
-               .background(
-                   RoundedRectangle(cornerRadius: 10)
-                       .stroke(SwiftUI.Color.theme.whiteGreyColor, lineWidth: onboardingState == 3 ? 0 : 1)
-               )
-               .padding(.horizontal)
-               .shadow(radius: onboardingState == 3 ? 0 : 2)
+       VStack {
+           LinearGradient(colors: [.white, Color(.sRGB, white: 0.85, opacity: 1)], startPoint: .top, endPoint: .bottom)
+                .frame(height: 7)
+                .opacity(0.6)
+           
+           Spacer()
+               .frame(height: 13)
+           
+           HStack {
+               if onboardingState == 0 {
+                   Text("다음")
+                       .font(.appleSDGothicNeo(.medium, size: 20))
+                       .foregroundColor(.theme.whiteColor)
+                       .frame(height: 48)
+                       .frame(maxWidth: .infinity)
+                       .background(SwiftUI.Color.theme.mainPurpleColor)
+                       .cornerRadius(24)
+                       .padding(.horizontal, 15)
+                       .onTapGesture {
+                           withAnimation(.spring()) {
+                               onboardingState += 1
+                           }
+                       }
+               } else {
+                   Text("이전")
+                       .font(.appleSDGothicNeo(.medium, size: 20))
+                       .foregroundColor(.theme.mainPurpleColor)
+                       .frame(height: 48)
+                       .frame(maxWidth: .infinity)
+                       .background(.white)
+                       .cornerRadius(24)
+                       .background(
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(SwiftUI.Color.theme.mainPurpleColor, lineWidth: 1)
+                       )
+                       .padding(.leading, 15)
+                       .onTapGesture {
+                           withAnimation(.spring()) {
+                               onboardingState -= 1
+                           }
+                       }
+                   
+                   Spacer()
+                       .frame(width: 10)
+                   
+                   Text("다음")
+                       .font(.appleSDGothicNeo(.medium, size: 20))
+                       .foregroundColor(.theme.whiteColor)
+                       .frame(height: 48)
+                       .frame(maxWidth: .infinity)
+                       .background(SwiftUI.Color.theme.mainPurpleColor)
+                       .cornerRadius(24)
+                       .padding(.trailing, 15)
+                       .onTapGesture {
+                           if onboardingState == 3 {
+                               isOnboarding = false
+                               isPressedButton = true
+                           } else {
+                               withAnimation(.spring()) {
+                                   onboardingState += 1
+                               }
+                           }
+                       }
+               }
+           }
        }
-       .disabled(onboardingState == 3 ? false : true)
-
    }
    
    private var pageControl: some View {
        HStack(spacing: 12) {
            ForEach(0..<onBoardingSteps.count, id: \.self) { index in
-               if index == onboardingState {
-                   Rectangle()
-                       .frame(width: 32, height: 10)
-                       .cornerRadius(10)
-                       .foregroundColor(.theme.mainBlueColor)
-               } else {
-                   Circle()
-                       .frame(width: 12, height: 12)
-                       .foregroundColor(.init(hex: "D9D9D9"))
-               }
+               Circle()
+                   .frame(width: 8, height: 8)
+                   .foregroundColor(index == onboardingState ? .init(hex: "D9D9D9") : .theme.mainBlueColor)
            }
        }
        .padding(.bottom, 24)
