@@ -10,76 +10,152 @@ import Foundation
 
 final class HomeService {
     
-    private let userCD = UserServicesCoredata()
-    private let projectCD = ProjectServicesCoredata()
+    //MARK: Properties
+    // private
     private let userId: String
-    let challenge: ChallengeService
+    private let userCD: UserServicesCoredata
+    private let statCD: StatisticsServicesCoredata
+    private let projectCD: ProjectServicesCoredata
     
-    //===============================
+    // public
+    let challengeSC: ChallengeService
+    var dto: HomeDataDTO = HomeDataDTO()
+    
     // MARK: - Initializer
-    //===============================
-    /// 사용자 ID를 기반으로 `HomeService` 및 `ChallengeService` 인스턴스를 생성합니다.
-    /// - Parameter userId: 사용자 ID입니다.
-    init(with userId: String){
-        self.userId = userId
-        self.challenge = ChallengeService(with: userId)
-    }
+    init(with userId: String) {
+            self.userId = userId
+            self.userCD = UserServicesCoredata()
+            self.statCD = StatisticsServicesCoredata()
+            self.projectCD = ProjectServicesCoredata()
+            self.challengeSC = ChallengeService(with: userId)
+        }
     
-    /// `HomeService`에서 사용되는 `ChallengeService` 인스턴스의 필수적인 추가 초기화 작업을 수행합니다,
-    /// - Throws: 서비스 초기화 중 예상치 못한 오류가 발생한 경우 `HomeServiceError.UnexpectedInitError`가 발생합니다.
-    func readyService() async throws {
+    // MARK: - PrepareDTO
+    func prepareService() async throws {
         do {
-            try await self.challenge.prepareService()
+            try await prepareProperties()
+            
+            async let phrase = getPhrase()
+            async let statData = getStat()
+            async let myChallenges = getMyChallenge()
+            async let challenges = getChallenge()
+            async let projeccts = getProjectDTO()
+            
+            self.dto = try await HomeDataDTO(
+                userName: self.userId,
+                phrase: phrase,
+                statData: statData,
+                challenges: challenges,
+                myChallenges: myChallenges,
+                projects: projeccts
+            )
+            
         } catch {
-            throw HomeServiceError.UnexpectedInitError
+            print("[HomeService] Failed to struct HomeDataDTO")
+            self.dto = HomeDataDTO()
         }
     }
     
-    //===============================
-    // MARK: - Generate Sentence
-    //===============================
-    // MARK: - Generate Sentence
-    /// 랜덤한 문장을 생성하여 반환합니다.
-    /// - Returns: 생성된 문장입니다.
-    /// - Throws: 문장 생성에 실패한 경우 `HomeServiceError.InternalError`가 발생합니다.
-    func getSentences() throws -> String {
+    private func prepareProperties() async throws {
+        try await challengeSC.prepareService()
+    }
+    
+    
+    // MARK: - UserData
+    // Phrase
+    private func getPhrase() async throws -> String {
         if let phrase = UserPhrase().stringAry.randomElement() {
             return phrase
         } else {
-            throw HomeServiceError.InternalError
+            print("[HomeService] Failed to get phrase")
+            return "Error"
         }
     }
     
-    //===============================
-    // MARK: - get ProjectCard
-    //===============================
-    // MARK: - Get ProjectCard
-    /// 사용자의 목표(project) 조회 후, 마감일이 가장 가까운 3개를 내림차순으로 정렬하여 반환합니다.
-    /// - Returns: `[ProjectCardDTO]` 목표(Project) 정보들 중, Card에 표현될 정보만 포함되어 있습니다.
-    /// - Throws: 조회 중 예상치 못한 오류가 발생한 경우 `HomeServiceError.UnexpectedProjectCardGetError`가 발생합니다.
-    func getProjectCard() throws -> [ProjectCardDTO] {
+    
+    // MARK: - Statistics
+    
+    private func getStat() async throws -> StatChallengeDTO {
+        do {
+            let stat = try statCD.getObject(with: userId)
+            return StatChallengeDTO(with: stat)
+        } catch {
+            print("[HomeService] Failed to get StatData: \(error.localizedDescription)")
+            return StatChallengeDTO()
+        }
+    }
+    
+    
+    // MARK: - Challenge
+    // MyChallenge
+    private func getMyChallenge() async throws -> [MyChallengeDTO] {
+        do {
+            return try challengeSC.getMyChallenges()
+        } catch {
+            print("[HomeService] Failed to get myChallenge from challengeService: \(error.localizedDescription)")
+            return []
+        }
+    }
+    
+    // Challenge
+    private func getChallenge() async throws -> [ChallengeDTO] {
+        do {
+            return try challengeSC.getChallenges()
+        } catch {
+            print("[HomeService] Failed to get TotalChallenge from challengeService: \(error.localizedDescription)")
+            return []
+        }
+    }
+    
+    
+    // MARK: - Project
+    
+    private func getProjectDTO() async throws -> [ProjectHomeDTO] {
         do {
             // Get All Projects
             let projects = try self.projectCD.getDTO(with: userId)
-            let sortedProjects = projects.sorted { $0.deadline < $1.deadline }
+            let sortedProjects = projects.sorted { $0.deadline < $1.deadline }.prefix(3).map { $0 }
             // Return top 3 projects
-            return Array(sortedProjects.prefix(upTo: 3))
+            return sortedProjects
         } catch {
-            print("(Service) Error get ProjectCard in HomeService : \(error)")
-            throw HomeServiceError.UnexpectedProjectCardGetError
+            print("[HomeService] Failed to get Project from ProjectCD: \(error.localizedDescription)")
+            return []
         }
     }
 }
 
-//===============================
-// MARK: - MyChallenge
-//===============================
-extension HomeService{
-    /// 사용자의 '나의 도전과제' 목록을 조회합니다'
-    /// - Returns: 조회된 '나의 도전과제' 정보를 '[MyChallengeDTO]' 형태로 반환합니다. 단, 사용자가 '나의 도전과제' 를 지정하지 않은경우 '[]' 가 반환됩니다.
-    /// - Throws: 챌린지 조회 중 오류가 발생한 경우 해당 오류를 던집니다.
-    func getMyChallenge() throws -> [MyChallengeDTO] {
-        try challenge.getMyChallenges()
+//MARK: DTO
+
+struct HomeDataDTO {
+    let userName: String
+    let phrase: String
+    let statData: StatChallengeDTO
+    let challenges: [ChallengeDTO]
+    let myChallenges: [MyChallengeDTO]
+    let projects: [ProjectHomeDTO]
+    
+    init(){
+        self.userName = "unknown"
+        self.phrase = "unknown"
+        self.statData = StatChallengeDTO()
+        self.challenges = []
+        self.myChallenges = []
+        self.projects = []
+    }
+    
+    init(userName: String,
+         phrase: String,
+         statData: StatChallengeDTO,
+         challenges: [ChallengeDTO],
+         myChallenges: [MyChallengeDTO],
+         projects: [ProjectHomeDTO]
+    ) {
+        self.userName = userName
+        self.phrase = phrase
+        self.statData = statData
+        self.challenges = challenges
+        self.myChallenges = myChallenges
+        self.projects = projects
     }
 }
 
@@ -91,27 +167,4 @@ struct UserPhrase {
         "역시 자네야!",
         "마감을 지킨다면 유혈사태는 일어나지 않을것입니다"
     ]
-}
-
-//===============================
-// MARK: - Exception
-//===============================
-enum HomeServiceError: LocalizedError {
-    case UnexpectedInitError
-    case UnexpectedSentenceGenerateError
-    case UnexpectedProjectCardGetError
-    case InternalError
-    
-    var errorDescription: String?{
-        switch self {
-        case .UnexpectedInitError:
-            return "Service: There was an unexpected error while Initialize 'HomeService'"
-        case .UnexpectedSentenceGenerateError:
-            return "Service: There was an unexpected error while Generate Sentence in 'HomeService'"
-        case .UnexpectedProjectCardGetError:
-            return "Service: There was an unexpected error while Get 'ProjectCard' in 'HomeService'"
-        case .InternalError:
-            return "Service: Internal Error Occurred while processing 'HomeService'"
-        }
-    }
 }

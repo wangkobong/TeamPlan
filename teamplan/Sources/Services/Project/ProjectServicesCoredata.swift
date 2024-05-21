@@ -13,7 +13,7 @@ final class ProjectServicesCoredata: ProjectObjectManage {
     typealias Entity = ProjectEntity
     typealias Object = ProjectObject
     typealias DTO = ProjectUpdateDTO
-    typealias CardDTO = ProjectCardDTO
+    typealias CardDTO = ProjectHomeDTO
     
     var context: NSManagedObjectContext
     init(coredataController: CoredataProtocol = CoredataMainController.shared) {
@@ -168,55 +168,76 @@ extension ProjectServicesCoredata {
 
 
 // MARK: - Convert to DTO
-struct ProjectCardDTO{
+struct ProjectHomeDTO {
     
     let projectId: Int
     let title: String
     let finished: Bool
     let startedAt: Date
     let deadline: Date
-    let registedTodo: Int
-    let finishedTodo: Int
+    let remainDay: Int
+    let remainTodo: Int
+    let totalTerm: Int
+    let progressedTerm: Int
     
     init(projectId: Int, 
          title: String,
          startedAt: Date,
          deadline: Date,
          finished: Bool,
-         registedTodo: Int,
-         finishedTodo: Int
+         remainDay: Int,
+         remainTodo: Int,
+         totalTerm: Int,
+         progressedTerm: Int
     ) {
         self.projectId = projectId
         self.title = title
         self.startedAt = startedAt
         self.deadline = deadline
         self.finished = finished
-        self.registedTodo = registedTodo
-        self.finishedTodo = finishedTodo
+        self.remainDay = remainDay
+        self.remainTodo = remainTodo
+        self.totalTerm = totalTerm
+        self.progressedTerm = progressedTerm
     }
 }
 
 extension ProjectServicesCoredata {
     
-    private func convertToDTO(with entity: Entity) throws -> ProjectCardDTO {
+    private func convertToDTO(with entity: Entity) throws -> ProjectHomeDTO {
         guard let title = entity.title,
               let type = ProjectStatus(rawValue: Int(entity.status)),
-              let startedAt = entity.started_at,
-              let deadline = entity.deadline
-        else {
+              let startAt = entity.started_at,
+              let deadline = entity.deadline else {
             throw CoredataError.convertFailure(serviceName: .cd, dataType: .project)
         }
-        
         let isFinished = (type != .ongoing)
+        let remainTodo = Int(entity.total_registed_todo) - Int(entity.finished_todo)
         
-        return ProjectCardDTO(
+        var remainDay: Int
+        var totalTerm: Int
+        var progressedTerm: Int
+        do {
+            remainDay = try Utilities().calculateDatePeroid(with: Date(), and: deadline)
+            totalTerm = try Utilities().calculateDatePeroid(with: startAt, and: deadline)
+            progressedTerm = try Utilities().calculateDatePeroid(with: startAt, and: Date())
+        } catch {
+            print("[ProjectRepo] Failed to calculate Day Data for Struct ProjectHomeDTO: \(error.localizedDescription)")
+            remainDay = 0
+            totalTerm = 0
+            progressedTerm = 0
+        }
+
+        return ProjectHomeDTO(
             projectId: Int(entity.project_id),
             title: title,
-            startedAt: startedAt,
+            startedAt: startAt,
             deadline: deadline,
             finished: isFinished,
-            registedTodo: Int(entity.total_registed_todo),
-            finishedTodo: Int(entity.finished_todo)
+            remainDay: remainDay,
+            remainTodo: remainTodo,
+            totalTerm: totalTerm,
+            progressedTerm: progressedTerm
         )
     }
 }
