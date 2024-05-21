@@ -42,6 +42,7 @@ final class AuthenticationViewModel: ObservableObject {
     
     
     // MARK: - Login
+    @MainActor
     func tryLogin() async -> Bool {
         // check: user data
         guard let loginUser = self.signupUser else { return false }
@@ -62,6 +63,7 @@ final class AuthenticationViewModel: ObservableObject {
     }
     
     //MARK: - Signup
+    @MainActor
     func trySignup(userName: String) async throws -> UserInfoDTO {
         // check: user data
         guard let signupUser = self.signupUser else { throw SignupError.invalidUser }

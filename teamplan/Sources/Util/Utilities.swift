@@ -20,7 +20,10 @@ final class Utilities {
     // D-Day
     func calculateDatePeroid(with start: Date, and end: Date) throws -> Int {
         
-        let calendar = Calendar.current
+        // For accurate date calculation, force timezone to UTC
+        var calendar = Calendar.current
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        
         let startDate = calendar.startOfDay(for: start)
         let endDate = calendar.startOfDay(for: end)
         
@@ -99,6 +102,12 @@ extension DateFormatter {
     static let standardFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return formatter
+    }()
+    
+    static let shortFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yy.MM.dd"
         return formatter
     }()
 }
