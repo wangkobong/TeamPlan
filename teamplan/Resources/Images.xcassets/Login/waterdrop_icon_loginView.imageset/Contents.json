@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "loginView.png",
+      "filename" : "waterdrop_icon_loginView.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "loginView@2x.png",
+      "filename" : "waterdrop_icon_loginView@2x.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "loginView@3x.png",
+      "filename" : "waterdrop_icon_loginView@3x.png",
       "idiom" : "universal",
       "scale" : "3x"
     }
