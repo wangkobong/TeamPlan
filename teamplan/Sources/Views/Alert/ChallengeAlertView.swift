@@ -20,8 +20,8 @@ public enum ChallengeAlertType {
 public struct ChallengeAlertView: View {
     
     @Binding public var isPresented: Bool
-    @Binding var allChallenge: [ChallengeObject]
-    @Binding var challenge: ChallengeObject
+    @Binding var allChallenge: [ChallengeDTO]
+    @Binding var challenge: ChallengeDTO
     
     public typealias Action = () -> ()
     
@@ -29,7 +29,7 @@ public struct ChallengeAlertView: View {
     let index: Int
     public var action: Action
 
-    public init(isPresented: Binding<Bool>, allChallenge: Binding<[ChallengeObject]>, challenge: Binding<ChallengeObject>, type: ChallengeAlertType, index: Int, action: @escaping Action) {
+    public init(isPresented: Binding<Bool>, allChallenge: Binding<[ChallengeDTO]>, challenge: Binding<ChallengeDTO>, type: ChallengeAlertType, index: Int, action: @escaping Action) {
         self._isPresented = isPresented
         self._allChallenge = allChallenge
         self._challenge = challenge
@@ -82,7 +82,7 @@ public struct ChallengeAlertView: View {
 extension ChallengeAlertView {
     private var didCompleteAlert: some View {
         VStack {
-            Text("\(allChallenge[self.index].finishedAt)")
+            Text(formattedDate(from: allChallenge[self.index].finishedAt ?? Date()))
                 .font(.appleSDGothicNeo(.regular, size: 12))
                 .multilineTextAlignment(.center)
                 .foregroundColor(.theme.greyColor)
@@ -90,7 +90,7 @@ extension ChallengeAlertView {
             
             Spacer()
             
-            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].lock, isComplete: self.allChallenge[index].status))
+            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].isUnlock, isComplete: self.allChallenge[index].isFinished))
                 .frame(width: 82, height: 82)
             
             Text("\(allChallenge[self.index].desc)")
@@ -128,7 +128,7 @@ extension ChallengeAlertView {
 
             Spacer()
             
-            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].lock, isComplete: self.allChallenge[index].status))
+            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].isUnlock, isComplete: self.allChallenge[index].isFinished))
                 .frame(width: 82, height: 82)
             
             Text("\(getChallenge(index: self.index).title)")
@@ -166,7 +166,7 @@ extension ChallengeAlertView {
 
             Spacer()
             
-            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].lock, isComplete: self.allChallenge[index].status))
+            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].isUnlock, isComplete: self.allChallenge[index].isFinished))
                 .frame(width: 82, height: 82)
             
             Text("\(getChallenge(index: self.index).title)")
@@ -225,7 +225,7 @@ extension ChallengeAlertView {
 
             Spacer()
             
-            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].lock, isComplete: self.allChallenge[index].status))
+            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].isUnlock, isComplete: self.allChallenge[index].isFinished))
                 .frame(width: 82, height: 82)
             
             Text("\(getChallenge(index: self.index).title)")
@@ -263,7 +263,7 @@ extension ChallengeAlertView {
 
             Spacer()
             
-            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].lock, isComplete: self.allChallenge[index].status))
+            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].isUnlock, isComplete: self.allChallenge[index].isFinished))
                 .frame(width: 82, height: 82)
             
             Text("\(getChallenge(index: self.index).title)")
@@ -393,7 +393,14 @@ extension ChallengeAlertView {
 
 
 extension ChallengeAlertView {
-    private func getChallenge(index: Int) -> ChallengeObject {
+    private func getChallenge(index: Int) -> ChallengeDTO {
         return self.allChallenge[index]
     }
+    
+    private func formattedDate(from date: Date) -> String {
+         let formatter = DateFormatter()
+         formatter.dateStyle = .medium
+         formatter.timeStyle = .none
+         return formatter.string(from: date)
+     }
 }

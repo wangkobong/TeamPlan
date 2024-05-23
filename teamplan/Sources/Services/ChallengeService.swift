@@ -412,9 +412,9 @@ extension ChallengeService {
 
 
 // MARK: ChallengeDTO
-struct ChallengeDTO{
+public struct ChallengeDTO: Equatable {
 
-    let challengeId: Int
+    var challengeId: Int
     let title: String
     let desc: String
     let goal: Int
