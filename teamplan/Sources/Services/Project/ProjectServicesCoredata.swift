@@ -25,18 +25,25 @@ final class ProjectServicesCoredata: ProjectObjectManage {
         try context.save()
     }
     
-    func getDTO(with userId: String) throws -> [CardDTO] {
-        let entities = try getEntities(with: userId)
-        return try entities.map { try convertToDTO(with: $0) }
-    }
-    
+    // get single
     func getObject(with userId: String, and projectId: Int) throws -> ProjectObject {
         let entity = try getEntity(with: projectId, and: userId)
         return try convertToObject(with: entity)
     }
     
+    func getDTO(with userId: String) throws -> [CardDTO] {
+        let entities = try getEntities(with: userId)
+        return try entities.map { try convertToDTO(with: $0) }
+    }
+    
+    // get list
     func getObjects(with userId: String) throws -> [ProjectObject] {
         let entities = try getEntities(with: userId)
+        return try entities.map{ try convertToObject(with: $0) }
+    }
+    
+    func getTargetObjects(with userId: String) throws -> [ProjectObject] {
+        let entities = try getTargetEntities(with: userId)
         return try entities.map{ try convertToObject(with: $0) }
     }
     
@@ -82,6 +89,18 @@ extension ProjectServicesCoredata{
         
         let fetchReq: NSFetchRequest<Entity> = Entity.fetchRequest()
         fetchReq.predicate = NSPredicate(format: EntityPredicate.projectList.format, userId)
+        return try self.context.fetch(fetchReq)
+    }
+    
+    private func getTargetEntities(with userId: String) throws -> [ProjectEntity] {
+        
+        let fetchReq: NSFetchRequest<Entity> = Entity.fetchRequest()
+        fetchReq.predicate = NSPredicate(
+            format: EntityPredicate.projectTargetList.format,
+            userId,
+            ProjectStatus.ongoing.rawValue,
+            ProjectStatus.completable.rawValue
+        )
         return try self.context.fetch(fetchReq)
     }
 }
