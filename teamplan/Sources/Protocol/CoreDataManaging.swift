@@ -112,7 +112,9 @@ protocol ProjectObjectManage: BasicObjectManage {
     
     func getDTO(with userId: String) throws -> [CardDTO]
     func getObject(with userId: String, and projectId: Int) throws -> Object
+    
     func getObjects(with userId: String) throws -> [Object]
+    func getTargetObjects(with userId: String) throws -> [Object]
     
     func updateObject(with dto: DTO) throws
     func deleteObject(with userId: String, and projectId: Int) throws
@@ -138,8 +140,9 @@ enum EntityPredicate {
     case user
     case stat
     case accessLog
-    case projectList
     case project
+    case projectList
+    case projectTargetList
     case fullChallenge
     case singleChallenge
     case completeChallenge
@@ -151,6 +154,8 @@ enum EntityPredicate {
             return "user_id == %@"
         case .project:
             return "user_id == %@ AND project_id == %d"
+        case .projectTargetList:
+            return "user_id == %@ AND (status == %d OR status == %d)"
         case .singleChallenge:
             return "user_id == %@ AND challenge_id == %d"
         case .completeChallenge:
