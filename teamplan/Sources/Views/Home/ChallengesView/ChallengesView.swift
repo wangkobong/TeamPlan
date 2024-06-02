@@ -134,10 +134,6 @@ extension ChallengesView {
             .padding(.leading, 16)
             
             HStack(spacing: 17) {
-//                ForEach($homeViewModel.userData.myChallenges.count..<3, id: \.self) { index in
-                let count = homeViewModel.userData.myChallenges.count
-                ForEach(0..<homeViewModel.userData.myChallenges.count, id: \.self) { index in
-                }
                 ForEach(0..<homeViewModel.userData.myChallenges.count, id: \.self) { index in
                     let challenge = self.$homeViewModel.userData.myChallenges[index]
                     let screenWidth = UIScreen.main.bounds.size.width
@@ -205,27 +201,20 @@ extension ChallengesView {
                     let endIndex = min(startIndex + 12, homeViewModel.userData.challenges.count)
                     let pageItems = Array($homeViewModel.userData.challenges[startIndex..<endIndex])
                     
-//                    LazyVGrid(columns: columns, spacing: 10) {
-//                        ForEach(pageItems.indices, id: \.self) { index in
-//                            let absoluteIndex = startIndex + index
-//                            let item = pageItems[index]
-//                            ChallengeDetailView(challenge: item.wrappedValue)
-//                                .frame(width: 62, height: 120)
-//                                .onTapGesture {
-//                                    self.indexForAlert = absoluteIndex
-//                                    self.setAlert(challenge: item.wrappedValue)
-////                                    print("-------")
-////                                    print("desc: \(item.wrappedValue.chlg_desc)")
-////                                    print("desc2: \(item.wrappedValue.chlg_title)")
-////                                    print("isSelected: \(item.wrappedValue.chlg_selected)")
-////                                    print("lock: \(item.wrappedValue.chlg_lock)")
-////                                    print("isComplete: \(item.wrappedValue.chlg_status)")
-////                                    print("prevGoal: \(item.wrappedValue.chlg_goal)")
-////                                    print("prevTitle: \(item.wrappedValue.chlg_title)")
-//                                }
-//                        }
-//                    }
-//                    .tag(pageIndex)
+                    LazyVGrid(columns: columns, spacing: 10) {
+                        ForEach(pageItems.indices, id: \.self) { index in
+                            let absoluteIndex = startIndex + index
+                            let item = pageItems[index]
+                            ChallengeDetailView(challenge: item.wrappedValue)
+                                .frame(width: 62, height: 120)
+                                .onTapGesture {
+                                    self.indexForAlert = absoluteIndex
+                                    self.setAlert(challenge: item.wrappedValue)
+
+                                }
+                        }
+                    }
+                    .tag(pageIndex)
                     
                 }
             }
@@ -254,18 +243,18 @@ extension ChallengesView {
 }
 
 extension ChallengesView {
-    private func setAlert(challenge: ChallengeObject) {
+    private func setAlert(challenge: ChallengeDTO) {
         
         // 완료한 도전과제
-        if challenge.status == true && challenge.selectStatus == false && challenge.lock == false {
+        if challenge.isFinished == true && challenge.isSelected == false && challenge.isUnlock == false {
             self.type = .didComplete
             self.isPresented.toggle()
         // 등록된 도전과제
-        } else if challenge.status == false && challenge.selectStatus == true && challenge.lock == false {
+        } else if challenge.isFinished == false && challenge.isSelected == true && challenge.isUnlock == false {
             self.type = .didSelected
             self.isPresented.toggle()
         // 도전하기
-        } else if challenge.status == false && challenge.selectStatus == false && challenge.lock == false {
+        } else if challenge.isFinished == false && challenge.isSelected == false && challenge.isUnlock == false {
             if homeViewModel.userData.myChallenges.count == 3 {
                 toast = Toast(style: .error, message: "나의 도전과제는 3개까지만 등록이 가능합니다.", width: 300)
             } else {
@@ -273,7 +262,7 @@ extension ChallengesView {
                 self.isPresented.toggle()
             }
         // 잠금해제 안됨
-        } else if challenge.status == false && challenge.selectStatus == false && challenge.lock == true {
+        } else if challenge.isFinished == false && challenge.isSelected == false && challenge.isUnlock == true {
             self.type = .lock
             self.isPresented.toggle()
         }
