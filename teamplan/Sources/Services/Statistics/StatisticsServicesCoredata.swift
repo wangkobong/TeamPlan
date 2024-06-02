@@ -214,3 +214,52 @@ extension StatisticsServicesCoredata {
         return isUpdated
     }
 }
+
+//MARK: DTO
+// MARK: - StatChallengeDTO
+struct StatDTO {
+    
+    let userId: String
+    var term: Int
+    var drop: Int
+    var totalRegistedProjects: Int
+    var totalFinishedProjects: Int
+    var totalFailedProjects: Int
+    var totalAlertedProjects: Int
+    var totalExtendedProjects: Int
+    var totalRegistedTodos: Int
+    var totalFinishedTodos: Int
+    var challengeStepStatus: [Int : Int]
+    var myChallenges: [Int]
+    
+    init(){
+        self.userId = ""
+        self.term = 0
+        self.drop = 0
+        self.totalRegistedProjects = 0
+        self.totalFinishedProjects = 0
+        self.totalFailedProjects = 0
+        self.totalAlertedProjects = 0
+        self.totalExtendedProjects = 0
+        self.totalRegistedTodos = 0
+        self.totalFinishedTodos = 0
+        self.challengeStepStatus = [ : ]
+        self.myChallenges = []
+    }
+    
+    init(with object: StatisticsObject){
+        self.userId = object.userId
+        self.term = object.term
+        self.drop = object.drop
+        self.totalRegistedProjects = object.totalRegistedProjects
+        self.totalFinishedProjects = object.totalFinishedProjects
+        self.totalFailedProjects = object.totalFailedProjects
+        self.totalAlertedProjects = object.totalAlertedProjects
+        self.totalExtendedProjects = object.totalExtendedProjects
+        self.totalRegistedTodos = object.totalRegistedTodos
+        self.totalFinishedTodos = object.totalFinishedTodos
+        self.challengeStepStatus = object.challengeStepStatus
+        self.myChallenges = object.mychallenges
+    }
+}
+

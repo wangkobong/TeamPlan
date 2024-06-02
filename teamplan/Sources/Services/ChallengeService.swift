@@ -18,12 +18,9 @@ final class ChallengeService {
     private var challengeIdSet = Set<Int>()
     
     // shared
-    @Published var statDTO: StatChallengeDTO
+    @Published var statDTO: StatDTO
     @Published var myChallenges: [MyChallengeDTO] = []
     @Published var challengesDTO: [ChallengeDTO] = []
-    
-    // Legacy
-    @Published var challengeArray: [ChallengeObject] = []
     
     /// `ChallengeService` 클래스의 인스턴스를 초기화합니다.
     ///
@@ -35,13 +32,13 @@ final class ChallengeService {
     /// 이 과정은 앱 내에서 도전과제 기능을 수행하기 위한 기본 설정을 제공합니다.
     init(with userId: String) {
         self.userId = userId        
-        self.statDTO = StatChallengeDTO()
+        self.statDTO = StatDTO()
     }
 }
 
 
-
 // MARK: - Prepare Service
+
 extension ChallengeService {
 
     // main executor
@@ -54,13 +51,10 @@ extension ChallengeService {
             tempDict[challenge.challengeId] = challenge
         }
         challengeDict = tempDict
-        statDTO = StatChallengeDTO(with: try statCD.getObject(with: userId))
+        statDTO = StatDTO(with: try statCD.getObject(with: userId))
         
         try await prepareChallenges()
         try await prepareMyChallenges()
-        
-        // legacy: must be replace to 'challengesDTO'
-        self.challengeArray = challenges
     }
     
     // myChallenges
@@ -141,7 +135,7 @@ extension ChallengeService {
     /// - Throws: 중복 도전과제, 최대 도전과제 수 초과 등으로 인한 오류를 던집니다.
     /// - 이 함수는 중복 검사를 수행하고, 도전과제를 'myChallenges'에 추가하며, 해당 도전과제의 상태를 업데이트합니다.
     /// - 또한 관련 통계 정보를 갱신하고, 모든 변경 사항을 로그로 출력합니다.
-    func setMyChallenges(with challengeId: Int) throws {
+    func setMyChallenges(with challengeId: Int) async throws {
         
         if canAppendMyChallenge(with: challengeId) {
             // properties
@@ -192,7 +186,7 @@ extension ChallengeService {
     /// - Throws: 도전과제 해제 및 상태 업데이트에서 발생한 오류들을 던집니다.
     /// - 이 함수는 도전과제를 'myChallenges'에 제거하며, 해당 도전과제의 상태를 업데이트합니다.
     /// - 또한 관련 통계 정보를 갱신하고, 모든 변경 사항을 로그로 출력합니다.
-    func disableMyChallenge(with challengeId: Int) throws {
+    func disableMyChallenge(with challengeId: Int) async throws {
         // properties
         let updatedAt = Date()
         
@@ -485,29 +479,6 @@ struct MyChallengeDTO: Hashable, Identifiable {
         self.desc = object.desc
         self.goal = object.goal
         self.progress = object.progress
-    }
-}
-
-
-// MARK: - StatChallengeDTO
-struct StatChallengeDTO {
-    
-    let userId: String
-    var drop: Int
-    var challengeStepStatus: [Int : Int]
-    var myChallenges: [Int]
-    
-    init(){
-        self.userId = ""
-        self.drop = 0
-        self.challengeStepStatus = [ : ]
-        self.myChallenges = []
-    }
-    init(with object: StatisticsObject){
-        self.userId = object.userId
-        self.drop = object.drop
-        self.challengeStepStatus = object.challengeStepStatus
-        self.myChallenges = object.mychallenges
     }
 }
 

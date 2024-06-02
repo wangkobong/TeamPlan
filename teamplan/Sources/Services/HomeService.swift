@@ -13,6 +13,8 @@ final class HomeService {
     //MARK: Properties
     // private
     private let userId: String
+    private let userName: String
+    
     private let userCD: UserServicesCoredata
     private let statCD: StatisticsServicesCoredata
     private let projectCD: ProjectServicesCoredata
@@ -22,13 +24,14 @@ final class HomeService {
     @Published var dto: HomeDataDTO = HomeDataDTO()
     
     // MARK: - Initializer
-    init(with userId: String) {
-            self.userId = userId
-            self.userCD = UserServicesCoredata()
-            self.statCD = StatisticsServicesCoredata()
-            self.projectCD = ProjectServicesCoredata()
-            self.challengeSC = ChallengeService(with: userId)
-        }
+    init(with userId: String, and userName: String) {
+        self.userId = userId
+        self.userName = userName
+        self.userCD = UserServicesCoredata()
+        self.statCD = StatisticsServicesCoredata()
+        self.projectCD = ProjectServicesCoredata()
+        self.challengeSC = ChallengeService(with: userId)
+    }
     
     // MARK: - PrepareDTO
     func prepareService() async throws {
@@ -42,7 +45,7 @@ final class HomeService {
             async let projeccts = getProjectDTO()
             
             self.dto = try await HomeDataDTO(
-                userName: self.userId,
+                userName: userName,
                 phrase: phrase,
                 statData: statData,
                 challenges: challenges,
@@ -75,13 +78,13 @@ final class HomeService {
     
     // MARK: - Statistics
     
-    private func getStat() async throws -> StatChallengeDTO {
+    func getStat() async throws -> StatDTO {
         do {
             let stat = try statCD.getObject(with: userId)
-            return StatChallengeDTO(with: stat)
+            return StatDTO(with: stat)
         } catch {
             print("[HomeService] Failed to get StatData: \(error.localizedDescription)")
-            return StatChallengeDTO()
+            return StatDTO()
         }
     }
     
@@ -130,7 +133,7 @@ struct HomeDataDTO {
     let id = UUID().uuidString
     let userName: String
     let phrase: String
-    let statData: StatChallengeDTO
+    var statData: StatDTO
     var challenges: [ChallengeDTO]
     var myChallenges: [MyChallengeDTO]
     var projects: [ProjectHomeDTO]
@@ -138,7 +141,7 @@ struct HomeDataDTO {
     init(){
         self.userName = "unknown"
         self.phrase = "unknown"
-        self.statData = StatChallengeDTO()
+        self.statData = StatDTO()
         self.challenges = []
         self.myChallenges = []
         self.projects = []
@@ -146,7 +149,7 @@ struct HomeDataDTO {
     
     init(userName: String,
          phrase: String,
-         statData: StatChallengeDTO,
+         statData: StatDTO,
          challenges: [ChallengeDTO],
          myChallenges: [MyChallengeDTO],
          projects: [ProjectHomeDTO]
