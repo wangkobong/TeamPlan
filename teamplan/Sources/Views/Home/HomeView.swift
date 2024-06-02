@@ -75,7 +75,7 @@ struct HomeView: View {
         }
         .onAppear {
             isExistProject = false
-            pageControlCount = max(homeViewModel.myChallenges.count, 1)
+            pageControlCount = max(homeViewModel.userData.myChallenges.count, 1)
             Task {
                 isChallenging = !homeViewModel.userData.myChallenges.isEmpty
                 isExistProject = !homeViewModel.userData.projects.isEmpty
@@ -83,7 +83,7 @@ struct HomeView: View {
         }
         // MyChallege Array Check
         .onChange(of: homeViewModel.userData.myChallenges) { newValue in
-            isChallenging = !homeViewModel.myChallenges.isEmpty
+            isChallenging = !homeViewModel.userData.myChallenges.isEmpty
         }
 
         // HomeViewModel Exception Handling
@@ -232,7 +232,7 @@ extension HomeView {
     //MARK: userName: Name
     private var userNameSection: some View {
         HStack {
-            Text("\(homeViewModel.userName)" + "님,")
+            Text("\(homeViewModel.userData.userName)" + "님,")
                 .font(.appleSDGothicNeo(.bold, size: 20))
                 .foregroundColor(.theme.blackColor)
                 .background(

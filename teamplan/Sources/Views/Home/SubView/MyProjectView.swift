@@ -64,9 +64,9 @@ struct MyProjectView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 16) {
                 ForEach(0..<3, id: \.self) { index in
-                    let project = homeVM.userData.projects[index]
-                    MyProjectCardView(stat: homeVM.statistics, project: project)
-                        .frame(width: UIScreen.main.bounds.width - 32)
+//                    let project = homeVM.userData.projects[index]
+//                    MyProjectCardView(stat: homeVM.statistics, project: project)
+//                        .frame(width: UIScreen.main.bounds.width - 32)
                 }
             }
             .padding(.horizontal, 16)

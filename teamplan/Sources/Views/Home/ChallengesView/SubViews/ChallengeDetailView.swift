@@ -10,7 +10,7 @@ import SwiftUI
 
 struct ChallengeDetailView: View {
     
-    let challenge: ChallengeObject
+    let challenge: ChallengeDTO
     
     var body: some View {
         VStack {
@@ -20,7 +20,7 @@ struct ChallengeDetailView: View {
                     .fill(Color.white)
                     .frame(width: 57, height: 57)
            
-                Image(ChallengeIconHelper.setIcon(type: challenge.type, isLock: challenge.lock, isComplete: challenge.status))
+                Image(ChallengeIconHelper.setIcon(type: challenge.type, isLock: challenge.isUnlock, isComplete: challenge.isFinished))
                     .resizable()
                     .scaledToFit()
                     .frame(width: 57, height: 57)

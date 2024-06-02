@@ -19,10 +19,10 @@ final class HomeViewModel: ObservableObject {
     @Published var isViewModelReady: Bool = false       // activated when data complete: progress to homeView
     
     // Legacy
-    @Published var userName: String = ""
-    @Published var myChallenges: [MyChallengeDTO] = []
-    @Published var challengeArray: [ChallengeObject] = []
-    @Published var statistics: StatChallengeDTO = StatChallengeDTO()
+//    @Published var userName: String = ""
+//    @Published var myChallenges: [MyChallengeDTO] = []
+//    @Published var challengeArray: [ChallengeObject] = []
+//    @Published var statistics: StatChallengeDTO = StatChallengeDTO()
     
     private let identifier: String
     private var cancellables = Set<AnyCancellable>()
@@ -37,7 +37,7 @@ final class HomeViewModel: ObservableObject {
            let identifier = userDefault.identifier,
            let userName = userDefault.userName {
             self.identifier = identifier
-            self.userName = userName
+//            self.userName = userName
             
         // UserDefault: Exception Handling
         } else {
@@ -75,25 +75,7 @@ final class HomeViewModel: ObservableObject {
 extension HomeViewModel {
     
     private func addSubscribers() {
-        
-        homeSC.challengeSC.$myChallenges
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] myChallenges in
-                self?.myChallenges = myChallenges
-            }
-            .store(in: &cancellables)
-        
-        homeSC.challengeSC.$statDTO
-            .sink { [weak self] statistics in
-                self?.statistics = statistics
-            }
-            .store(in: &cancellables)
-        
-        homeSC.challengeSC.$challengeArray
-            .sink { [weak self] challengeArray in
-                self?.challengeArray = challengeArray
-            }
-            .store(in: &cancellables)
+
     }
     
     func tryChallenge(with challengeId: Int) {

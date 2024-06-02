@@ -127,12 +127,13 @@ final class HomeService {
 //MARK: DTO
 
 struct HomeDataDTO {
+    let id = UUID().uuidString
     let userName: String
     let phrase: String
     let statData: StatChallengeDTO
-    let challenges: [ChallengeDTO]
-    let myChallenges: [MyChallengeDTO]
-    let projects: [ProjectHomeDTO]
+    var challenges: [ChallengeDTO]
+    var myChallenges: [MyChallengeDTO]
+    var projects: [ProjectHomeDTO]
     
     init(){
         self.userName = "unknown"
