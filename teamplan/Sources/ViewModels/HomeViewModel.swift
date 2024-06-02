@@ -19,6 +19,7 @@ final class HomeViewModel: ObservableObject {
     @Published var isViewModelReady: Bool = false       // activated when data complete: progress to homeView
     
     private let identifier: String
+    private let userName: String
     private var cancellables = Set<AnyCancellable>()
     private let homeSC: HomeService
 
@@ -31,17 +32,18 @@ final class HomeViewModel: ObservableObject {
            let identifier = userDefault.identifier,
            let userName = userDefault.userName {
             self.identifier = identifier
-//            self.userName = userName
+            self.userName = userName
             
         // UserDefault: Exception Handling
         } else {
             print("[HomeViewModel] ViewModel Initialize Failed")
             self.identifier = "unknown"
+            self.userName = "unknown"
             self.isLoginRedirectNeed = true
         }
         
         // Initialize Properties with Identifier
-        self.homeSC = HomeService(with: self.identifier)
+        self.homeSC = HomeService(with: identifier, and: userName)
         self.userData = HomeDataDTO()
         
         self.prepareData()
@@ -69,6 +71,36 @@ final class HomeViewModel: ObservableObject {
             }
         }
     }
+    
+    func updateStatData() {
+        Task{
+            do {
+                try await self.userData.statData = homeSC.getStat()
+            } catch let error  {
+                // Handle the error here
+                print("[HomeViewModel] Failed to Update StatData: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    func getChallengeProgress(with type: ChallengeType) -> Int {
+        switch type {
+        case .onboarding:
+            return 0
+        case .serviceTerm:
+            return userData.statData.term
+        case .waterDrop:
+            return userData.statData.drop
+        case .projectAlert:
+            return userData.statData.totalAlertedProjects
+        case .projectFinish:
+            return userData.statData.totalFailedProjects
+        case .totalTodo:
+            return userData.statData.totalRegistedTodos
+        default:
+            return -1
+        }
+    }
 }
 
 // MARK: Data Change Detector
@@ -80,21 +112,34 @@ extension HomeViewModel {
     }
     
     func tryChallenge(with challengeId: Int) {
-        do {
-            print("challengeId: \(challengeId)")
-            try homeSC.challengeSC.setMyChallenges(with: challengeId)
-        } catch let error {
-            // Handle the error here
-            print("[HomeViewModel] Failed to Set Challenge: \(error.localizedDescription)")
+        Task{
+            do {
+                try await homeSC.challengeSC.setMyChallenges(with: challengeId)
+                await updateDTO()
+                
+            } catch let error {
+                // Handle the error here
+                print("[HomeViewModel] Failed to Set Challenge: \(error.localizedDescription)")
+            }
         }
     }
     
     func quitChallenge(with challengeId: Int) {
-        do {
-            try homeSC.challengeSC.disableMyChallenge(with: challengeId)
-        } catch let error {
-            // Handle the error here
-            print("[HomeViewModel] Failed to Disable Challenge: \(error.localizedDescription)")
+        Task {
+            do {
+                try await homeSC.challengeSC.disableMyChallenge(with: challengeId)
+                await updateDTO()
+                
+            } catch let error {
+                // Handle the error here
+                print("[HomeViewModel] Failed to Disable Challenge: \(error.localizedDescription)")
+            }
         }
+    }
+    
+    private func updateDTO() async {
+        self.userData.myChallenges = homeSC.challengeSC.myChallenges
+        self.userData.challenges = homeSC.challengeSC.challengesDTO
+        self.userData.statData = homeSC.challengeSC.statDTO
     }
 }

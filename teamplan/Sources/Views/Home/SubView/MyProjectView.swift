@@ -75,7 +75,7 @@ struct MyProjectView: View {
 }
 
 struct MyProjectCardView: View {
-    let stat: StatChallengeDTO
+    let stat: StatDTO
     let project: ProjectHomeDTO
     let percent: CGFloat = 0.65
     
