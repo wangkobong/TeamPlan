@@ -18,12 +18,6 @@ final class HomeViewModel: ObservableObject {
     @Published var isLoginRedirectNeed: Bool = false    // activated when data load fails: logout & redirect to loginView
     @Published var isViewModelReady: Bool = false       // activated when data complete: progress to homeView
     
-    // Legacy
-//    @Published var userName: String = ""
-//    @Published var myChallenges: [MyChallengeDTO] = []
-//    @Published var challengeArray: [ChallengeObject] = []
-//    @Published var statistics: StatChallengeDTO = StatChallengeDTO()
-    
     private let identifier: String
     private var cancellables = Set<AnyCancellable>()
     private let homeSC: HomeService
@@ -54,11 +48,18 @@ final class HomeViewModel: ObservableObject {
         self.addSubscribers()
     }
 
+    @MainActor
     private func prepareData() {
         Task {
             do {
                 try await homeSC.prepareService()
-                self.userData = homeSC.dto
+                homeSC.$dto
+                    .receive(on: DispatchQueue.main)
+                    .sink { [weak self] userData in
+                        self?.userData = userData
+                    }
+                    .store(in: &cancellables)
+
                 self.isViewModelReady = true
                 print("[HomeViewModel] Successfully prepare viewModel")
                 
@@ -80,7 +81,7 @@ extension HomeViewModel {
     
     func tryChallenge(with challengeId: Int) {
         do {
-            print(challengeId)
+            print("challengeId: \(challengeId)")
             try homeSC.challengeSC.setMyChallenges(with: challengeId)
         } catch let error {
             // Handle the error here

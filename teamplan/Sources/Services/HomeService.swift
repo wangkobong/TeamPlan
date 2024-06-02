@@ -19,7 +19,7 @@ final class HomeService {
     
     // public
     let challengeSC: ChallengeService
-    var dto: HomeDataDTO = HomeDataDTO()
+    @Published var dto: HomeDataDTO = HomeDataDTO()
     
     // MARK: - Initializer
     init(with userId: String) {
