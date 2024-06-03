@@ -12,7 +12,7 @@ final class MypageViewModel: ObservableObject {
     
     //MARK: Properties
     
-    @Published var userName: String
+    var userName: String
     @Published var dto: MypageDTO
     @Published var accomplishes: [Accomplishment]
     

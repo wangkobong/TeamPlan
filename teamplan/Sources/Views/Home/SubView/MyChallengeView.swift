@@ -12,7 +12,7 @@ import SwiftUI
 struct MyChallengeView: View {
     
     //MARK: Properties & Body
-    @EnvironmentObject private var homeVM: HomeViewModel
+    @ObservedObject var homeVM: HomeViewModel
     @Binding var isChallengeViewActive: Bool
     
     var body: some View {
@@ -120,8 +120,8 @@ struct MyChallengeView: View {
 
 //MARK: Preview
 
-struct MyChallengeView_Previews: PreviewProvider {
-    static var previews: some View {
-        MyChallengeView(isChallengeViewActive: .constant(false))
-    }
-}
+//struct MyChallengeView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        MyChallengeView(isChallengeViewActive: .constant(false))
+//    }
+//}
