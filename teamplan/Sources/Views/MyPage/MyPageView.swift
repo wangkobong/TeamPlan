@@ -10,12 +10,12 @@ import SwiftUI
 
 struct MyPageView: View {
     
-    @ObservedObject private var vm = MypageViewModel();
+    @ObservedObject private var vm = MypageViewModel()
     
     // MARK: - private properties
     
     private var leftRightInset: CGFloat = 16
-    private var menuTitles: [MypageMenu] = [.guide, .logout, .withdraw, .version]
+    private var menuTitles: [MypageMenu] = [.guide, .setting, .logout, .withdraw, .version]
     
     // MARK: - body
     
@@ -38,9 +38,13 @@ struct MyPageView: View {
     
     private var headerSection: some View {
         VStack {
-            Text("마이페이지")
-                .font(.archivoBlack(.regular, size: 20))
-                .foregroundStyle(Color.theme.mainPurpleColor)
+            HStack {
+                Text("마이페이지")
+                    .font(.appleSDGothicNeo(.bold, size: 20))
+                    .foregroundColor(.theme.blackColor)
+                Spacer()
+            }
+            .padding(.top, 8)
             
             HStack(spacing: 20) {
                 Image(uiImage: Gen.Images.projectEmpty.image)
@@ -49,7 +53,6 @@ struct MyPageView: View {
                     HStack(alignment: .center, spacing: 4) {
                         Text("\(vm.userName) 지킴이")
                             .font(.appleSDGothicNeo(.bold, size: 20))
-                        Image("Pencil")
                     }
                     HStack {
                         Text(AttributedString("지켜낸 폭탄맨 ") + attributedString(for: vm.dto.protected))
@@ -96,6 +99,9 @@ struct MyPageView: View {
         List {
             ForEach(menuTitles, id: \.self) { title in
                 MenuItemView(title: title.rawValue, showArrow: title != .version)
+                    .onTapGesture {
+                        print("클릭: \(title)")
+                    }
             }
         }
         .scrollDisabled(true)
