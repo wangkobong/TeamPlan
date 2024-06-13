@@ -75,7 +75,7 @@ extension ProjectExtendView {
     private var contents: some View {
         VStack {
             HStack {
-                Text("목표 이름")
+                Text("목표 이름: \(project.title)")
                     .foregroundColor(.black)
                     .font(.appleSDGothicNeo(.bold, size: 17))
                 Spacer()
@@ -103,7 +103,7 @@ extension ProjectExtendView {
                     HStack {
                         Image(uiImage: Gen.Images.waterdrop.image)
                             .frame(width: 14, height: 18)
-                        Text("\(projectViewModel.projectService.statData.drop)")
+                        Text("\(projectViewModel.statData.drop)")
                             .foregroundColor(.black)
                             .font(.appleSDGothicNeo(.bold, size: 17))
                         Text("개")

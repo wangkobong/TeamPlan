@@ -50,11 +50,7 @@ struct ProjectMainView: View {
             .sheet(isPresented: $isAddProjectViewActive) {
                 AddProjectView(projectViewModel: projectViewModel)
             }
-            .onAppear {
-                projectViewModel.getProjects()
-            }
         }
-
     }
 }
 
@@ -123,7 +119,7 @@ extension ProjectMainView {
                         .foregroundColor(.theme.blackColor)
                         .padding(.top, 11)
                     Spacer()
-                    Text("\(projectViewModel.projectService.statData.totalRegistedProjects)")
+                    Text("\(projectViewModel.statData.totalRegistedProjects)")
                         .font(.appleSDGothicNeo(.bold, size: 18))
                         .foregroundColor(.theme.mainPurpleColor)
                         .padding(.bottom, 14)
@@ -143,7 +139,7 @@ extension ProjectMainView {
                         .foregroundColor(.theme.blackColor)
                         .padding(.top, 11)
                     Spacer()
-                    Text("\(projectViewModel.projectService.statData.totalFinishedProjects)")
+                    Text("\(projectViewModel.statData.totalFinishedProjects)")
                         .font(.appleSDGothicNeo(.bold, size: 18))
                         .foregroundColor(.theme.mainPurpleColor)
                         .padding(.bottom, 14)
@@ -165,7 +161,7 @@ extension ProjectMainView {
                         .foregroundColor(.theme.blackColor)
                         .padding(.top, 11)
                     Spacer()
-                    Text("\(projectViewModel.projectService.statData.drop)")
+                    Text("\(projectViewModel.statData.drop)")
                         .font(.appleSDGothicNeo(.bold, size: 18))
                         .foregroundColor(.theme.mainBlueColor)
                         .padding(.bottom, 14)
@@ -185,7 +181,7 @@ extension ProjectMainView {
         VStack {
             VStack {
                 ForEach(Array(projectViewModel.projectList.enumerated()), id: \.1.projectId) { index, project in
-                    ProjectCardView(projectViewModel: projectViewModel,project: $projectViewModel.projectList[index])
+                    ProjectCardView(project: $projectViewModel.projectList[index], projectViewModel: projectViewModel)
                         .onTapGesture {
                             projectDetailViewIndex = index
                             isPushProjectDetailView.toggle()

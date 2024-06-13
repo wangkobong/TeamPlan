@@ -15,20 +15,20 @@ struct ProjectView: View {
     private var isEmpty = false
     
     var body: some View {
-        NavigationStack {
-            navigationArea
-                .padding(.bottom, 20)
-            Spacer()
-            ZStack {
-                if projectViewModel.projectList.count == 0 {
-                    ProjectEmptyView(projectViewModel: projectViewModel)
-                } else {
-                    ProjectMainView(projectViewModel: projectViewModel)
+        if !projectViewModel.isViewModelReady {
+            LoadingView()
+        } else {
+            NavigationStack {
+                navigationArea
+                    .padding(.bottom, 20)
+                Spacer()
+                ZStack {
+                    if projectViewModel.projectList.count == 0 {
+                        ProjectEmptyView(projectViewModel: projectViewModel)
+                    } else {
+                        ProjectMainView(projectViewModel: projectViewModel)
+                    }
                 }
-//                ProjectMainView(projectViewModel: projectViewModel)
-            }
-            .onAppear {
-                projectViewModel.getProjects()
             }
         }
     }

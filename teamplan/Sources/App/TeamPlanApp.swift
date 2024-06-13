@@ -44,7 +44,7 @@ struct TeamPlanApp: App {
 
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     
-    private var backgroundTask: ProjectServicesBackground?
+    private var backgroundTask: BackgroundTask?
     private var isBackgroudTaskReady: Bool = false
     private var isRequestRegisted: Bool = false
     
@@ -80,7 +80,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         guard let backgroundTask = backgroundTask else { return }
         
         // check project notify
-        if await backgroundTask.isPushMessageReady() {
+        if await backgroundTask.executeTask() {
             let content = UNMutableNotificationContent()
             content.title = backgroundTask.notificationMessage.title
             content.body = backgroundTask.notificationMessage.message
@@ -95,15 +95,15 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             do {
                 try await UNUserNotificationCenter.current().add(request)
                 self.isRequestRegisted = true
-                print("[AppDelegate] Successfully scheduled project notify")
+                print("[AppDelegate] Successfully scheduled Notification")
             } catch {
                 self.isRequestRegisted = false
-                print("[AppDelegate] Failed to scheduled project notify: \(error.localizedDescription)")
+                print("[AppDelegate] Failed to scheduled Notification: \(error.localizedDescription)")
             }
         
         // no project to need notify
         } else {
-            print("[AppDelegate] Background Task Not Needed - Notifiy Count: \(backgroundTask.projectNotifyCount)")
+            print("[AppDelegate] Background Task Not Needed")
         }
     }
     
@@ -133,7 +133,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         if let userDefault = UserDefaultManager.loadWith(key: UserDefaultKey.user.rawValue),
            let identifier = userDefault.identifier,
            let userName = userDefault.userName {
-            backgroundTask = ProjectServicesBackground(userId: identifier, userName: userName)
+            backgroundTask = BackgroundTask(userId: identifier, userName: userName)
             isBackgroudTaskReady = true
         } else {
             print("[AppDelegate] Failed to fetch user data from UserDefault")

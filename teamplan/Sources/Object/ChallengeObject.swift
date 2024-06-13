@@ -64,6 +64,25 @@ public struct ChallengeObject: Hashable {
         self.unselectedAt = unselectedAt
         self.finishedAt = finishedAt
     }
+    
+    init(){
+        self.challengeId = 0
+        self.userId = "unknown"
+        self.title = "unknown"
+        self.desc = "unknown"
+        self.goal = 0
+        self.type = .unknownType
+        self.reward = 0
+        self.step = 0
+        self.version = 0
+        self.status = false
+        self.lock = false
+        self.progress = 0
+        self.selectStatus = false
+        self.selectedAt = Date()
+        self.unselectedAt = Date()
+        self.finishedAt = Date()
+    }
 }
 
 // MARK: Type

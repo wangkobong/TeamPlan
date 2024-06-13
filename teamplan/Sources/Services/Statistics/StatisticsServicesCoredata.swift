@@ -216,7 +216,7 @@ extension StatisticsServicesCoredata {
 }
 
 //MARK: DTO
-// MARK: - StatChallengeDTO
+
 struct StatDTO {
     
     let userId: String
