@@ -137,6 +137,19 @@ extension HomeViewModel {
         }
     }
     
+    func completeChallenge(with challengeId: Int) {
+        Task {
+            do {
+                try await homeSC.challengeSC.rewardMyChallenge(with: challengeId)
+                await updateDTO()
+                
+            } catch let error {
+                // Handle the error here
+                print("[HomeViewModel] Failed to Disable Challenge: \(error.localizedDescription)")
+            }
+        }
+    }
+    
     private func updateDTO() async {
         self.userData.myChallenges = homeSC.challengeSC.myChallenges
         self.userData.challenges = homeSC.challengeSC.challengesDTO
