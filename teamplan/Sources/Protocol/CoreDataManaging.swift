@@ -74,6 +74,17 @@ protocol CoreValueObjectManage: BasicObjectManage {
 }
 
 
+// MARK: - Notification
+protocol NotificationObjectManage: BasicObjectManage {
+    
+    func setObject(with object: Object) async throws
+    func getFullObject(with userId: String) async throws -> [Object]
+    func getCategoryObject(with userId: String, and category: NotificationCategory) async throws -> [Object]
+    func deleteObject(with userId: String, and notifyId: Int) async throws
+    func deleteObjects(with userId: String, and notifyIds: [Int]) async throws
+}
+
+
 // MARK: - Challenge
 protocol ChallengeObjectManage: BasicObjectManage {
     associatedtype DTO
@@ -105,18 +116,21 @@ protocol LogObjectManage: BasicObjectManage {
 
 // MARK: - Project
 protocol ProjectObjectManage: BasicObjectManage {
-    associatedtype DTO
-    associatedtype CardDTO
+    associatedtype UpdateDTO
+    associatedtype HomeDTO
+    associatedtype BackgroundDTO
     
     func setObject(with object: Object) throws
     
-    func getDTO(with userId: String) throws -> [CardDTO]
     func getObject(with userId: String, and projectId: Int) throws -> Object
-    
     func getObjects(with userId: String) throws -> [Object]
     func getTargetObjects(with userId: String) throws -> [Object]
     
-    func updateObject(with dto: DTO) throws
+    func getIdList(with userId: String) throws -> [Int]
+    func getHomeDTOList(with userId: String) throws -> [HomeDTO]
+    func getBackgroundDTOList(with userId:String) throws -> [BackgroundDTO]
+    
+    func updateObject(with dto: UpdateDTO) throws
     func deleteObject(with userId: String, and projectId: Int) throws
     func deleteAllObject(with userId: String) throws
 }
@@ -136,32 +150,60 @@ protocol TodoObjectManage: BasicObjectManage {
 
 // MARK: - Enum
 enum EntityPredicate {
-    case coreValue
     case user
     case stat
+    case coreValue
+    
+    case singleNotify
+    case fullNotify
+    case categoryNotify
+    
     case accessLog
+    case targetLog
+    
     case project
     case projectList
     case projectTargetList
+    
     case fullChallenge
     case singleChallenge
     case completeChallenge
-    case targetLog
     
     var format: String {
         switch self {
-        case .coreValue, .user, .stat, .fullChallenge, .accessLog, .projectList:
+        // user data
+        case .coreValue, .user, .stat:
             return "user_id == %@"
+            
+        // notification
+        case .singleNotify:
+            return "user_id == %@ AND notify_id == %d"
+        case .fullNotify:
+            return "user_id == %@"
+        case .categoryNotify:
+            return "user_id == %@ AND category == %d"
+            
+        // accesslog
+        case .accessLog:
+            return "user_id == %@"
+        case .targetLog:
+            return "user_id == %@ AND access_record > %@"
+            
+        // project
         case .project:
             return "user_id == %@ AND project_id == %d"
+        case .projectList:
+            return "user_id == %@"
         case .projectTargetList:
             return "user_id == %@ AND (status == %d OR status == %d)"
+            
+        // challenge
+        case .fullChallenge:
+            return "user_id == %@"
         case .singleChallenge:
             return "user_id == %@ AND challenge_id == %d"
         case .completeChallenge:
             return "user_id == %@ AND status == %@"
-        case .targetLog:
-            return "user_id == %@ AND access_record > %@"
         }
     }
 }

@@ -21,7 +21,7 @@ final class HomeViewModel: ObservableObject {
     private let identifier: String
     private let userName: String
     private var cancellables = Set<AnyCancellable>()
-    private let homeSC: HomeService
+    private let service: HomeService
 
     //MARK: Initialize
 
@@ -43,42 +43,39 @@ final class HomeViewModel: ObservableObject {
         }
         
         // Initialize Properties with Identifier
-        self.homeSC = HomeService(with: identifier, and: userName)
-        self.userData = HomeDataDTO()
-        
+        self.service = HomeService(with: identifier, and: userName)
+        self.userData = HomeDataDTO(with: userName)
         self.prepareData()
-        self.addSubscribers()
     }
 
     @MainActor
     private func prepareData() {
         Task {
-            do {
-                try await homeSC.prepareService()
-                homeSC.$dto
-                    .receive(on: DispatchQueue.main)
-                    .sink { [weak self] userData in
-                        self?.userData = userData
-                    }
-                    .store(in: &cancellables)
-
+            if self.identifier == "unknown" {
+                print("[HomeViewModel] Alert! Unknown Identifier detected!")
+                self.isLoginRedirectNeed = true
+            }
+            
+            if await self.service.prepareService() {
+                await updateUserData()
                 self.isViewModelReady = true
                 print("[HomeViewModel] Successfully prepare viewModel")
                 
-            } catch {
-                print("[HomeViewModel] Failed to Initialize HomeService: \(error.localizedDescription)")
+            } else {
+                print("[HomeViewModel] Failed to Initialize ViewModel process")
                 self.isLoginRedirectNeed = true
             }
         }
     }
     
-    func updateStatData() {
+    func updateData() {
         Task{
-            do {
-                try await self.userData.statData = homeSC.getStat()
-            } catch let error  {
-                // Handle the error here
-                print("[HomeViewModel] Failed to Update StatData: \(error.localizedDescription)")
+            if await self.service.updateService() {
+                await updateUserData()
+                await updateUserDataChallenge()
+            } else {
+                print("[HomeViewModel] Failed to update ViewModel userData")
+                self.isViewModelReady = false
             }
         }
     }
@@ -107,15 +104,11 @@ final class HomeViewModel: ObservableObject {
 // TODO: Need To Update with using 'userData' version
 extension HomeViewModel {
     
-    private func addSubscribers() {
-
-    }
-    
     func tryChallenge(with challengeId: Int) {
         Task{
             do {
-                try await homeSC.challengeSC.setMyChallenges(with: challengeId)
-                await updateDTO()
+                try await service.challengeSC.setMyChallenges(with: challengeId)
+                await updateUserDataChallenge()
                 
             } catch let error {
                 // Handle the error here
@@ -127,8 +120,8 @@ extension HomeViewModel {
     func quitChallenge(with challengeId: Int) {
         Task {
             do {
-                try await homeSC.challengeSC.disableMyChallenge(with: challengeId)
-                await updateDTO()
+                try await service.challengeSC.disableMyChallenge(with: challengeId)
+                await updateUserDataChallenge()
                 
             } catch let error {
                 // Handle the error here
@@ -137,9 +130,15 @@ extension HomeViewModel {
         }
     }
     
-    private func updateDTO() async {
-        self.userData.myChallenges = homeSC.challengeSC.myChallenges
-        self.userData.challenges = homeSC.challengeSC.challengesDTO
-        self.userData.statData = homeSC.challengeSC.statDTO
+    @MainActor
+    private func updateUserData() async {
+        self.userData = self.service.dto
+    }
+    
+    @MainActor
+    private func updateUserDataChallenge() async {
+        self.userData.myChallenges = service.challengeSC.myChallenges
+        self.userData.challenges = service.challengeSC.challengesDTO
+        self.userData.statData = service.challengeSC.statDTO
     }
 }

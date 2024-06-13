@@ -2,7 +2,7 @@
 //  ProjectService.swift
 //  teamplan
 //
-//  Created by 크로스벨 on 3/29/24.
+//  Created by 크로스벨 on 6/9/24.
 //  Copyright © 2024 team1os. All rights reserved.
 //
 
@@ -10,96 +10,674 @@ import Foundation
 
 final class ProjectService {
     
-    // Service Propertise
-    private let coreValueCD = CoreValueServicesCoredata()
-    private let statCD = StatisticsServicesCoredata()
-    private let projectCD = ProjectServicesCoredata()
-    private let todoCD = TodoServiceCoredata()
-    private let util = Utilities()
+    // Published
+    
+    var statDTO: StatDTO
+    var projectList: [ProjectDTO]
+    
+    // Private
+    
+    private let util: Utilities
     private let userId: String
+
+    private let statCD: StatisticsServicesCoredata
+    private let coreValueCD: CoreValueServicesCoredata
+    private let projectCD: ProjectServicesCoredata
+    private let todoCD: TodoServiceCoredata
     
-    var statData: StatisticsObject = StatisticsObject()
-    var coreValue: CoreValueObject = CoreValueObject()
+    private var coreValue: CoreValueObject
     
-    // Shared DTO
-    @Published var statDashBoard: ProjectStatDTO = ProjectStatDTO()
-    @Published var projectList: [ProjectDTO] = []
-    
-    // Initializer
-    init(userId: String) {
+    init(userId: String, statData: StatDTO) {
+        self.statDTO = statData
+        self.projectList = []
+        
+        self.util = Utilities()
         self.userId = userId
-    }
-    
-    func prepareService() throws {
-        self.statData = try statCD.getObject(with: userId)
-        self.coreValue = try coreValueCD.getObject(with: userId)
-        try getProjectList()
-        try getStatDashBoard()
+        
+        self.statCD = StatisticsServicesCoredata()
+        self.coreValue = CoreValueObject()
+        self.coreValueCD = CoreValueServicesCoredata()
+        self.projectCD = ProjectServicesCoredata()
+        self.todoCD = TodoServiceCoredata()
     }
 }
 
+//MARK: Service - Executor
 
-// MARK: - Create NewProject
+enum ProjectServiceAction {
+    case prepareService
+    case setNewProject(newData: NewProjectDTO, setDate: Date)
+    case renameProject(projectId: Int, newTitle: String)
+    case deleteProject(projectId: Int)
+    case extendProject(dto: ExtendProjectDTO)
+    case completeProject(projectId: Int, completeDate: Date)
+    case setNewTodo(projectId: Int)
+    case updateTodoStatus(projectId: Int, todoId: Int, newStatus: TodoStatus)
+    case updateTodoDesc(projectId: Int, todoId: Int, newDesc: String)
+    
+    var desc: String {
+        switch self {
+        case .prepareService:
+            return "prepareService"
+        case .setNewProject:
+            return "setNewProject"
+        case .renameProject:
+            return "renameProject"
+        case .deleteProject:
+            return "deleteProject"
+        case .extendProject:
+            return "extendProject"
+        case .completeProject:
+            return "completeProject"
+        case .setNewTodo:
+            return "setNewTodo"
+        case .updateTodoStatus:
+            return "updateTodoStatus"
+        case .updateTodoDesc:
+            return "updateTodoDesc"
+        }
+    }
+}
+
 extension ProjectService {
     
-    // condition check
+    // main executor: manage retry action
+    func executor(action: ProjectServiceAction) async -> Bool {
+        let max = 3
+        var retryCount = 1
+        var isProcessComplete = false
+        
+        while retryCount <= max && !isProcessComplete {
+            isProcessComplete = await executeServiceAction(action)
+            
+            if !isProcessComplete {
+                print("[ProjectService] Retrying \(action.desc) action... \(retryCount)/\(max)")
+                retryCount += 1
+            }
+        }
+        
+        if !isProcessComplete {
+            print("[ProjectService] Failed to execute \(action.desc) action after \(max) retries")
+            return false
+        }
+        print("[ProjectService] Successfully executed \(action.desc) action in \(retryCount) tries")
+        return true
+    }
+    
+    // sub executor: manage service action
+    private func executeServiceAction(_ action: ProjectServiceAction) async -> Bool {
+        switch action {
+        case .prepareService:
+            return await prepareServiceData()
+        case .setNewProject(let newData, let setDate):
+            return await setNewProjectProcess(with: newData, on: setDate)
+        case .renameProject(let projectId, let newTitle):
+            return await renameProjectProcess(with: projectId, and: newTitle)
+        case .deleteProject(let projectId):
+            return await deleteProjectProcess(with: projectId)
+        case .extendProject(let dto):
+            return await extendProjectProcess(with: dto)
+        case .completeProject(let projectId, let completeDate):
+            return await completeProjectProcess(with: projectId, at: completeDate)
+        case .setNewTodo(let projectId):
+            return await setNewTodoProcess(with: projectId)
+        case .updateTodoStatus(let projectId, let todoId, let newStatus):
+            return await updateTodoStatusProcess(with: projectId, and: todoId, newStatus: newStatus)
+        case .updateTodoDesc(let projectId, let todoId, let newDesc):
+            return await updateTodoDescProcess(with: projectId, and: todoId, newDesc: newDesc)
+        }
+    }
+}
+
+//MARK: Service - PrepareData
+
+extension ProjectService {
+    
+    // executor
+    private func prepareServiceData() async -> Bool {
+        async let statReady = prepareStatData()
+        async let coreValueReady = prepareCoreValueData()
+        async let projectReady = prepareProjectData()
+        
+        let results = await [statReady, coreValueReady, projectReady]
+        return results.allSatisfy{ $0 }
+    }
+    
+    // fetch
+    private func prepareStatData() async -> Bool {
+        do {
+            let statObject = try statCD.getObject(with: userId)
+            self.statDTO = StatDTO(with: statObject)
+
+            return true
+        } catch {
+            print("[ProjectService] Failed to prepare StatData")
+            return false
+        }
+    }
+    
+    // fetch
+    private func prepareCoreValueData() async -> Bool {
+        do {
+            self.coreValue = try coreValueCD.getObject(with: userId)
+            return true
+        } catch {
+            print("[ProjectService] Failed to prepare CoreValueData")
+            return false
+        }
+    }
+    
+    // fetch
+    private func prepareProjectData() async -> Bool {
+        do {
+            let projectObjectList = try projectCD.getTargetObjects(with: userId)
+            for object in projectObjectList {
+                self.projectList.append(try await convertExistObjectToDTO(with: object))
+            }
+            return true
+        } catch {
+            print("[ProjectService] Failed to prepare ProjectData")
+            return false
+        }
+    }
+}
+
+//MARK: Project - Create
+
+struct NewProjectDTO {
+    
+    let title: String
+    let startAt: Date
+    let deadline: Date
+    let setDate: Date
+    
+    init(
+         title: String,
+         startAt: Date,
+         deadline: Date,
+         setDate: Date)
+    {
+        self.title = title
+        self.startAt = startAt
+        self.deadline = deadline
+        self.setDate = setDate
+    }
+}
+
+extension ProjectService {
+    
+    // shared
     func canRegistNewProject() -> Bool {
         return self.projectList.count < self.coreValue.projectRegistLimit
     }
     
-    // main function
-    func setNewProject(title: String, startAt: Date, deadline: Date) throws {
-        try createNewProject(title: title, startAt: startAt, deadline: deadline)
-        try updateNewProjectRelated()
+    // executor
+    private func setNewProjectProcess(with newData: NewProjectDTO, on setDate: Date) async -> Bool {
+        let newProject = createNewProject(with: newData)
+
+        guard await saveProjectToStorage(with: newProject) else {
+            print("[ProjectService] Stop set new project process")
+            return false
+        }
+        
+        let isAppendToList = await appendProjectToList(with: newProject)
+        let isStatDataUpdated = await updateStatDataAboutProjectCreation()
+
+        return isAppendToList && isStatDataUpdated
     }
     
-    private func createNewProject(title: String, startAt: Date, deadline: Date) throws {
-        let setDate = Date()
-        let newId = statData.totalRegistedProjects + 1
-        let newProject = ProjectObject(
+    // creator
+    private func createNewProject(with newData: NewProjectDTO) -> ProjectObject {
+        let newId = statDTO.totalRegistedProjects
+        let dailyTodoRegistLimit = coreValue.todoRegistLimit
+        
+        return ProjectObject(
             projectId: newId,
             userId: userId,
-            title: title,
+            title: newData.title,
             status: .ongoing,
             todos: [],
             totalRegistedTodo: 0,
-            dailyRegistedTodo: self.coreValue.todoRegistLimit,
+            dailyRegistedTodo: dailyTodoRegistLimit,
             finishedTodo: 0,
             alerted: 0,
             extendedCount: 0,
-            registedAt: setDate,
-            startedAt: startAt,
-            deadline: deadline,
-            finishedAt: setDate,
-            syncedAt: setDate
+            registedAt: newData.setDate,
+            startedAt: newData.startAt,
+            deadline: newData.deadline,
+            finishedAt: newData.setDate,
+            syncedAt: newData.setDate
         )
-        try projectCD.setObject(with: newProject)
     }
-    private func updateNewProjectRelated() throws {
-        try updateProjectStatObject(type: .newProject)
-        try updateProjectStatDTO(type: .newProject)
-        try updateServiceProperties()
+    
+    // update: projectObject
+    private func saveProjectToStorage(with object: ProjectObject) async -> Bool {
+        do {
+            try projectCD.setObject(with: object)
+            return true
+        } catch {
+            print("[ProjectService] Failed to set project data at storage")
+            return false
+        }
+    }
+    
+    // update: projectDTO
+    private func appendProjectToList(with object: ProjectObject) async -> Bool {
+        do {
+            let dto = try await convertNewObjectToDTO(with: object)
+            self.projectList.append(dto)
+            return true
+        } catch {
+            print("[ProjectService] Failed to append project data at list")
+            return false
+        }
+    }
+    
+    // update: statObject & DTO
+    private func updateStatDataAboutProjectCreation() async -> Bool {
+        var updated = StatUpdateDTO(userId: userId)
+        let currentValue = self.statDTO.totalRegistedProjects
+        let updatedValue = self.statDTO.totalRegistedProjects + 1
+        
+        updated.newTotalRegistedProjects = updatedValue
+        self.statDTO.totalRegistedProjects = updatedValue
+        
+        do {
+            try statCD.updateObject(with: updated)
+            return true
+        } catch {
+            print("[ProjectService] Failed to Update StatObject")
+            self.statDTO.totalRegistedProjects = currentValue
+            return false
+        }
     }
 }
 
+//MARK: Project - Rename
 
-// MARK: - Create NewTodo
 extension ProjectService {
     
-    // condition check
-    func canRegistNewTodo(with dto: ProjectDTO) -> Bool {
-        return dto.todoCanRegist > 0
+    // executor
+    private func renameProjectProcess(with projectId: Int, and newTitle: String) async -> Bool {
+        do {
+            // search project at list
+            let index = try await searchProjectIndex(with: projectId)
+            
+            // update object, then dto
+            if await updateProjectObjectAboutRename(with: newTitle, and: index) {
+                updateProjectDTOAboutRename(with: newTitle, and: index)
+                return true
+                
+            // exception handling
+            } else {
+                print("[ProjectService] Stop rename project process")
+                return false
+            }
+        } catch {
+            print("[ProjectService] Stop rename project process")
+            return false
+        }
     }
     
-    // main function
-    func setNewTodo(projectId: Int) throws {
-        let newTodoId = try projectCD.getObject(with: userId, and: projectId).totalRegistedTodo + 1
-        let newTodo = try createNewTodo(projectId: projectId, newTodoId: newTodoId)
-        try updateNewTodoRelated(with: projectId, newTodo: newTodo)
+    // update: projectObject
+    private func updateProjectObjectAboutRename(with newTitle: String, and index: Int) async -> Bool {
+        let updated = ProjectUpdateDTO(projectId: projectList[index].projectId, userId: userId, newTitle: newTitle)
+        
+        do {
+            try projectCD.updateObject(with: updated)
+            return true
+        } catch {
+            print("[ProjectService] Failed to Update ProjectObject")
+            return false
+        }
     }
     
-    private func createNewTodo(projectId: Int, newTodoId: Int) throws -> TodoDTO {
-        let newTodo = TodoObject(
+    // update: projectDTO
+    private func updateProjectDTOAboutRename(with newTitle: String, and index: Int) {
+        projectList[index].title = newTitle
+    }
+}
+
+//MARK: Project - Delete
+
+extension ProjectService {
+    
+    // executor
+    private func deleteProjectProcess(with projectId: Int) async -> Bool {
+        
+        // delete object
+        let isProjectObjectDeleted = await updateProjectObjectAboutDelete(with: projectId)
+        let isProjectDTOdeleted = await updateProjectDTOAboutdelete(with: projectId)
+        
+        if isProjectObjectDeleted && isProjectDTOdeleted {
+            return true
+        } else {
+            print("[ProjectService] Stop delete project process")
+            return false
+        }
+    }
+    
+    // update: projectObject
+    private func updateProjectObjectAboutDelete(with projectId: Int) async -> Bool {
+        do {
+            try projectCD.deleteObject(with: userId, and: projectId)
+            return true
+        } catch {
+            print("[ProjectService] Failed to Delete ProjectObject")
+            return false
+        }
+    }
+    
+    // update: projectDTO
+    private func updateProjectDTOAboutdelete(with projectId: Int) async -> Bool {
+        do {
+            let index = try await searchProjectIndex(with: projectId)
+            self.projectList.remove(at: index)
+            return true
+        } catch {
+            print("[ProjectService] Failed to Delete ProjectDTO")
+            return false
+        }
+    }
+}
+
+//MARK: Project - Extend
+
+struct ExtendProjectDTO {
+    let projectId: Int
+    let usedDrop: Int
+    let newDeadline: Date
+    
+    init(projectId: Int,
+         usedDrop: Int,
+         newDeadline: Date
+    ) {
+        self.projectId = projectId
+        self.usedDrop = usedDrop
+        self.newDeadline = newDeadline
+    }
+}
+
+extension ProjectService {
+    
+    // executor
+    private func extendProjectProcess(with dto: ExtendProjectDTO) async -> Bool {
+        do {
+            // get index
+            let index = try await searchProjectIndex(with: dto.projectId)
+            
+            // update object, then update dto
+            if await updateProjectObjectAboutExtend(with: dto.projectId, and: dto.newDeadline) {
+                let isProjectDTOUpdated = await updateProjectDTOAboutExtend(with: dto.newDeadline, and: index)
+                let isStatDataUpdated = await updateStatDataAboutExtend(with: dto.usedDrop)
+
+                return isProjectDTOUpdated && isStatDataUpdated
+            } else {
+                print("[ProjectService] Failed to update project object in storage")
+                return false
+            }
+        } catch {
+            print("[ProjectService] Failed to search ProjectDTO")
+            return false
+        }
+    }
+    
+    // update: projectUpdate
+    private func updateProjectObjectAboutExtend(with projectId: Int, and newDeadline: Date) async -> Bool {
+        let previousObject: ProjectObject
+        var updated = ProjectUpdateDTO(projectId: projectId, userId: userId)
+        
+        // fetch object
+        do {
+            previousObject = try projectCD.getObject(with: userId, and: projectId)
+        } catch {
+            print("[ProjectService] Failed to fetch projectObject")
+            return false
+        }
+        
+        // update object
+        updated.newDeadline = newDeadline
+        updated.newExtendedCount = previousObject.extendedCount + 1
+        do {
+            try projectCD.updateObject(with: updated)
+            return true
+        } catch {
+            print("[ProjectService] Failed to Update ProjectObject")
+            return false
+        }
+    }
+    
+    // update: projectDTO
+    private func updateProjectDTOAboutExtend(with newDeadline: Date, and index: Int) async -> Bool {
+        do {
+            let today = Date()
+            let newTotalPeriod = try util.calculateDatePeriod(with: projectList[index].startAt, and: newDeadline)
+            let newRemainDays = try util.calculateDatePeriod(with: today, and: newDeadline)
+            
+            projectList[index].deadline = newDeadline
+            projectList[index].totalPeriod = newTotalPeriod
+            projectList[index].remainDays = newRemainDays
+            
+            return true
+        } catch {
+            print("[ProjectService] Failed to calculate new project period")
+            return false
+        }
+    }
+    
+    // update: statObject & statDTO
+    private func updateStatDataAboutExtend(with usedDrop: Int) async -> Bool {
+        var updated = StatUpdateDTO(userId: userId)
+        let updatedVaule = self.statDTO.totalExtendedProjects + 1
+        let previousValue = self.statDTO.totalExtendedProjects
+        
+        updated.newTotalExtendedProjects = updatedVaule
+        self.statDTO.totalExtendedProjects = updatedVaule
+        
+        do {
+            try statCD.updateObject(with: updated)
+            return true
+        } catch {
+            print("[ProjectService] Failed to Update StatObject")
+            self.statDTO.totalExtendedProjects = previousValue
+            return false
+        }
+    }
+}
+
+//MARK: Project - Complete
+
+extension ProjectService {
+    
+    // shared
+    func canCompleteProject(with projectId: Int) async -> Bool {
+        do {
+            let index = try await searchProjectIndex(with: projectId)
+            return projectList[index].todoRemain == 0
+        } catch {
+            print("[ProjectService] Failed to search project index")
+            return false
+        }
+    }
+    
+    // executor
+    private func completeProjectProcess(with projectId: Int, at completeDate: Date) async -> Bool {
+        do {
+            // get index
+            let index = try await searchProjectIndex(with: projectId)
+            
+            if await !updateProjectObjectAboutComplete(with: projectId, at: completeDate) {
+                print("[ProjectService] Stop complete project process")
+                return false
+            }
+            
+            if await !updateStatDataAboutComplete(with: index) {
+                print("[ProjectService] Stop complete project process")
+                return false
+            }
+            updateProjectDTOAboutComplete(with: index)
+            return true
+            
+        } catch {
+            print("[ProjectService] Failed to search ProjectDTO")
+            return false
+        }
+    }
+    
+    // update: projectObject
+    private func updateProjectObjectAboutComplete(with projectId: Int, at completeDate: Date) async -> Bool {
+        
+        // construct update info
+        let updated = ProjectUpdateDTO(
+            projectId: projectId,
+            userId: userId,
+            newStatus: .finished,
+            newFinishedAt: completeDate
+        )
+        
+        // update object
+        do {
+            try projectCD.updateObject(with: updated)
+            return true
+        } catch {
+            print("[ProjectService] Failed to Update ProjectObject")
+            return false
+        }
+    }
+    
+    // update: projectDTO
+    private func updateProjectDTOAboutComplete(with index: Int) {
+        self.projectList.remove(at: index)
+    }
+    
+    // update: statObject & statDTO
+    private func updateStatDataAboutComplete(with index: Int) async -> Bool {
+        var updated = StatUpdateDTO(userId: userId)
+        
+        let currentTotalFinishedProjects = statDTO.totalFinishedProjects
+        let updatedTotalFinishedProjects = currentTotalFinishedProjects + 1
+        
+        let currentTotalFinishedTodos = statDTO.totalFinishedTodos
+        let updatedTotalFinishedTodos = currentTotalFinishedTodos + projectList[index].todoList.count
+        
+        updated.newTotalFinishedProjects = updatedTotalFinishedProjects
+        updated.newTotalFinishedTodos = updatedTotalFinishedTodos
+        
+        do {
+            try statCD.updateObject(with: updated)
+        } catch {
+            print("[ProjectService] Failed to Update StatObject")
+            return false
+        }
+        statDTO.totalFinishedProjects = updatedTotalFinishedProjects
+        statDTO.totalFinishedTodos = updatedTotalFinishedTodos
+        return true
+    }
+}
+
+//MARK: Project - Explode
+// only update object
+extension ProjectService {
+    
+    private func explodeProjectProcess(with projectId: Int, on explodeDate: Date) async -> Bool {
+        async let isProjectObjectUpdated = updateProjectObjectAboutExplode(with: projectId, on: explodeDate)
+        async let isStatObjectUpdated = updateStatObjectAboutExplode()
+        
+        let results = await [isProjectObjectUpdated, isStatObjectUpdated]
+        
+        if results.allSatisfy({ $0 }) {
+            return true
+        } else {
+            print("[ProjectService] Failed to process explode ProjectObject")
+            return false
+        }
+    }
+    
+    // update: projectObject
+    private func updateProjectObjectAboutExplode(with projectId: Int, on explodeDate: Date) async -> Bool {
+        
+        // construct update info
+        let updated = ProjectUpdateDTO(
+            projectId: projectId,
+            userId: userId,
+            newStatus: .exploded,
+            newFinishedAt: explodeDate
+        )
+        
+        // update object
+        do {
+            try projectCD.updateObject(with: updated)
+            return true
+        } catch {
+            print("[ProjectService] Failed to Update ProjectObject")
+            return false
+        }
+    }
+    
+    // update: statObject
+    private func updateStatObjectAboutExplode() async -> Bool {
+        do {
+            let currentValue = try statCD.getObject(with: userId).totalFailedProjects
+            let updated = StatUpdateDTO(userId: userId, newTotalFailedProjects: currentValue + 1)
+            try statCD.updateObject(with: updated)
+            return true
+        } catch {
+            print("[ProjectService] Failed to update StatisticsObject: \(error)")
+            return false
+        }
+    }
+}
+
+//MARK: Todo - Create
+
+extension ProjectService {
+    
+    // shared
+    func canRegistNewTodo(with projectId: Int) async -> Bool {
+        do {
+            let index = try await searchProjectIndex(with: projectId)
+            return projectList[index].todoCanRegist > 0
+        } catch {
+            print("[ProjectService] Failed to search project index")
+            return false
+        }
+    }
+    
+    // executor
+    private func setNewTodoProcess(with projectId: Int) async -> Bool {
+        do {
+            let index = try await searchProjectIndex(with: projectId)
+            let newTodoId = projectList[index].todoList.count + 1
+            let newTodo = createNewTodoObject(with: projectId, and: newTodoId, index: index)
+            
+            guard await saveTodoAtStorage(with: newTodo) else {
+                print("[ProjectService] Failed to save new todo at storage")
+                return false
+            }
+            
+            guard await updateProjectDataAboutTodoCreation(with: projectId, and: index) else {
+                print("[ProjectService] Failed to update project data about todo creation")
+                return false
+            }
+            
+            await appendTodoAtList(with: newTodo, and: index)
+            
+            guard await updateStatDataAboutTodoCreation() else {
+                print("[ProjectService] Failed to update stat data about todo creation")
+                return false
+            }
+            
+            return true
+        } catch {
+            print("[ProjectService] Failed to add new todo process: \(error)")
+            return false
+        }
+    }
+
+    // creator
+    private func createNewTodoObject(with projectId: Int, and newTodoId: Int, index: Int) -> TodoObject {
+        
+        return TodoObject(
             projectId: projectId,
             todoId: newTodoId,
             userId: userId,
@@ -107,416 +685,276 @@ extension ProjectService {
             pinned: false,
             status: .ongoing
         )
-        try todoCD.setObject(with: newTodo)
-        return TodoDTO(with: newTodo)
     }
-    private func updateNewTodoRelated(with projectId: Int, newTodo: TodoDTO) throws {
-        try updateProjectObject(with: projectId, .newTodo(newTodo: newTodo))
-        try updateProjectDTO(with: projectId, .newTodo(newTodo: newTodo))
-        try updateProjectStatObject(type: .newTodo)
-        try updateServiceProperties()
-    }
-}
 
-
-// MARK: - Get ProjectList & StatDashBoard
-extension ProjectService {
-    
-    private func getProjectList() throws {
-        self.projectList.removeAll()
-        let projectObjects = try projectCD.getObjects(with: userId)
-        
-        self.projectList = try projectObjects
-            .filter { $0.status == .ongoing }
-            .map { try convertToProjectDTO(data: $0, registLimit: self.coreValue.todoRegistLimit) }
-            .sorted { $0.period < $1.period }
-    }
-    
-    private func getStatDashBoard() throws {
-        self.statDashBoard = ProjectStatDTO(object: statData)
-    }
-}
-
-
-// MARK: - Extend Support
-extension ProjectService {
-    
-    // condition check
-    func isDropEnough(inputDrop: Int) -> Bool {
-        return statData.drop > inputDrop
-    }
-    
-    // Convert inputDrop to newDeadLine
-    // TODO: Need Custom Exception
-    func calcDeadLineWithDrop(projectId: Int, inputDrop: Int) throws -> Date {
-        let convertRatio = coreValue.dropConvertRatio
-        let index = try searchProjectIndex(with: projectId)
-        
-        let currentDeadline = self.projectList[index].deadline
-        let extend = inputDrop * Int(convertRatio)
-        
-        guard let updatedDeadline = Calendar.current.date(byAdding: .day, value: extend, to: currentDeadline) else {
-            throw CoredataError.convertFailure(serviceName: .project, dataType: .project)
-        }
-        return updatedDeadline
-    }
-    
-    // Convert newDeadLine to needDrop
-    // TODO: Need Custom Exception
-    func calcDeadlineWithDate(with projectId: Int, and newDate: Date) throws -> Int {
-        let convertRatio = coreValue.dropConvertRatio
-        let index = try searchProjectIndex(with: projectId)
-        
-        let currentDeadline = self.projectList[index].deadline
-        let component = Calendar.current.dateComponents([.day], from: currentDeadline, to: newDate)
-        
-        guard let extendDays = component.day else {
-            throw CoredataError.convertFailure(serviceName: .project, dataType: .project)
-        }
-        return extendDays * Int(convertRatio)
-    }
-}
-
-
-// MARK: - Project Related
-extension ProjectService {
-    
-    // extend
-    func extendProject(projectId: Int, usedDrop: Int, newDeadline: Date, newTitle: String) throws {
-        try updateProjectObject(with: projectId, .extend(newDeadline: newDeadline, newTitle: newTitle))
-        try updateProjectDTO(with: projectId, .extend(newDeadline: newDeadline, newTitle: newTitle))
-        try updateProjectStatObject(type: .extend(usedDrop: usedDrop))
-        try updateServiceProperties()
-    }
-    
-    // delete
-    func deleteProject(projectId: Int) throws {
-        try updateProjectObject(with: projectId, .delete)
-        try updateProjectDTO(with: projectId, .delete)
-    }
-    
-    // explode
-    func explodeProject(projectId: Int) throws {
-        try updateProjectObject(with: projectId, .explode)
-        try updateProjectDTO(with: projectId, .explode)
-        try updateProjectStatObject(type: .explode)
-        try updateServiceProperties()
-    }
-    
-    // complete
-    func isProjectCompletable(_ dto: ProjectDTO) -> Bool {
-        return dto.todoRemain == 0
-    }
-    
-    func completeProject(projectId: Int) throws {
-        try updateProjectObject(with: projectId, .complete)
-        try updateProjectDTO(with: projectId, .complete)
-        try updateProjectStatObject(type: .complete)
-        try updateProjectStatDTO(type: .complete)
-        try updateServiceProperties()
-    }
-}
-
-
-// MARK: - Todo Related
-extension ProjectService {
-    
-    func updateTodoDesc(with projectId: Int, todoId: Int, newDesc: String) throws {
-        try updateTodoObject(with: projectId, and: todoId, .newDesc(newDesc: newDesc))
-        try updateTodoDTO(with: projectId, and: todoId, .newDesc(newDesc: newDesc))
-    }
-    
-    func updateTodoStatus(with projectId: Int, todoId: Int, newStatus: TodoStatus) throws {
-        try updateTodoObject(with: projectId, and: todoId, .newStatus(newStatus: newStatus))
-        try updateTodoDTO(with: projectId, and: todoId, .newStatus(newStatus: newStatus))
-    }
-}
-
-
-// MARK: - Util
-extension ProjectService {
-    
-    private func calcPeriod(deadline: Date) throws -> Int {
-        return try util.calculateDatePeroid(with: Date(), and: deadline)
-    }
-    
-    private func calcTodoRemain(registedTodo: Int, finishedTodo: Int) -> Int {
-        let result = registedTodo - finishedTodo
-        if result < 0 { return 0 }
-        return result
-    }
-    
-    private func calcTodoCanRegist(registLimit: Int, dailyRegisted: Int) -> Int {
-        let result = registLimit - dailyRegisted
-        if result < 0 { return 0 }
-        return 0
-    }
-    
-    // TODO: Need Custom Exception
-    private func searchProjectIndex(with projectId: Int) throws -> Int {
-        guard let index = self.projectList.firstIndex(where: { $0.projectId == projectId }) else {
-            throw CoredataError.convertFailure(serviceName: .project, dataType: .project)
-        }
-        return index
-    }
-    
-    // TODO: Need Custom Exception
-    private func searchTodoIndex(with projectIndex: Int, and todoId: Int) throws -> Int  {
-        guard let index = self.projectList[projectIndex].todoList.firstIndex(where: { $0.todoId == todoId }) else {
-            // TODO: Custom Error
-            throw CoredataError.convertFailure(serviceName: .project, dataType: .project)
-        }
-        return index
-    }
-    
-    private func sortTodoList(with list: inout [TodoDTO]) {
-        list.sort { (todo1, todo2) in
-            if todo1.status == todo2.status {
-                return todo1.todoId > todo2.todoId
-            } else {
-                return todo1.status == .ongoing
-            }
+    // set: todoObject
+    private func saveTodoAtStorage(with newTodo: TodoObject) async -> Bool {
+        do {
+            try todoCD.setObject(with: newTodo)
+            return true
+        } catch {
+            print("[ProjectService] Failed to save todo object at storage: [ ProjectId: \(newTodo.projectId) / TodoId: \(newTodo.todoId)]")
+            return false
         }
     }
-    
-    private func convertToProjectDTO(data: ProjectObject, registLimit: Int) throws -> ProjectDTO {
-        var todoList = try todoCD.getObjects(userId: userId, projectId: data.projectId).map { TodoDTO(with: $0) }
-        sortTodoList(with: &todoList)
+
+    // update: projectObject & DTO
+    private func updateProjectDataAboutTodoCreation(with projectId: Int, and index: Int) async -> Bool {
+        guard let current = await fetchProjectObject(with: projectId) else {
+            return false
+        }
         
-        let dto = ProjectDTO(
+        let newDailyRegistedTodo = current.dailyRegistedTodo - 1
+        let newTotalRegistedTodo = current.totalRegistedTodo + 1
+        let updated = ProjectUpdateDTO(
+            projectId: projectId,
             userId: userId,
-            projectId: data.projectId,
-            title: data.title,
-            status: data.status,
-            period: try calcPeriod(deadline: data.deadline),
-            startAt: data.startedAt,
-            deadline: data.deadline,
-            todoRemain: calcTodoRemain(registedTodo: data.totalRegistedTodo, finishedTodo: data.finishedTodo),
-            todoCanRegist: data.dailyRegistedTodo,
-            todoList: todoList
+            newTotalRegistedTodo: newTotalRegistedTodo,
+            newDailyRegistedTodo: newDailyRegistedTodo
         )
-        return dto
+        
+        guard await updateProjectObject(with: updated) else {
+            return false
+        }
+        
+        updateProjectDTOAboutTodoCreation(with: newDailyRegistedTodo, and: index)
+        return true
     }
-    
-    private func updateServiceProperties() throws {
-        self.statData = try statCD.getObject(with: userId)
+
+    // update: projectObject
+    private func updateProjectObject(with updated: ProjectUpdateDTO) async -> Bool {
+        do {
+            try projectCD.updateObject(with: updated)
+            return true
+        } catch {
+            print("[ProjectService] Failed to update project object at storage: [\(updated.projectId)]")
+            return false
+        }
+    }
+
+    // update: projectDTO
+    private func appendTodoAtList(with newTodo: TodoObject, and index: Int) async {
+        let todoDTO = TodoDTO(with: newTodo)
+        self.projectList[index].todoList.append(todoDTO)
+    }
+    private func updateProjectDTOAboutTodoCreation(with dailyRegistedTodo: Int, and index: Int) {
+        self.projectList[index].todoCanRegist = dailyRegistedTodo
+        self.projectList[index].todoRemain += 1
+    }
+
+    // update: statObject & statDTO
+    private func updateStatDataAboutTodoCreation() async -> Bool {
+        let updated = StatUpdateDTO(
+            userId: userId,
+            newTotalRegistedTodos: self.statDTO.totalRegistedTodos + 1
+        )
+        do {
+            try statCD.updateObject(with: updated)
+            self.statDTO.totalRegistedTodos += 1
+            return true
+        } catch {
+            print("[ProjectService] Failed to update stat object")
+            return false
+        }
     }
 }
 
-
-// MARK: - Update
-enum ProjectUpdateAction {
-    case newTodo(newTodo: TodoDTO)
-    case extend(newDeadline: Date, newTitle: String)
-    case delete
-    case explode
-    case complete
-    case updateTodo(newStatus: TodoStatus)
-}
-
-enum ProjectStatUpdateAction {
-    case newProject
-    case newTodo
-    case extend(usedDrop: Int)
-    case delete
-    case explode
-    case complete
-}
-
-enum TodoUpdateAction {
-    case newDesc(newDesc: String)
-    case newStatus(newStatus: TodoStatus)
-}
+//MARK: Todo - UpdateStatus
 
 extension ProjectService {
     
-    // Project Object
-    private func updateProjectObject(with projectId: Int, _ type: ProjectUpdateAction) throws {
-        let data = try projectCD.getObject(with: userId, and: projectId)
-        var updated = ProjectUpdateDTO(projectId: projectId, userId: userId)
-        
-        switch type {
-        case .newTodo:
-            updated.newTotalRegistedTodo = data.totalRegistedTodo - 1
-            updated.newDailyRegistedTodo = data.dailyRegistedTodo - 1
-        case .extend(let newDeadline, let newTitle):
-            updated.newDeadline = newDeadline
-            updated.newTitle = newTitle
-            updated.newExtendedCount = data.extendedCount + 1
-        case .delete:
-            updated.newStatus = .deleted
-            updated.newFinishedAt = Date()
-        case .explode:
-            updated.newStatus = .exploded
-            updated.newFinishedAt = Date()
-        case .complete:
-            updated.newStatus = .finished
-            updated.newFinishedAt = Date()
-        case .updateTodo(let status):
-            if status == .finish { updated.newFinishedTodo = data.finishedTodo + 1 }
-            if status == .ongoing { updated.newFinishedTodo = data.finishedTodo - 1 }
+    // executor
+    private func updateTodoStatusProcess(with projectId: Int, and todoId: Int, newStatus: TodoStatus) async -> Bool {
+        guard let finishedTodoCount = await fetchFinishedTodoCount(for: projectId) else {
+            print("[ProjectService] Failed to fetch finished todo count for project: [\(projectId)]")
+            return false
         }
-        try projectCD.updateObject(with: updated)
-    }
-    
-    // Project DTO
-    private func updateProjectDTO(with projectId: Int, _ type: ProjectUpdateAction) throws {
-        let index = try searchProjectIndex(with: projectId)
         
-        switch type {
-        case .newTodo(let newTodo):
-            self.projectList[index].todoRemain += 1
-            self.projectList[index].todoCanRegist -= 1
-            self.projectList[index].todoList.append(newTodo)
-            sortTodoList(with: &self.projectList[index].todoList)
-        case .extend(let newDeadline, let newTitle):
-            self.projectList[index].title = newTitle
-            self.projectList[index].deadline = newDeadline
-            self.projectList[index].period = try calcPeriod(deadline: newDeadline)
-        case .updateTodo(let status):
-            if status == .finish { self.projectList[index].todoRemain -= 1 }
-            if status == .ongoing { self.projectList[index].todoRemain += 1 }
-        case .delete, .explode, .complete:
-            self.projectList.remove(at: index)
+        do {
+            let projectIndex = try await searchProjectIndex(with: projectId)
+            let todoIndex = try await searchTodoIndex(with: projectIndex, and: todoId)
+            let isTodoObjectUpdated = await updateTodoObjectStatus(with: projectId, and: todoId, to: newStatus)
+            let isProjectObjectUpdated = await updateProjectFinishedTodoCount(with: projectId, currentCount: finishedTodoCount, newStatus: newStatus)
+            
+            if isTodoObjectUpdated && isProjectObjectUpdated {
+                updateProjectDTOStatus(with: projectIndex, and: todoIndex, newStatus: newStatus)
+                return true
+            } else {
+                return false
+            }
+        } catch {
+            print("[ProjectService] Failed to search index for project: [\(projectId)]")
+            return false
         }
     }
-    
-    // Todo Object
-    private func updateTodoObject(with projectId: Int, and todoId: Int, _ type: TodoUpdateAction) throws {
-        var updated = TodoUpdateDTO(projectId: projectId, todoId: todoId, userId: userId)
-        
-        switch type {
-        case .newDesc(let desc):
-            updated.newDesc = desc
-        case .newStatus(let status):
-            updated.newStatus = status
+
+    // helper: fetch finished todo count
+    private func fetchFinishedTodoCount(for projectId: Int) async -> Int? {
+        guard let projectObject = await fetchProjectObject(with: projectId) else {
+            print("[ProjectService] Failed to fetch project object for project: [\(projectId)]")
+            return nil
         }
-        try todoCD.updateObject(updated: updated)
+        return projectObject.finishedTodo
     }
-    
-    // Todo DTO
-    private func updateTodoDTO(with projectId: Int, and todoId: Int, _ type: TodoUpdateAction) throws {
-        let projectIndex = try searchProjectIndex(with: projectId)
-        let todoIndex = try searchTodoIndex(with: projectIndex, and: todoId)
-        
-        switch type {
-        case .newDesc(let desc):
-            self.projectList[projectIndex].todoList[todoIndex].desc = desc
-        case .newStatus(let status):
-            self.projectList[projectIndex].todoList[todoIndex].status = status
+
+    // update: todoObject
+    private func updateTodoObjectStatus(with projectId: Int, and todoId: Int, to newStatus: TodoStatus) async -> Bool {
+        do {
+            let updated = TodoUpdateDTO(
+                projectId: projectId,
+                todoId: todoId,
+                userId: userId,
+                newStatus: newStatus
+            )
+            try todoCD.updateObject(updated: updated)
+            return true
+        } catch {
+            print("[ProjectService] Failed to update todo object for todo: [\(todoId)] in project: [\(projectId)]")
+            return false
         }
     }
-    
-    // Stat Object
-    private func updateProjectStatObject(type: ProjectStatUpdateAction) throws {
-        var updated = StatUpdateDTO(userId: userId)
+
+    // update: projectObject
+    private func updateProjectFinishedTodoCount(with projectId: Int, currentCount: Int, newStatus: TodoStatus) async -> Bool {
+        let updatedValue: Int
         
-        switch type {
-        case .newProject:
-            updated.newTotalRegistedProjects = statData.totalRegistedProjects + 1
-        case .newTodo:
-            updated.newTotalRegistedTodos = statData.totalRegistedTodos + 1
-        case .extend(let usedDrop):
-            updated.newDrop = statData.drop - usedDrop
-            updated.newTotalExtendedProjects = statData.totalExtendedProjects + 1
-        case .delete:
-            break
-        case .explode:
-            updated.newTotalFailedProjects = statData.totalFailedProjects + 1
-        case .complete:
-            updated.newTotalFinishedProjects = statData.totalFinishedProjects + 1
+        switch newStatus {
+        case .finish:
+            updatedValue = currentCount + 1
+        case .ongoing:
+            updatedValue = currentCount - 1
         }
-        try statCD.updateObject(with: updated)
+        
+        do {
+            let updated = ProjectUpdateDTO(
+                projectId: projectId,
+                userId: userId,
+                newFinishedTodo: updatedValue
+            )
+            try projectCD.updateObject(with: updated)
+            return true
+        } catch {
+            print("[ProjectService] Failed to update project object: [\(projectId)]")
+            return false
+        }
     }
-    
-    // Stat DTO
-    private func updateProjectStatDTO(type: ProjectStatUpdateAction) throws {
-        switch type {
-        case .newProject:
-            self.statDashBoard.registedProject += 1
-        case .extend(let usedDrop):
-            self.statDashBoard.storagedDrop -= usedDrop
-        case .complete:
-            self.statDashBoard.finishedProject += 1
-        case .delete, .explode, .newTodo:
-            break
+
+    // update: projectDTO
+    private func updateProjectDTOStatus(with projectIndex: Int, and todoIndex: Int, newStatus: TodoStatus) {
+        switch newStatus {
+        case .finish:
+            self.projectList[projectIndex].todoRemain -= 1
+        case .ongoing:
+            self.projectList[projectIndex].todoRemain += 1
         }
+        self.projectList[projectIndex].todoList[todoIndex].status = newStatus
     }
 }
 
+//MARK: Todo - UpdateDesc
 
-// MARK: - DTO
-// Project DashBoard
-struct ProjectStatDTO {
-    
-    var registedProject: Int
-    var finishedProject: Int
-    var storagedDrop: Int
-    
-    init(object: StatisticsObject) {
-        self.registedProject = object.totalRegistedProjects
-        self.finishedProject = object.totalFinishedProjects
-        self.storagedDrop = object.drop
+extension ProjectService {
+    private func updateTodoDescProcess(with projectId: Int, and todoId: Int, newDesc: String) async -> Bool {
+        do {
+            let projectIndex = try await searchProjectIndex(with: projectId)
+            let todoIndex = try await searchTodoIndex(with: projectIndex, and: todoId)
+            
+            if await updateTodoObjectDesc(with: projectId, and: todoId, newDesc: newDesc) {
+                await updateProjectDTODesc(with: projectIndex, and: todoIndex, newDesc: newDesc)
+                return true
+            } else {
+                print("[ProjectService] Stop update todo description process")
+                return false
+            }
+            
+        } catch {
+            print("[ProjectService] Failed to search index for project: [\(projectId)]")
+            return false
+        }
     }
-    init(){
-        self.registedProject = 0
-        self.finishedProject = 0
-        self.storagedDrop = 0
+    
+    private func updateTodoObjectDesc(with projectId: Int, and todoId: Int, newDesc: String) async -> Bool {
+        let updated = TodoUpdateDTO(projectId: projectId, todoId: todoId, userId: userId, newDesc: newDesc)
+        
+        do {
+            try todoCD.updateObject(updated: updated)
+            return true
+        } catch {
+            print("[ProjectService] Failed to update todo object [ Projectid: \(projectId) | TodoId: \(todoId) ]")
+            return false
+        }
+    }
+    
+    private func updateProjectDTODesc(with projectIndex: Int, and todoIndex: Int, newDesc: String) async {
+        self.projectList[projectIndex].todoList[todoIndex].desc = newDesc
     }
 }
 
-// Project
+//MARK: Project DTO
+
 struct ProjectDTO {
     
     let userId: String
     let projectId: Int
     var title: String
     var status: ProjectStatus
-    var period: Int
     let startAt: Date
     var deadline: Date
     var todoRemain: Int
     var todoCanRegist: Int
     var todoList: [TodoDTO]
     
-    init(userId: String,
-         projectId: Int,
-         title: String,
-         status: ProjectStatus,
-         period: Int,
-         startAt: Date,
-         deadline: Date,
-         todoRemain: Int,
-         todoCanRegist: Int,
-         todoList: [TodoDTO]
-    ) {
-        self.userId = userId
-        self.projectId = projectId
-        self.title = title
-        self.status = status
-        self.period = period
-        self.startAt = startAt
-        self.deadline = deadline
-        self.todoRemain = todoRemain
-        self.todoCanRegist = todoCanRegist
-        self.todoList = todoList
-    }
+    var totalPeriod: Int
+    var progressedPeriod: Int
+    var remainDays: Int
     
+    // default
     init(tempDate: Date = Date()){
         self.userId = ""
         self.projectId = 0
         self.title = ""
         self.status = .unknown
-        self.period = 0
         self.startAt = tempDate
         self.deadline = tempDate
         self.todoRemain = 0
         self.todoCanRegist = 0
         self.todoList = []
+        self.totalPeriod = 0
+        self.progressedPeriod = 0
+        self.remainDays = 0
+    }
+    
+    // onoging
+    init(userId: String,
+         projectId: Int,
+         title: String,
+         status: ProjectStatus,
+         startAt: Date,
+         deadline: Date,
+         todoRemain: Int,
+         todoCanRegist: Int,
+         todoList: [TodoDTO],
+         totalPeriod: Int,
+         progressedPeriod: Int,
+         remainDays: Int
+    ) {
+        self.userId = userId
+        self.projectId = projectId
+        self.title = title
+        self.status = status
+        self.startAt = startAt
+        self.deadline = deadline
+        self.todoRemain = todoRemain
+        self.todoCanRegist = todoCanRegist
+        self.todoList = todoList
+        self.totalPeriod = totalPeriod
+        self.progressedPeriod = progressedPeriod
+        self.remainDays = remainDays
     }
 }
 
-// Todo
+//MARK: Todo DTO
+
 struct TodoDTO {
     let todoId: Int
     var desc: String
@@ -528,5 +966,109 @@ struct TodoDTO {
         self.desc = object.desc
         self.pinned = object.pinned
         self.status = object.status
+    }
+}
+
+//MARK: Converter
+
+extension ProjectService {
+    
+    private func convertNewObjectToDTO(with object: ProjectObject) async throws -> ProjectDTO {
+        let today = Date()
+        let remainDays: Int
+        let totalPeriod: Int
+        
+        // period calculation
+        do {
+            remainDays = try util.calculateDatePeriod(with: today, and: object.deadline)
+            totalPeriod = try util.calculateDatePeriod(with: object.startedAt, and: object.deadline)
+        } catch {
+            print("[ProjectService] Failed to calculate project period at Object conversion")
+            throw CoredataError.convertFailure(serviceName: .project, dataType: .project)
+        }
+        
+        // construct object
+        return ProjectDTO(
+            userId: object.userId,
+            projectId: object.projectId,
+            title: object.title,
+            status: object.status,
+            startAt: object.startedAt,
+            deadline: object.deadline,
+            todoRemain: 0,
+            todoCanRegist: object.dailyRegistedTodo,
+            todoList: [],
+            totalPeriod: totalPeriod,
+            progressedPeriod: 0,
+            remainDays: remainDays
+        )
+    }
+    
+    private func convertExistObjectToDTO(with object: ProjectObject) async throws -> ProjectDTO {
+        let today = Date()
+        let remainDays: Int
+        let totalPeriod: Int
+        let progressedPeriod: Int
+        
+        let todoRemain: Int
+        let todoList: [TodoDTO]
+        
+        do {
+            remainDays = try util.calculateDatePeriod(with: today, and: object.deadline)
+            totalPeriod = try util.calculateDatePeriod(with: object.startedAt, and: object.deadline)
+            progressedPeriod = try util.calculateDatePeriod(with: object.startedAt, and: today)
+            
+            todoRemain = object.totalRegistedTodo - object.finishedTodo
+            todoList = object.todos.map { TodoDTO(with: $0) }
+        } catch {
+            print("[ProjectService] Failed to convert object data")
+            throw CoredataError.convertFailure(serviceName: .project, dataType: .project)
+        }
+        
+        // construct data
+        return ProjectDTO(
+            userId: object.userId,
+            projectId: object.projectId,
+            title: object.title,
+            status: object.status,            
+            startAt: object.startedAt,
+            deadline: object.deadline,
+            todoRemain: todoRemain,
+            todoCanRegist: object.dailyRegistedTodo,
+            todoList: todoList,
+            totalPeriod: totalPeriod,
+            progressedPeriod: progressedPeriod,
+            remainDays: remainDays
+        )
+    }
+}
+
+//MARK: Util
+
+extension ProjectService {
+    
+    private func searchProjectIndex(with projectId: Int) async throws -> Int {
+        guard let index = self.projectList.firstIndex(where: { $0.projectId == projectId }) else {
+            print("[ProjectService] Failed to search project index at list")
+            throw CoredataError.convertFailure(serviceName: .project, dataType: .project)
+        }
+        return index
+    }
+    
+    private func searchTodoIndex(with projectIndex: Int, and todoId: Int) async throws -> Int {
+        guard let todoIndex = projectList[projectIndex].todoList.firstIndex(where: { $0.todoId == todoId }) else {
+            print("[ProjectService] Failed to search todo index at list")
+            throw CoredataError.convertFailure(serviceName: .project, dataType: .project)
+        }
+        return todoIndex
+    }
+    
+    private func fetchProjectObject(with projectId: Int) async -> ProjectObject? {
+        do {
+            return try projectCD.getObject(with: userId, and: projectId)
+        } catch {
+            print("[ProjectService] Failed to fetch project object at storage")
+            return nil
+        }
     }
 }

@@ -63,10 +63,9 @@ struct MyProjectView: View {
     private var projectList: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 16) {
-                ForEach(0..<3, id: \.self) { index in
-//                    let project = homeVM.userData.projects[index]
-//                    MyProjectCardView(stat: homeVM.statistics, project: project)
-//                        .frame(width: UIScreen.main.bounds.width - 32)
+                ForEach(homeVM.userData.projectsDTO.prefix(3), id: \.projectId) { project in
+                    MyProjectCardView(stat: homeVM.userData.statData, project: project)
+                        .frame(width: UIScreen.main.bounds.width - 32)
                 }
             }
             .padding(.horizontal, 16)
@@ -84,9 +83,10 @@ struct MyProjectCardView: View {
             projectHead
             projectTitle
             projectTodoCount
-            Spacer().frame(height: 35)
+            Spacer().frame(height: 30)
             projectProgressBar
                 .padding(.horizontal, 16)
+                .padding(.bottom, 10)
             projectDeadline
         }
         .frame(height: 176)
@@ -144,9 +144,13 @@ struct MyProjectCardView: View {
     
     private var projectTodoCount: some View {
         HStack {
-            Text("총 \(project.remainTodo)개의 TODO가 남아있어요")
-                .font(.appleSDGothicNeo(.regular, size: 12))
-                .foregroundColor(.black)
+            Text("총 \(project.remainTodo)개의 할 일")
+                .font(.appleSDGothicNeo(.semiBold, size: 12))
+                .foregroundColor(.theme.darkGreyColor)
+            Text("이 남아있어요")
+                .font(.appleSDGothicNeo(.light, size: 12))
+                .foregroundColor(Color(hex: "3B3B3B"))
+                .offset(x: -8)
             Spacer()
         }
     }
@@ -174,7 +178,7 @@ struct MyProjectCardView: View {
                 Text("START")
                     .font(.appleSDGothicNeo(.regular, size: 12))
                     .foregroundColor(.theme.greyColor)
-                Spacer()
+                Spacer().frame(width: 265)
                 Text("D-\(project.remainDay)")
                     .font(.appleSDGothicNeo(.regular, size: 12))
                     .foregroundColor(.theme.blackColor)

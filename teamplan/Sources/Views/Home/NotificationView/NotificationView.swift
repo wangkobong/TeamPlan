@@ -11,44 +11,39 @@ import WrappingHStack
 
 struct NotificationView: View {
     
+    @EnvironmentObject private var homeViewModel: HomeViewModel
     @EnvironmentObject private var notificationViewModel: NotificationViewModel
-
+    
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
         VStack {
-            
-            section
-                .frame(height: 61)
-            
-            ScrollView {
-                NotificationListView(notifications: $notificationViewModel.filteredNotiList)
+            if !notificationViewModel.isViewModelReady {
+                LoadingView()
+            } else {
+                section
+                    .frame(height: 61)
+                
+                ScrollView {
+                    NotificationListView(notifications: $notificationViewModel.filteredNotiList)
+                }
+                Spacer()
             }
-            
-            Spacer()
         }
         .navigationBarBackButtonHidden(true)
         .navigationTitle("알림")
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-
                 Button {
-                    dismiss.callAsFunction()
-                    
+                    dismiss()
                 } label: {
                     Image("left_arrow_home")
                 }
             }
         }
         .onAppear {
-            notificationViewModel.filterNotifications(type: .all)
+            notificationViewModel.prepareViewModel(with: homeViewModel)
         }
-    }
-}
-
-struct NotificationView_Previews: PreviewProvider {
-    static var previews: some View {
-        NotificationView()
     }
 }
 
@@ -94,3 +89,9 @@ extension NotificationView {
         notificationViewModel.filterNotifications(type: type)
     }
 }
+
+//struct NotificationView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        NotificationView()
+//    }
+//}

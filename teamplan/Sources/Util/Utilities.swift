@@ -18,7 +18,7 @@ final class Utilities {
         return calendar.isDate(currentTime, inSameDayAs: lastTime)
     }
     // D-Day
-    func calculateDatePeroid(with start: Date, and end: Date) throws -> Int {
+    func calculateDatePeriod(with start: Date, and end: Date) throws -> Int {
         
         // For accurate date calculation, force timezone to UTC
         var calendar = Calendar.current

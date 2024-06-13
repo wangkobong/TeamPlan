@@ -27,7 +27,5 @@ struct NotificationModel: Identifiable, Hashable {
 enum NotificationType {
     case all
     case project
-    case todo
     case challenge
-    case notice
 }

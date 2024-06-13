@@ -17,7 +17,6 @@ struct NotificationRowView: View {
             
             imageSection
                 .frame(width: 60)
-
             
             VStack(alignment: .leading) {
 
@@ -42,13 +41,6 @@ struct NotificationRowView: View {
     }
 }
 
-struct NotificationRowView_Previews: PreviewProvider {
-    static var previews: some View {
-        NotificationRowView(notification: .constant(NotificationModel(title: "알림 제목", description: "알림 본문", type: .project, isSelected: false, date: Date())))
-            .previewLayout(.sizeThatFits)
-    }
-}
-
 extension NotificationRowView {
     private func switchView() -> some View {
         switch notification.type {
@@ -56,10 +48,6 @@ extension NotificationRowView {
             return Image("paper_noti")
         case .challenge:
             return Image("power_noti")
-        case .notice:
-            return Image("check_noti")
-        case .todo:
-            return Image("pen_noti")
         case .all:
             return Image("bomb_noti")
         }
@@ -79,7 +67,6 @@ extension NotificationRowView {
         }
 
     }
-    
 
     private var dateSection: some View {
         HStack {
@@ -89,5 +76,12 @@ extension NotificationRowView {
                 .foregroundColor(.theme.darkGreyColor)
         }
         .frame(height: 20)
+    }
+}
+
+struct NotificationRowView_Previews: PreviewProvider {
+    static var previews: some View {
+        NotificationRowView(notification: .constant(NotificationModel(title: "알림 제목", description: "알림 본문", type: .project, isSelected: false, date: Date())))
+            .previewLayout(.sizeThatFits)
     }
 }

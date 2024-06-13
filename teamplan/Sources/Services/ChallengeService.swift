@@ -472,6 +472,15 @@ struct MyChallengeDTO: Hashable, Identifiable {
     let goal: Int
     let progress: Int
     
+    init() {
+        self.challengeID = 0
+        self.type = .unknownType
+        self.title = "unknown"
+        self.desc = "unknown"
+        self.goal = 0
+        self.progress = 0
+    }
+    
     init(with object: ChallengeObject){
         self.challengeID = object.challengeId
         self.type = object.type
@@ -480,6 +489,7 @@ struct MyChallengeDTO: Hashable, Identifiable {
         self.goal = object.goal
         self.progress = object.progress
     }
+
 }
 
 
