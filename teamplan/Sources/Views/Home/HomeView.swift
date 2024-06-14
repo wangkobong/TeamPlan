@@ -57,6 +57,10 @@ struct HomeView: View {
                     .fullScreenCover(isPresented: $showingTutorial) {
                         TutorialView()
                     }
+                    .onAppear {
+                        homeViewModel.updateData()
+                        checkProperties()
+                    }
                 }
             }
         }
@@ -75,8 +79,7 @@ struct HomeView: View {
         // HomeViewModel Exception Handling
         .onChange(of: homeViewModel.isLoginRedirectNeed) { newValue in
             if newValue {
-                LoginService().logoutUser()
-                mainViewState = .login
+                logout()
             }
         }
         .alert(isPresented: $showLogoutAlert) {
@@ -91,11 +94,19 @@ struct HomeView: View {
         }
     }
     
+    private func checkProperties() {
+        pageControlCount = max(homeViewModel.userData.myChallenges.count, 1)
+        Task {
+            isChallenging = !homeViewModel.userData.myChallenges.isEmpty
+            isExistProject = !homeViewModel.userData.projectsDTO.isEmpty
+        }
+    }
+    
     //MARK: Function
     
     private func logout() {
         LoginService().logoutUser()
-        withAnimation(.easeIn(duration: 5)) {
+        withAnimation(.easeIn(duration: 2)) {
             mainViewState = .login
         }
     }
@@ -117,7 +128,7 @@ extension HomeView {
                 Text("로그아웃")
             }
             
-            NavigationLink(destination: NotificationView(), isActive: $isNotificationViewActive) {
+            NavigationLink(destination: NotificationView().environmentObject(homeViewModel), isActive: $isNotificationViewActive) {
                 Image(systemName: "bell")
                     .foregroundColor(.black)
             }

@@ -46,20 +46,17 @@ final class AuthenticationViewModel: ObservableObject {
     func tryLogin() async -> Bool {
         // check: user data
         guard let loginUser = self.signupUser else { return false }
-    
-        do {
-            // process: execute login process
-            let user = try await self.loginLoadingService.executor(with: loginUser)
-            
-            // get: UserDefault
-            getUserDefault(with: user.userId, and: user.nickName)
-            return true
-            
-            // TODO: Need Custom Error
-        } catch {
-            print("[AuthenticationViewModel] Failed to set UserDefault : \(error.localizedDescription)")
+        
+        // process: execute login process
+        if await !loginLoadingService.executor(with: loginUser) {
+            print("[AuthenticationViewModel] Failed to set UserDefault")
             return false
         }
+        let user = self.loginLoadingService.userData
+        
+        // get: UserDefault
+        getUserDefault(with: user.userId, and: user.nickName)
+        return true
     }
     
     //MARK: - Signup

@@ -12,31 +12,28 @@ import CoreData
 final class ProjectServicesCoredata: ProjectObjectManage {
     typealias Entity = ProjectEntity
     typealias Object = ProjectObject
-    typealias DTO = ProjectUpdateDTO
-    typealias CardDTO = ProjectHomeDTO
+    typealias UpdateDTO = ProjectUpdateDTO
+    
+    private let util = Utilities()
     
     var context: NSManagedObjectContext
     init(coredataController: CoredataProtocol = CoredataMainController.shared) {
         self.context = coredataController.context
     }
     
+    //MARK: Main CRUD
+    
     func setObject(with object: ProjectObject) throws {
         createEntity(with: object)
         try context.save()
     }
     
-    // get single
+    // get Object
     func getObject(with userId: String, and projectId: Int) throws -> ProjectObject {
         let entity = try getEntity(with: projectId, and: userId)
         return try convertToObject(with: entity)
     }
     
-    func getDTO(with userId: String) throws -> [CardDTO] {
-        let entities = try getEntities(with: userId)
-        return try entities.map { try convertToDTO(with: $0) }
-    }
-    
-    // get list
     func getObjects(with userId: String) throws -> [ProjectObject] {
         let entities = try getEntities(with: userId)
         return try entities.map{ try convertToObject(with: $0) }
@@ -45,6 +42,22 @@ final class ProjectServicesCoredata: ProjectObjectManage {
     func getTargetObjects(with userId: String) throws -> [ProjectObject] {
         let entities = try getTargetEntities(with: userId)
         return try entities.map{ try convertToObject(with: $0) }
+    }
+    
+    // get DTO
+    func getIdList(with userId: String) throws -> [Int] {
+        let entities = try getTargetEntities(with: userId)
+        return entities.map{ Int($0.project_id) }
+    }
+    
+    func getHomeDTOList(with userId: String) throws -> [ProjectHomeDTO] {
+        let entities = try getEntities(with: userId)
+        return try entities.map { try convertEntityToDTO(with: $0) }
+    }
+    
+    func getBackgroundDTOList(with userId: String) throws -> [ProjectBackgroundDTO] {
+        let entities = try getTargetEntities(with: userId)
+        return try entities.map { try convertEntityToDTO(with: $0) }
     }
     
     func updateObject(with dto: ProjectUpdateDTO) throws {
@@ -70,7 +83,7 @@ final class ProjectServicesCoredata: ProjectObjectManage {
 }
 
 
-// MARK: Support Function
+// MARK: Fetch Entity
 extension ProjectServicesCoredata{
     
     private func getEntity(with projectId: Int, and userId: String) throws -> Entity {
@@ -105,7 +118,7 @@ extension ProjectServicesCoredata{
     }
 }
 
-//MARK: - Set
+//MARK: - Create Entity
 extension ProjectServicesCoredata {
     
     private func createEntity(with object: Object) {
@@ -129,7 +142,7 @@ extension ProjectServicesCoredata {
 }
 
 
-//MARK: - Convert to Object
+//MARK: - Convert (E2O)
 extension ProjectServicesCoredata {
     
     private func convertToObject(with entity: Entity) throws -> Object {
@@ -186,6 +199,7 @@ extension ProjectServicesCoredata {
 }
 
 
+
 // MARK: - Convert to DTO
 struct ProjectHomeDTO: Identifiable {
     let id = UUID().uuidString
@@ -199,7 +213,19 @@ struct ProjectHomeDTO: Identifiable {
     let totalTerm: Int
     let progressedTerm: Int
     
-    init(projectId: Int, 
+    init(tempDate: Date = Date()){
+        self.projectId = 0
+        self.title = "unknown"
+        self.startedAt = tempDate
+        self.deadline = tempDate
+        self.finished = false
+        self.remainDay = 0
+        self.remainTodo = 0
+        self.totalTerm = 0
+        self.progressedTerm = 0
+    }
+    
+    init(projectId: Int,
          title: String,
          startedAt: Date,
          deadline: Date,
@@ -223,7 +249,37 @@ struct ProjectHomeDTO: Identifiable {
 
 extension ProjectServicesCoredata {
     
-    private func convertToDTO(with entity: Entity) throws -> ProjectHomeDTO {
+    func convertObjectToDTO(with object: ProjectObject) throws -> ProjectHomeDTO {
+        let today = Date()
+        let isFinished = object.status != .ongoing && object.status != .completable
+        let remainTodo = object.totalRegistedTodo - object.finishedTodo
+        var (remainDay, totalTerm, progressedTerm): (Int, Int, Int)
+        
+        do {
+            remainDay = try util.calculateDatePeriod(with: today, and: object.deadline)
+            totalTerm = try util.calculateDatePeriod(with: object.startedAt, and: object.deadline)
+            progressedTerm = try util.calculateDatePeriod(with: object.startedAt, and: today)
+        } catch {
+            print("[ProjectRepo] Failed to calculate Day Data for Struct ProjectHomeDTO: \(error.localizedDescription)")
+            remainDay = 0
+            totalTerm = 0
+            progressedTerm = 0
+        }
+        
+        return ProjectHomeDTO(
+            projectId: object.projectId,
+            title: object.title,
+            startedAt: object.startedAt,
+            deadline: object.deadline,
+            finished: isFinished,
+            remainDay: remainDay,
+            remainTodo: remainTodo,
+            totalTerm: totalTerm,
+            progressedTerm: progressedTerm
+        )
+    }
+
+    private func convertEntityToDTO(with entity: Entity) throws -> ProjectHomeDTO {
         guard let title = entity.title,
               let type = ProjectStatus(rawValue: Int(entity.status)),
               let startAt = entity.started_at,
@@ -237,9 +293,9 @@ extension ProjectServicesCoredata {
         var totalTerm: Int
         var progressedTerm: Int
         do {
-            remainDay = try Utilities().calculateDatePeroid(with: Date(), and: deadline)
-            totalTerm = try Utilities().calculateDatePeroid(with: startAt, and: deadline)
-            progressedTerm = try Utilities().calculateDatePeroid(with: startAt, and: Date())
+            remainDay = try Utilities().calculateDatePeriod(with: Date(), and: deadline)
+            totalTerm = try Utilities().calculateDatePeriod(with: startAt, and: deadline)
+            progressedTerm = try Utilities().calculateDatePeriod(with: startAt, and: Date())
         } catch {
             print("[ProjectRepo] Failed to calculate Day Data for Struct ProjectHomeDTO: \(error.localizedDescription)")
             remainDay = 0
@@ -260,6 +316,44 @@ extension ProjectServicesCoredata {
         )
     }
 }
+
+// MARK: DTO (Background)
+struct ProjectBackgroundDTO {
+    
+    let projectId: Int
+    let startedAt: Date
+    let deadline: Date
+    
+    init(temp: Date = Date()){
+        self.projectId = 0
+        self.startedAt = temp
+        self.deadline = temp
+    }
+    
+    init(projectId: Int,
+         startedAt: Date,
+         deadline: Date) {
+        self.projectId = projectId
+        self.startedAt = startedAt
+        self.deadline = deadline
+    }
+}
+
+extension ProjectServicesCoredata {
+    
+    private func convertEntityToDTO(with entity: Entity) throws -> ProjectBackgroundDTO {
+        guard let startedAt = entity.started_at,
+              let deadline = entity.deadline else {
+            throw CoredataError.fetchFailure(serviceName: .cd, dataType: .project)
+        }
+        return ProjectBackgroundDTO(
+            projectId: Int(entity.project_id),
+            startedAt: startedAt,
+            deadline: deadline
+        )
+    }
+}
+
 
 // MARK: - Update
 struct ProjectUpdateDTO{
