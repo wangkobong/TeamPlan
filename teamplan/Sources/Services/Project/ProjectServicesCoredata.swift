@@ -199,9 +199,10 @@ extension ProjectServicesCoredata {
 }
 
 
-// MARK: - DTO (Home)
-struct ProjectHomeDTO {
-    
+
+// MARK: - Convert to DTO
+struct ProjectHomeDTO: Identifiable {
+    let id = UUID().uuidString
     let projectId: Int
     let title: String
     let finished: Bool

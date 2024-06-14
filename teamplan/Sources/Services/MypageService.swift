@@ -95,6 +95,7 @@ struct MypageDTO {
 
 enum MypageMenu: String {
     case guide = "가이드북"
+    case setting = "환경설정"
     case logout = "로그아웃"
     case withdraw = "회원탈퇴"
     case version = "앱버젼"

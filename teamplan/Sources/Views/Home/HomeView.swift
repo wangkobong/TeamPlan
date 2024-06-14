@@ -12,13 +12,6 @@ import KeychainSwift
 struct HomeView: View {
     
     //MARK: Properties
-    
-    private let challengeCardsExample: [ChallengeCardModel] = [
-        ChallengeCardModel(image: "applelogo", title: "목표달성의 쾌감!", description: "물방울 3개 모으기"),
-        ChallengeCardModel(image: "applelogo", title: "프로젝트 완주", description: "프로젝트 한개 완주"),
-        ChallengeCardModel(image: "applelogo", title: "화이팅!", description: "물방울 10개 모으기")
-    ]
-    
     @StateObject var homeViewModel = HomeViewModel()
     @EnvironmentObject var authViewModel: AuthenticationViewModel
     @AppStorage("mainViewState") var mainViewState: MainViewState?
@@ -30,7 +23,6 @@ struct HomeView: View {
     @State private var showingTutorial = false
     @State private var isGuideViewActive = false
     @State private var isChallengesViewActive = false
-    @State private var pageControlCount = 1
     @State private var isLoading = false
     
     @State private var showLogoutAlert = false
@@ -53,16 +45,11 @@ struct HomeView: View {
                         ScrollView {
                             guideArea
                             userNameArea
-                                .padding(.top, 40)
+                                .padding(.top, 26)
                             
-                            MyProjectView(isProjectExist: $isExistProject)
-                                .environmentObject(homeViewModel)
-                            
-                            pageControl
-                                .padding(.top, 12)
-                            
-                            MyChallengeView(isChallengeViewActive: $isChallengesViewActive)
-                                .environmentObject(homeViewModel)
+                            MyProjectView(isProjectExist: $isExistProject, homeVM: homeViewModel)
+
+                            MyChallengeView(homeVM: homeViewModel, isChallengeViewActive: $isChallengesViewActive)
 
                             Spacer()
                         }
@@ -75,6 +62,13 @@ struct HomeView: View {
                         checkProperties()
                     }
                 }
+            }
+        }
+        .onAppear {
+            isExistProject = false
+            Task {
+                isChallenging = !homeViewModel.userData.myChallenges.isEmpty
+                isExistProject = !homeViewModel.userData.projects.isEmpty
             }
         }
         // MyChallege Array Check
@@ -255,20 +249,6 @@ extension HomeView {
                 .foregroundColor(.theme.blackColor)
             Spacer()
         }
-    }
-    
-    //MARK: Page Control
-
-    private var pageControl: some View {
-        HStack(spacing: 4) {
-            ForEach(0..<pageControlCount, id: \.self) { index in
-                Circle()
-                    .frame(width: 6, height: 6)
-                    .foregroundColor(index == 0 ? .theme.mainBlueColor : Color.init(hex: "D9D9D9"))
-            }
-        }
-        .frame(height: 6)
-        .padding(.horizontal, 16)
     }
 }
 
