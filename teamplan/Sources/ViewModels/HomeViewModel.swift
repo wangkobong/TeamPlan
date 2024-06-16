@@ -133,8 +133,8 @@ extension HomeViewModel {
     func completeChallenge(with challengeId: Int) {
         Task {
             do {
-                try await homeSC.challengeSC.rewardMyChallenge(with: challengeId)
-                await updateDTO()
+                try await service.challengeSC.rewardMyChallenge(with: challengeId)
+                await updateUserDataChallenge()
                 
             } catch let error {
                 // Handle the error here

@@ -95,7 +95,6 @@ struct HomeView: View {
     }
     
     private func checkProperties() {
-        pageControlCount = max(homeViewModel.userData.myChallenges.count, 1)
         Task {
             isChallenging = !homeViewModel.userData.myChallenges.isEmpty
             isExistProject = !homeViewModel.userData.projectsDTO.isEmpty

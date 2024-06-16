@@ -9,7 +9,7 @@
 import Foundation
 
 struct ProjectObject{
-    
+    let id = UUID().uuidString
     let projectId: Int
     let userId: String
     let title: String
