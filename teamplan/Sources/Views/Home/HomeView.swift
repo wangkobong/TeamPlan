@@ -82,20 +82,9 @@ struct HomeView: View {
                 logout()
             }
         }
-        .alert(isPresented: $showLogoutAlert) {
-            Alert(
-                title: Text("로그아웃"),
-                message: Text("정말 로그아웃 하시겠습니까?"),
-                primaryButton: .destructive(Text("로그아웃")){
-                    logout()
-                },
-                secondaryButton: .cancel(Text("취소"))
-            )
-        }
     }
     
     private func checkProperties() {
-        pageControlCount = max(homeViewModel.userData.myChallenges.count, 1)
         Task {
             isChallenging = !homeViewModel.userData.myChallenges.isEmpty
             isExistProject = !homeViewModel.userData.projectsDTO.isEmpty
@@ -121,12 +110,6 @@ extension HomeView {
                 .frame(width: 61, height: 27)
                 .padding(.leading, -10)
             Spacer()
-            
-            Button {
-                showLogoutAlert = true
-            } label: {
-                Text("로그아웃")
-            }
             
             NavigationLink(destination: NotificationView().environmentObject(homeViewModel), isActive: $isNotificationViewActive) {
                 Image(systemName: "bell")
