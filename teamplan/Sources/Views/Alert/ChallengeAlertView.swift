@@ -234,7 +234,7 @@ extension ChallengeAlertView {
                 .foregroundColor(.theme.mainPurpleColor)
     
             
-            Text("'\(getChallenge(index: self.index).title)'\n해결 후 잠금해제")
+            Text("'\(getChallenge(index: self.index).prevTitle ?? "")'\n해결 후 잠금해제")
                 .font(.appleSDGothicNeo(.regular, size: 17))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
