@@ -67,7 +67,7 @@ extension ProjectDetailView {
     private var header: some View {
         ZStack{
             VStack(alignment: .leading) {
-                Text("D-\(project.deadline.days(from: Date()))")
+                Text(project.deadline.days(from: Date()) < 0 ? "기간만료" : "D-\(project.deadline.days(from: Date()))")
                     .foregroundColor(Color.theme.mainPurpleColor)
                     .font(.appleSDGothicNeo(.bold, size: 24))
                     .padding(.bottom, 5)

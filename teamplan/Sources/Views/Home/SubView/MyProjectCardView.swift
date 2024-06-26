@@ -110,7 +110,7 @@ struct MyProjectCardView: View {
                     .font(.appleSDGothicNeo(.regular, size: 12))
                     .foregroundColor(.theme.greyColor)
                 Spacer()
-                Text("D-\(project.remainDay)")
+                Text(project.remainDay < 0 ? "기간만료" : "D-\(project.remainDay)")
                     .font(.appleSDGothicNeo(.regular, size: 12))
                     .foregroundColor(.theme.blackColor)
             }
