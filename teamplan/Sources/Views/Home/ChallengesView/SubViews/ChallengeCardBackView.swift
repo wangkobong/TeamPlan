@@ -46,7 +46,7 @@ struct ChallengeCardBackView: View {
             .padding(.leading, 17)
             .padding(.trailing, 17)
             
-            Text("포기하기")
+            Text(challenge.progress == 1 ? "완료하기" : "포기하기")
                 .frame(height: 25)
                 .frame(maxWidth: .infinity)
                 .background(Color.theme.mainPurpleColor)
@@ -57,15 +57,12 @@ struct ChallengeCardBackView: View {
                 .padding(.leading, 10)
                 .padding(.trailing, 10)
                 .onTapGesture {
-                    print("포기하기")
-                    self.type = .quit
-                    self.isPresented.toggle()
+                    challenge.progress == 1 ? completeChallenge() : quitChallenge()
                 }
         }
         .frame(width: setCardWidth(screenWidth: parentsWidth),height: 144)
         .onAppear {
-            print("goal: \(challenge.goal)")
-            print("progress: \(challenge.progress)")
+            print("도전과제 정보: \(challenge)")
         }
     }
         
@@ -99,5 +96,16 @@ extension ChallengeCardBackView {
 
         let progressRatio = CGFloat(challenge.progress) / CGFloat(challenge.goal)
         return progressRatio * (setCardWidth(screenWidth: parentsWidth) - 34) // Adjusted width based on the padding
+    }
+    
+    private func completeChallenge() {
+        homeViewModel.completeChallenge(with: challenge.challengeID)
+        self.type = .complete
+        self.isPresented.toggle()
+    }
+    
+    private func quitChallenge() {
+        self.type = .quit
+        self.isPresented.toggle()
     }
 }

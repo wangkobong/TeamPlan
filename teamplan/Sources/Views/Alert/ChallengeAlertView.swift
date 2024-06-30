@@ -15,6 +15,7 @@ public enum ChallengeAlertType {
     case lock
     case quit
     case didChallenge
+    case complete
 }
 
 public struct ChallengeAlertView: View {
@@ -59,6 +60,8 @@ public struct ChallengeAlertView: View {
                     quitAlert
                 case .didChallenge:
                     didChallengeAlert
+                case .complete:
+                    completeAlert
                 }
             }
             .frame(width: 296, height: 323)
@@ -389,6 +392,50 @@ extension ChallengeAlertView {
             }
         }
     }
+    
+    private var completeAlert: some View {
+        VStack {
+            Text(formattedDate(from: allChallenge[self.index].finishedAt ?? Date()))
+                .font(.appleSDGothicNeo(.regular, size: 12))
+                .multilineTextAlignment(.center)
+                .foregroundColor(.theme.greyColor)
+                .padding(.top, 16)
+            
+            Spacer()
+            
+            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].isUnlock, isComplete: self.allChallenge[index].isFinished))
+                .frame(width: 82, height: 82)
+            
+            Text("\(allChallenge[self.index].desc)")
+                .font(.appleSDGothicNeo(.bold, size: 24))
+                .multilineTextAlignment(.center)
+                .foregroundColor(.theme.mainPurpleColor)
+    
+            
+            Text("\(getChallenge(index: self.index).title)\n이 배찌를 획득하였어요.")
+                .font(.appleSDGothicNeo(.regular, size: 17))
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .foregroundColor(.theme.darkGreyColor)
+                .padding(.top, 12)
+                .padding(.horizontal, 40)
+            
+            Text("닫기")
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .font(.appleSDGothicNeo(.bold, size: 14))
+                .multilineTextAlignment(.center)
+                .foregroundColor(.theme.mainPurpleColor)
+                .background(Color.theme.mainPurpleColor.opacity(0.2))
+                .cornerRadius(8)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
+                .onTapGesture {
+                    self.isPresented = false
+                }
+        }
+    }
+
 }
 
 

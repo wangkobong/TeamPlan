@@ -83,6 +83,8 @@ struct ChallengesView: View {
                         homeViewModel.quitChallenge(with: $homeViewModel.userData.myChallenges[selectedCardIndex ?? 0].challengeID.wrappedValue)
                     case .didChallenge:
                         break
+                    case .complete:
+                        break
                     }
                 }
             }
