@@ -27,6 +27,9 @@ struct ProjectView: View {
                         ProjectEmptyView(projectViewModel: projectViewModel)
                     } else {
                         ProjectMainView(projectViewModel: projectViewModel)
+                            .onAppear {
+                                projectViewModel.updateProjectList()
+                            }
                     }
                 }
             }
