@@ -1,7 +1,7 @@
 import ProjectDescription
 
 let project = Project(
-    name: "teamplan",
+    name: "투두팡",
     organizationName: "team1os",
     packages: [
         .remote(
@@ -19,7 +19,7 @@ let project = Project(
     ],
     targets: [
         Target(
-            name: "teamplan",
+            name: "투두팡",
             platform: .iOS,
             product: .app,
             bundleId: "com.team1os.teamplan",

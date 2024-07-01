@@ -310,7 +310,7 @@ extension ProjectViewModel {
     }
     
     @MainActor
-    private func updateProjectList() {
+    func updateProjectList() {
         self.projectList = self.service.projectList
     }
     

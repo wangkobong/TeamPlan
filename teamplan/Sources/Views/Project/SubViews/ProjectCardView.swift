@@ -85,7 +85,7 @@ extension ProjectCardView {
                 .padding(.bottom, 24)
             HStack {
                 Spacer()
-                Text("D-\(project.remainDays)")
+                Text(project.remainDays < 0 ? "기간만료" : "D-\(project.remainDays)")
                     .font(.appleSDGothicNeo(.regular, size: 12))
                     .foregroundColor(.theme.blackColor)
             }

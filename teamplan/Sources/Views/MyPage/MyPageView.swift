@@ -23,7 +23,7 @@ struct MyPageView: View {
     // MARK: - private properties
     
     private var leftRightInset: CGFloat = 16
-    private var menuTitles: [MypageMenu] = [.guide, .setting, .logout, .withdraw, .version]
+    private var menuTitles: [MypageMenu] = [.logout, .withdraw, .version]
     
     @State private var showAlert = false
     @State private var myPageAlertState: MyPageAlertState = .none
@@ -150,10 +150,6 @@ extension MyPageView {
     
     private func handleMenuTap(for menu: MypageMenu) {
         switch menu {
-        case .guide:
-            print("클릭: \(menu)")
-        case .setting:
-            print("클릭: \(menu)")
         case .logout:
             myPageAlertState = .logout
             showAlert = true
