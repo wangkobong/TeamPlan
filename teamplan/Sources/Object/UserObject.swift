@@ -56,6 +56,18 @@ struct UserObject{
         self.changedAt = changedAt
         self.syncedAt = syncedAt
     }
+    
+    init(temp: Date = Date()) {
+        self.userId = "unknown"
+        self.email = "unknown"
+        self.name = "unknown"
+        self.socialType = .unknown
+        self.status = .unknown
+        self.accessLogHead = 0
+        self.createdAt = temp
+        self.changedAt = temp
+        self.syncedAt = temp
+    }
 }
 
 

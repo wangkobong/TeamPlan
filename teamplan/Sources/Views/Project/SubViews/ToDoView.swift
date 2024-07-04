@@ -13,6 +13,7 @@ struct ToDoView: View {
     @ObservedObject var projectViewModel: ProjectViewModel
     @Binding var toDo: TodoDTO
     @State private var isEditing: Bool = false
+    @State private var showAlert: Bool = false
     let projectId: Int
     
     var body: some View {
@@ -37,21 +38,35 @@ struct ToDoView: View {
                             .opacity(toDo.status == .finish ? 1 : 0)
                     )
                     .disabled(toDo.status == .finish ? true : false)
+                    .onChange(of: toDo.desc) { newValue in
+                        if newValue.count > 20 {
+                            showAlert = true
+                            toDo.desc = String(newValue.prefix(20))
+                        }
+                    }
                     .onSubmit {
                         if toDo.desc != "" {
-                            projectViewModel.updateTodoDescription(with: projectId, todoId: toDo.todoId, newDesc: toDo.desc)
+                            projectViewModel.updateTodoDescription(
+                                with: projectId, todoId: toDo.todoId, newDesc: toDo.desc
+                            )
                         }
                     }
 
                     RoundedRectangle(cornerRadius: 24)
                         .stroke(isEditing ? SwiftUI.Color.theme.mainPurpleColor : Color(hex: "E2E2E2"), lineWidth: 1)
-                    
                 }
                 .frame(height: 38)
                 .frame(maxWidth: .infinity)
             }
             
             Spacer()
+        }
+        .alert(isPresented: $showAlert) {
+            Alert(
+                title: Text("글자 수 초과"),
+                message: Text("공백을 포함한 글자 수는 최대 20자입니다."),
+                dismissButton: .default(Text("확인"))
+            )
         }
     }
 }

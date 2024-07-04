@@ -22,7 +22,7 @@ final class MypageViewModel: ObservableObject {
     //MARK: Initializer
     // prepare prepertise : UserDefault (userName / Identifier)
     init() {
-        if let userDefault = UserDefaultManager.loadWith(key: UserDefaultKey.user.rawValue),
+        if let userDefault = UserDefaultManager.loadWith(),
            let identifier = userDefault.identifier,
            let userName = userDefault.userName {
             self.identifier = identifier
@@ -68,7 +68,7 @@ final class MypageViewModel: ObservableObject {
             }
             
         case .withdraw:
-            Task{ try await service.withdraw() }
+            Task{ _ = await service.withdraw() }
  
         default:
             return

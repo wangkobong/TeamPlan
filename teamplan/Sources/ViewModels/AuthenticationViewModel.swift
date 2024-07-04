@@ -31,67 +31,97 @@ final class AuthenticationViewModel: ObservableObject {
     // MARK: - properties
     
     // published
-    @Published var signupUser: AuthSocialLoginResDTO?
     @Published var nonce: String?
+    @Published var signupUser: AuthSocialLoginResDTO?
+    @Published var loginUser: UserInfoDTO?
 
     // private
     private let keychain = KeychainSwift()
     private let signupService = SignupService()
     private let loginService = LoginService()
-    private lazy var loginLoadingService = LoginLoadingService()
-    
     
     // MARK: - Login
+    
     @MainActor
     func tryLogin() async -> Bool {
         // check: user data
-        guard let loginUser = self.signupUser else { return false }
-        
-        // process: execute login process
-        if await !loginLoadingService.executor(with: loginUser) {
-            print("[AuthenticationViewModel] Failed to set UserDefault")
+        guard let loginUser = self.signupUser else {
+            print("[AuthViewModel] Failed to get loginData")
             return false
         }
-        let user = self.loginLoadingService.userData
+        let loginLoadingService = await LoginLoadingService.createInstance(with: loginUser)
         
-        // get: UserDefault
-        getUserDefault(with: user.userId, and: user.nickName)
-        return true
+        // process: execute login process
+        if await !loginLoadingService.executor() {
+            print("[AuthViewModel] Failed to set UserDefault")
+            return false
+        }
+        let user = loginLoadingService.userData
+        
+        if await getUserDefault(with: user.userId, and: user.nickName) {
+            print("[AuthViewModel] Successfully proceed login process")
+            return true
+        } else {
+            print("[AuthViewModel] Failed to proceed login process")
+            return false
+        }
     }
     
     //MARK: - Signup
+    
     @MainActor
-    func trySignup(userName: String) async throws -> UserInfoDTO {
+    func trySignup(userName: String) async -> Bool {
         // check: user data
-        guard let signupUser = self.signupUser else { throw SignupError.invalidUser }
+        guard let signupUser = self.signupUser else {
+            print("[AuthViewModel] Failed to get loginData")
+            return false
+        }
         
         // struct: add user nickName to signup data
-        var finalUserInfo = try self.signupService.getAccountInfo(newUser: signupUser)
+        var finalUserInfo = self.signupService.getAccountInfo(newUser: signupUser)
         finalUserInfo.updateNickName(with: userName)
         
         // set: new user data at Local & Server
         let signupService = SignupLoadingService(newUser: finalUserInfo)
-        let signedUser = try await signupService.executor()
+        await signupService.executor()
+        let registedUser = signupService.userData
         
         // set: UserDefault
-        setUserDefault(with: signedUser.userId, and: signedUser.nickName)
-     
-        return signedUser
+        if await setUserDefault(with: registedUser.userId, and: registedUser.nickName) {
+            self.loginUser = registedUser
+            
+            print("[AuthViewModel] Successfully proceed login process")
+            return true
+        } else {
+            print("[AuthViewModel] Failed to proceed login process")
+            return false
+        }
     }
     
-    // support
-    private func getUserDefault(with userId: String, and name: String) {
-        let userDefault = UserDefaultManager.loadWith(key: UserDefaultKey.user.rawValue) ??         UserDefaultManager.createWith(key: UserDefaultKey.user.rawValue)
-        userDefault.identifier = userId
-        userDefault.userName = name
-        userDefault.save()
+    //MARK: UserDefault
+    
+    private func getUserDefault(with userId: String, and name: String) async -> Bool {
+        if let userDefault = UserDefaultManager.loadWith() {
+            userDefault.identifier = userId
+            userDefault.userName = name
+            return userDefault.save()
+        } else if let userDefault = UserDefaultManager.createWith() {
+            userDefault.identifier = userId
+            userDefault.userName = name
+            return userDefault.save()
+        } else {
+            return false
+        }
     }
     
-    private func setUserDefault(with userId: String, and name: String) {
-        let userDefault = UserDefaultManager.createWith(key: UserDefaultKey.user.rawValue)
-        userDefault.identifier = userId
-        userDefault.userName = name
-        userDefault.save()
+    private func setUserDefault(with userId: String, and name: String) async -> Bool {
+        if let userDefault = UserDefaultManager.createWith() {
+            userDefault.identifier = userId
+            userDefault.userName = name
+            return userDefault.save()
+        } else {
+            return false
+        }
     }
 }
 

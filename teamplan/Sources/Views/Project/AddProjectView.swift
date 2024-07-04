@@ -61,6 +61,7 @@ struct AddProjectView: View {
     @Environment(\.dismiss) var dismiss
     
     @State var isValidate: Bool = false
+    @State private var showAlert: Bool = false
     
     var body: some View {
         VStack {
@@ -96,6 +97,13 @@ struct AddProjectView: View {
         }
         .onDisappear {
             projectViewModel.initAddingProjectProperty()
+        }
+        .alert(isPresented: $showAlert) {
+            Alert(
+                title: Text("글자 수 초과"),
+                message: Text("공백을 포함한 글자 수는 최대 20자입니다."),
+                dismissButton: .default(Text("확인"))
+            )
         }
     }
 }
@@ -149,6 +157,12 @@ extension AddProjectView {
                     .frame(height: 42)
                     .frame(maxWidth: .infinity)
                     .padding(.leading, 20)
+                    .onChange(of: projectViewModel.projectName) { newValue in
+                        if newValue.count > 20 {
+                            showAlert = true
+                            projectViewModel.projectName = String(newValue.prefix(20))
+                        }
+                    }
                 
                 RoundedRectangle(cornerRadius: 24)
                     .stroke(Color(hex: "E2E2E2"), lineWidth: 1)

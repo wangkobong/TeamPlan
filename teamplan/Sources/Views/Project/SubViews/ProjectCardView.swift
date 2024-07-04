@@ -10,6 +10,7 @@ import SwiftUI
 
 struct ProjectCardView: View {
     
+    @Environment(\.dismiss) var dismiss
     @Binding var project: ProjectDTO
     @State private var isExtendProjectViewActive = false
     @ObservedObject var projectViewModel: ProjectViewModel
@@ -62,6 +63,7 @@ extension ProjectCardView {
             Menu {
                 Button("삭제", action: {
                     projectViewModel.deleteProject(projectId: project.projectId)
+                    dismiss.callAsFunction()
                 })
                 Button("수정 및 기한연장", action: {
                     isExtendProjectViewActive.toggle()

@@ -1,0 +1,494 @@
+//
+//  ProjectServicesCoredata.swift
+//  teamplan
+//
+//  Created by 주찬혁 on 2023/08/25.
+//  Copyright © 2023 team1os. All rights reserved.
+//
+
+import Foundation
+import CoreData
+
+//MARK: Main
+
+final class ProjectServicesCoredata: ProjectObjectManage {
+    typealias Entity = ProjectEntity
+    typealias Object = ProjectObject
+    typealias UpdateDTO = ProjectUpdateDTO
+    
+    private let util = Utilities()
+    
+    var context: NSManagedObjectContext
+    init() {
+        self.context = LocalStorageManager.shared.context
+    }
+    
+    // set
+    func setObject(with object: ProjectObject) {
+        createEntity(with: object)
+    }
+    
+    // get
+    func getObject(with userId: String, and projectId: Int) throws -> ProjectObject {
+        let entity = try getEntity(with: projectId, and: userId)
+        return try convertToObject(with: entity)
+    }
+    
+    func getObjects(with userId: String) throws -> [ProjectObject] {
+        let entities = try getEntities(with: userId)
+        return try entities.map{ try convertToObject(with: $0) }
+    }
+    
+    func getValidObjects(with userId: String) throws -> [ProjectObject] {
+        let entities = try getValidEntities(with: userId)
+        return try entities.map{ try convertToObject(with: $0) }
+    }
+    
+    func getUploadObjects(with userId: String) throws -> [ProjectObject] {
+        let entities = try getUploadEntities(with: userId)
+        return try entities.map{ try convertToObject(with: $0) }
+    }
+    
+    // update
+    func updateObject(with dto: ProjectUpdateDTO) throws -> Bool {
+        let entity = try getEntity(with: dto.projectId, and: dto.userId)
+        return checkUpdate(from: entity, to: dto)
+    }
+    
+    // delete
+    func deleteObject(with userId: String, and projectId: Int) throws {
+        let entity = try getEntity(with: projectId, and: userId)
+        self.context.delete(entity)
+    }
+    
+    func deleteObjectList(with userId: String) throws {
+        let entities = try getEntities(with: userId)
+        for entity in entities {
+            self.context.delete(entity)
+        }
+    }
+    
+    func deleteTruncateObject(with userId: String) throws -> Bool {
+        let entities = try getTruncateEntities(with: userId)
+        for entity in entities {
+            self.context.delete(entity)
+        }
+        return true
+    }
+}
+
+// MARK: Sub
+
+extension ProjectServicesCoredata {
+    
+    func getIdList(with userId: String) throws -> [Int] {
+        let entities = try getValidEntities(with: userId)
+        return entities.map{ Int($0.project_id) }
+    }
+    
+    func getHomeDTOList(with userId: String) throws -> [ProjectHomeDTO] {
+        let entities = try getEntities(with: userId)
+        return try entities.map { try convertEntityToDTO(with: $0) }
+    }
+    
+    func getBackgroundDTOList(with userId: String) throws -> [ProjectBackgroundDTO] {
+        let entities = try getValidEntities(with: userId)
+        return try entities.map { try convertEntityToDTO(with: $0) }
+    }
+    
+    func convertObjectToDTO(with object: ProjectObject) throws -> ProjectHomeDTO {
+        let today = Date()
+        let isFinished = object.status != .ongoing && object.status != .completable
+        let remainTodo = object.totalRegistedTodo - object.finishedTodo
+        var (remainDay, totalTerm, progressedTerm): (Int, Int, Int)
+        
+        do {
+            remainDay = try util.calculateDatePeriod(with: today, and: object.deadline)
+            totalTerm = try util.calculateDatePeriod(with: object.startedAt, and: object.deadline)
+            progressedTerm = try util.calculateDatePeriod(with: object.startedAt, and: today)
+        } catch {
+            print("[ProjectRepo] Failed to calculate Day Data for Struct ProjectHomeDTO: \(error.localizedDescription)")
+            remainDay = 0
+            totalTerm = 0
+            progressedTerm = 0
+        }
+        
+        return ProjectHomeDTO(
+            projectId: object.projectId,
+            title: object.title,
+            startedAt: object.startedAt,
+            deadline: object.deadline,
+            finished: isFinished,
+            remainDay: remainDay,
+            remainTodo: remainTodo,
+            totalTerm: totalTerm,
+            progressedTerm: progressedTerm
+        )
+    }
+}
+
+// MARK: Context Related
+
+extension ProjectServicesCoredata {
+    
+    // set entity
+    private func createEntity(with object: Object) {
+        let entity = Entity(context: context)
+        
+        entity.project_id = Int32(object.projectId)
+        entity.user_id = object.userId
+        entity.title = object.title
+        entity.status = Int32(object.status.rawValue)
+        entity.total_registed_todo = Int32(object.totalRegistedTodo)
+        entity.daily_registed_todo = Int32(object.dailyRegistedTodo)
+        entity.finished_todo = Int32(object.finishedTodo)
+        entity.alerted = Int32(object.alerted)
+        entity.extended_count = Int32(object.extendedCount)
+        entity.registed_at = object.registedAt
+        entity.started_at = object.startedAt
+        entity.deadline = object.deadline
+        entity.finished_at = object.finishedAt
+        entity.synced_at = object.syncedAt
+    }
+    
+    // get single entity
+    private func getEntity(with projectId: Int, and userId: String) throws -> Entity {
+        
+        let fetchReq: NSFetchRequest<Entity> = Entity.fetchRequest()
+        fetchReq.predicate = NSPredicate(format: EntityPredicate.project.format, userId, projectId)
+        fetchReq.fetchLimit = 1
+        
+        guard let entity = try fetchEntity(with: fetchReq, and: self.context) else {
+            throw CoredataError.fetchFailure(serviceName: .cd, dataType: .project)
+        }
+        return entity
+    }
+    
+    // get entity list
+    private func getEntities(with userId: String) throws -> [ProjectEntity] {
+        
+        let fetchReq: NSFetchRequest<Entity> = Entity.fetchRequest()
+        fetchReq.predicate = NSPredicate(format: EntityPredicate.projectTotalList.format, userId)
+        return try self.context.fetch(fetchReq)
+    }
+    
+    // get valid entity list
+    private func getValidEntities(with userId: String) throws -> [ProjectEntity] {
+        
+        let fetchReq: NSFetchRequest<Entity> = Entity.fetchRequest()
+        fetchReq.predicate = NSPredicate(
+            format: EntityPredicate.projectValidList.format,
+            userId,
+            ProjectStatus.ongoing.rawValue,
+            ProjectStatus.completable.rawValue
+        )
+        return try self.context.fetch(fetchReq)
+    }
+    
+    // get upload entity list
+    private func getUploadEntities(with userId: String) throws -> [ProjectEntity] {
+        
+        let fetchReq: NSFetchRequest<Entity> = Entity.fetchRequest()
+        fetchReq.predicate = NSPredicate(
+            format: EntityPredicate.projectUploadList.format,
+            userId,
+            ProjectStatus.ongoing.rawValue,
+            ProjectStatus.completable.rawValue,
+            ProjectStatus.finished.rawValue
+        )
+        return try self.context.fetch(fetchReq)
+    }
+    
+    // delete target entity list
+    private func getTruncateEntities(with userId: String) throws -> [ProjectEntity] {
+        
+        let fetchReq: NSFetchRequest<Entity> = Entity.fetchRequest()
+        fetchReq.predicate = NSPredicate(
+            format: EntityPredicate.projectTruncateList.format,
+            userId,
+            ProjectStatus.unknown.rawValue,
+            ProjectStatus.deleted.rawValue,
+            ProjectStatus.exploded.rawValue,
+            ProjectStatus.finished.rawValue
+        )
+        return try self.context.fetch(fetchReq)
+    }
+}
+
+//MARK: - Util
+extension ProjectServicesCoredata {
+    
+    // Project: Entity -> Object
+    private func convertToObject(with entity: Entity) throws -> Object {
+        guard let userId = entity.user_id,
+              let title = entity.title,
+              let status = ProjectStatus(rawValue: Int(entity.status)),
+              let registedAt = entity.registed_at,
+              let startedAt = entity.started_at,
+              let deadline = entity.deadline,
+              let finishedAt = entity.finished_at,
+              let syncedAt = entity.synced_at
+        else {
+            throw CoredataError.convertFailure(serviceName: .cd, dataType: .project)
+        }
+        let todoEntities = entity.todo_relationship?.allObjects as? [TodoEntity] ?? []
+        let todos = try convertTodoEntity(with: todoEntities, projectId: Int(entity.project_id), userId: userId)
+        
+        return ProjectObject(
+            projectId: Int(entity.project_id),
+            userId: userId,
+            title: title,
+            status: status,
+            todos: todos,
+            totalRegistedTodo: Int(entity.total_registed_todo),
+            dailyRegistedTodo: Int(entity.daily_registed_todo),
+            finishedTodo: Int(entity.finished_todo),
+            alerted: Int(entity.alerted),
+            extendedCount: Int(entity.extended_count),
+            registedAt: registedAt,
+            startedAt: startedAt,
+            deadline: deadline,
+            finishedAt: finishedAt,
+            syncedAt: syncedAt
+        )
+    }
+    
+    // Project: Entity -> DTO
+    private func convertEntityToDTO(with entity: Entity) throws -> ProjectHomeDTO {
+        guard let title = entity.title,
+              let type = ProjectStatus(rawValue: Int(entity.status)),
+              let startAt = entity.started_at,
+              let deadline = entity.deadline else {
+            throw CoredataError.convertFailure(serviceName: .cd, dataType: .project)
+        }
+        let isFinished = (type != .ongoing)
+        let remainTodo = Int(entity.total_registed_todo) - Int(entity.finished_todo)
+        
+        var remainDay: Int
+        var totalTerm: Int
+        var progressedTerm: Int
+        do {
+            remainDay = try Utilities().calculateDatePeriod(with: Date(), and: deadline)
+            totalTerm = try Utilities().calculateDatePeriod(with: startAt, and: deadline)
+            progressedTerm = try Utilities().calculateDatePeriod(with: startAt, and: Date())
+        } catch {
+            print("[ProjectRepo] Failed to calculate Day Data for Struct ProjectHomeDTO: \(error.localizedDescription)")
+            remainDay = 0
+            totalTerm = 0
+            progressedTerm = 0
+        }
+
+        return ProjectHomeDTO(
+            projectId: Int(entity.project_id),
+            title: title,
+            startedAt: startAt,
+            deadline: deadline,
+            finished: isFinished,
+            remainDay: remainDay,
+            remainTodo: remainTodo,
+            totalTerm: totalTerm,
+            progressedTerm: progressedTerm
+        )
+    }
+    
+    // Todo: Entity -> Object
+    private func convertTodoEntity(with todos: [TodoEntity], projectId: Int, userId: String) throws -> [TodoObject] {
+        let todoObjects: [TodoObject] = todos.isEmpty ? [] : try todos.map { todoEntity in
+            guard let desc = todoEntity.desc,
+                  let status = TodoStatus(rawValue: Int(todoEntity.status)) else {
+                throw CoredataError.convertFailure(serviceName: .cd, dataType: .todo)
+            }
+            return TodoObject(
+                projectId: projectId,
+                todoId: Int(todoEntity.todo_id),
+                userId: userId,
+                desc: desc,
+                pinned: todoEntity.pinned,
+                status: status
+            )
+        }
+        return todoObjects
+    }
+
+    // Project: Update
+    private func checkUpdate(from entity: ProjectEntity, to dto: ProjectUpdateDTO) -> Bool {
+        let util = Utilities()
+        var isUpdated = false
+        
+        if let newTitle = dto.newTitle {
+            isUpdated = util.updateIfNeeded(&entity.title, newValue: newTitle) || isUpdated
+        }
+        if let newStatus = dto.newStatus {
+            isUpdated = util.updateIfNeeded(&entity.status, newValue: Int32(newStatus.rawValue)) || isUpdated
+        }
+        if let newTotalRegistedTodo = dto.newTotalRegistedTodo {
+            isUpdated = util.updateIfNeeded(&entity.total_registed_todo, newValue: Int32(newTotalRegistedTodo)) || isUpdated
+        }
+        if let newDailyRegistedTodo = dto.newDailyRegistedTodo {
+            isUpdated = util.updateIfNeeded(&entity.daily_registed_todo, newValue: Int32(newDailyRegistedTodo)) || isUpdated
+        }
+        if let newFinishedTodo = dto.newFinishedTodo {
+            isUpdated = util.updateIfNeeded(&entity.finished_todo, newValue: Int32(newFinishedTodo)) || isUpdated
+        }
+        if let newAlerted = dto.newAlerted {
+            isUpdated = util.updateIfNeeded(&entity.alerted, newValue: Int32(newAlerted)) || isUpdated
+        }
+        if let newExtendedCount = dto.newExtendedCount {
+            isUpdated = util.updateIfNeeded(&entity.extended_count, newValue: Int32(newExtendedCount)) || isUpdated
+        }
+        if let newStartedAt = dto.newStartedAt {
+            isUpdated = util.updateIfNeeded(&entity.started_at, newValue: newStartedAt) || isUpdated
+        }
+        if let newDeadline = dto.newDeadline {
+            isUpdated = util.updateIfNeeded(&entity.deadline, newValue: newDeadline) || isUpdated
+        }
+        if let newFinishedAt = dto.newFinishedAt {
+            isUpdated = util.updateIfNeeded(&entity.finished_at, newValue: newFinishedAt) || isUpdated
+        }
+        if let newSyncedAt = dto.newSyncedAt {
+            isUpdated = util.updateIfNeeded(&entity.synced_at, newValue: newSyncedAt) || isUpdated
+        }
+        return isUpdated
+    }
+}
+
+// MARK: - DTO
+
+// Update
+struct ProjectUpdateDTO{
+    
+    let userId: String
+    let projectId: Int
+    var newTitle: String?
+    var newStatus: ProjectStatus?
+    var newTotalRegistedTodo: Int?
+    var newDailyRegistedTodo: Int?
+    var newFinishedTodo: Int?
+    var newAlerted: Int?
+    var newExtendedCount: Int?
+    var newStartedAt: Date?
+    var newDeadline: Date?
+    var newFinishedAt: Date?
+    var newSyncedAt: Date?
+    
+    init(
+        projectId: Int,
+        userId: String,
+        newTitle: String? = nil,
+        newStatus: ProjectStatus? = nil,
+        newTotalRegistedTodo: Int? = nil,
+        newDailyRegistedTodo: Int? = nil,
+        newFinishedTodo: Int? = nil,
+        newAlerted: Int? = nil,
+        newExtendedCount: Int? = nil,
+        newStartedAt: Date? = nil,
+        newDeadline: Date? = nil,
+        newFinishedAt: Date? = nil,
+        newSyncedAt: Date? = nil
+    ) {
+        self.projectId = projectId
+        self.userId = userId
+        self.newTitle = newTitle
+        self.newStatus = newStatus
+        self.newTotalRegistedTodo = newTotalRegistedTodo
+        self.newDailyRegistedTodo = newDailyRegistedTodo
+        self.newFinishedTodo = newFinishedTodo
+        self.newAlerted = newAlerted
+        self.newExtendedCount = newExtendedCount
+        self.newStartedAt = newStartedAt
+        self.newDeadline = newDeadline
+        self.newFinishedAt = newFinishedAt
+        self.newSyncedAt = newSyncedAt
+    }
+}
+
+// Home
+struct ProjectHomeDTO: Identifiable {
+    let id = UUID().uuidString
+    let projectId: Int
+    let title: String
+    let finished: Bool
+    let startedAt: Date
+    let deadline: Date
+    let remainDay: Int
+    let remainTodo: Int
+    let totalTerm: Int
+    let progressedTerm: Int
+    
+    init(tempDate: Date = Date()){
+        self.projectId = 0
+        self.title = "unknown"
+        self.startedAt = tempDate
+        self.deadline = tempDate
+        self.finished = false
+        self.remainDay = 0
+        self.remainTodo = 0
+        self.totalTerm = 0
+        self.progressedTerm = 0
+    }
+    
+    init(projectId: Int,
+         title: String,
+         startedAt: Date,
+         deadline: Date,
+         finished: Bool,
+         remainDay: Int,
+         remainTodo: Int,
+         totalTerm: Int,
+         progressedTerm: Int
+    ) {
+        self.projectId = projectId
+        self.title = title
+        self.startedAt = startedAt
+        self.deadline = deadline
+        self.finished = finished
+        self.remainDay = remainDay
+        self.remainTodo = remainTodo
+        self.totalTerm = totalTerm
+        self.progressedTerm = progressedTerm
+    }
+}
+
+// BackGround
+struct ProjectBackgroundDTO {
+    
+    let projectId: Int
+    let startedAt: Date
+    let deadline: Date
+    
+    init(temp: Date = Date()){
+        self.projectId = 0
+        self.startedAt = temp
+        self.deadline = temp
+    }
+    
+    init(projectId: Int,
+         startedAt: Date,
+         deadline: Date) {
+        self.projectId = projectId
+        self.startedAt = startedAt
+        self.deadline = deadline
+    }
+}
+
+extension ProjectServicesCoredata {
+    
+    private func convertEntityToDTO(with entity: Entity) throws -> ProjectBackgroundDTO {
+        guard let startedAt = entity.started_at,
+              let deadline = entity.deadline else {
+            throw CoredataError.fetchFailure(serviceName: .cd, dataType: .project)
+        }
+        return ProjectBackgroundDTO(
+            projectId: Int(entity.project_id),
+            startedAt: startedAt,
+            deadline: deadline
+        )
+    }
+}
+
+
+
+extension ProjectServicesCoredata {
+
+}
+

@@ -96,6 +96,16 @@ extension Dictionary {
         }
         return newDict
     }
+    
+    func compactMapKeysAndValues<T: Hashable, U>(_ transform: (Key, Value) -> (T, U)?) -> [T: U] {
+        var result: [T: U] = [:]
+        for (key, value) in self {
+            if let (newKey, newValue) = transform(key, value) {
+                result[newKey] = newValue
+            }
+        }
+        return result
+    }
 }
 
 extension DateFormatter {

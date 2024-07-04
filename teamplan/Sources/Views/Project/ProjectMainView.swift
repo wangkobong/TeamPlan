@@ -16,50 +16,88 @@ struct ProjectMainView: View {
     
     @ObservedObject var projectViewModel: ProjectViewModel
     
+    @State private var isProjectListEmpty = false
     @State private var isAddProjectViewActive = false
     @State private var isPushProjectDetailView = false
+    @State private var showAlert: Bool = false
     
     @State var path: [ProjectViewType] = []
     @State var projectDetailViewIndex = 0
     
     var body: some View {
-        ScrollView {
-            VStack {
-                NavigationLink(
-                    destination: ProjectDetailView(projectViewModel: projectViewModel, project: $projectViewModel.projectList[projectDetailViewIndex]),
-                    isActive: $isPushProjectDetailView) {
-                    
-                }
-                .opacity(0)
-                
-                userNameArea
-                
-                Spacer()
-                    .frame(height: 15)
-                
-                informationArea
-                
-                Spacer()
-                    .frame(height: 15)
-                
-                projectsArea
+        Group {
+            if isProjectListEmpty {
+                ProjectEmptyView(projectViewModel: projectViewModel)
+            } else {
+                ScrollView {
+                    VStack {
+                        NavigationLink(
+                            destination: ProjectDetailView(
+                                projectViewModel: projectViewModel,
+                                project: $projectViewModel.projectList[projectDetailViewIndex]),
+                            isActive: $isPushProjectDetailView) {
+                        }
+                        .opacity(0)
+                        
+                        userNameArea
+                        
+                        Spacer()
+                            .frame(height: 15)
+                        
+                        informationArea
+                        
+                        Spacer()
+                            .frame(height: 15)
+                        
+                        projectsArea
 
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            .sheet(isPresented: $isAddProjectViewActive) {
-                AddProjectView(projectViewModel: projectViewModel)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .sheet(isPresented: $isAddProjectViewActive) {
+                        AddProjectView(projectViewModel: projectViewModel)
+                    }
+                }
+                .onAppear {
+                    checkIndex()
+                    checkArray()
+                }
+                .onChange(of: projectViewModel.isProjectRemoved) { newValue in
+                    if newValue {
+                        adjustArray()
+                        checkIndex()
+                        checkArray()
+                    }
+                }
+                .alert(isPresented: $showAlert) {
+                    Alert(
+                        title: Text("목표등록 수 초과"),
+                        message: Text("최대 등록가능한 목표는 \(projectViewModel.projectRegistLimit)개 입니다."),
+                        dismissButton: .default(Text("확인"))
+                    )
+                }
             }
         }
     }
 }
 
-struct ProjectMainView_Previews: PreviewProvider {
-    static var previews: some View {
-        ProjectMainView(projectViewModel: ProjectViewModel())
+extension ProjectMainView {
+ 
+    func checkIndex() {
+        if projectDetailViewIndex >= projectViewModel.projectList.count {
+            projectDetailViewIndex = max(0, projectViewModel.projectList.count - 1)
+        }
+    }
+    
+    func checkArray() {
+        isProjectListEmpty = projectViewModel.projectList.isEmpty
+    }
+    
+    func adjustArray() {
+        projectViewModel.updateProjectList()
+        projectViewModel.isProjectRemoved = false
     }
 }
-
 
 extension ProjectMainView {
     private var userNameArea: some View {
@@ -101,10 +139,13 @@ extension ProjectMainView {
             )
             .offset(x: 0)
             .onTapGesture {
-                isAddProjectViewActive.toggle()
+                if projectViewModel.projectList.count < 5 {
+                    isAddProjectViewActive.toggle()
+                } else {
+                    self.showAlert = true
+                }
             }
         }
-
     }
     
     private var informationArea: some View {
@@ -114,9 +155,11 @@ extension ProjectMainView {
             HStack(alignment: .center) {
                 Spacer()
                 VStack {
-                    Text("등록 프로젝트")
+                    Text("등록했던 모든 목표")
                         .font(.appleSDGothicNeo(.semiBold, size: 12))
                         .foregroundColor(.theme.blackColor)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(nil)
                         .padding(.top, 11)
                     Spacer()
                     Text("\(projectViewModel.statData.totalRegistedProjects)")
@@ -134,9 +177,11 @@ extension ProjectMainView {
                 Spacer()
                 
                 VStack {
-                    Text("완료 프로젝트")
+                    Text("완료했던 모든 목표")
                         .font(.appleSDGothicNeo(.semiBold, size: 12))
                         .foregroundColor(.theme.blackColor)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(nil)
                         .padding(.top, 11)
                     Spacer()
                     Text("\(projectViewModel.statData.totalFinishedProjects)")
@@ -150,7 +195,6 @@ extension ProjectMainView {
             .frame(width: width * 2)
             .background(Color.white)
             .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
-
 
             Spacer()
             
@@ -171,23 +215,25 @@ extension ProjectMainView {
             .background(Color.white)
             .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
             .padding(.leading, 7)
-            
-
         }
         .frame(height: 78)
     }
     
     private var projectsArea: some View {
         VStack {
-            VStack {
-                ForEach(Array(projectViewModel.projectList.enumerated()), id: \.1.projectId) { index, project in
-                    ProjectCardView(project: $projectViewModel.projectList[index], projectViewModel: projectViewModel)
-                        .onTapGesture {
-                            projectDetailViewIndex = index
-                            isPushProjectDetailView.toggle()
-                        }
-                }
+            ForEach(projectViewModel.projectList.indices, id: \.self) { index in
+                ProjectCardView(project: $projectViewModel.projectList[index], projectViewModel: projectViewModel)
+                    .onTapGesture {
+                        projectDetailViewIndex = index
+                        isPushProjectDetailView.toggle()
+                    }
             }
         }
+    }
+}
+
+struct ProjectMainView_Previews: PreviewProvider {
+    static var previews: some View {
+        ProjectMainView(projectViewModel: ProjectViewModel())
     }
 }

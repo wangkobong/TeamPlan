@@ -14,11 +14,13 @@ final class ProjectService {
     
     var statDTO: StatDTO
     var projectList: [ProjectDTO]
+    var projectRegistLimit: Int
     
     // Private
     
     private let util: Utilities
     private let userId: String
+    private let storageManager: LocalStorageManager
 
     private let statCD: StatisticsServicesCoredata
     private let coreValueCD: CoreValueServicesCoredata
@@ -30,9 +32,11 @@ final class ProjectService {
     init(userId: String, statData: StatDTO) {
         self.statDTO = statData
         self.projectList = []
+        self.projectRegistLimit = 0
         
         self.util = Utilities()
         self.userId = userId
+        self.storageManager = LocalStorageManager.shared
         
         self.statCD = StatisticsServicesCoredata()
         self.coreValue = CoreValueObject()
@@ -99,9 +103,10 @@ extension ProjectService {
         if !isProcessComplete {
             print("[ProjectService] Failed to execute \(action.desc) action after \(max) retries")
             return false
+        } else {
+            print("[ProjectService] Successfully executed \(action.desc) action in \(retryCount) tries")
+            return true
         }
-        print("[ProjectService] Successfully executed \(action.desc) action in \(retryCount) tries")
-        return true
     }
     
     // sub executor: manage service action
@@ -140,7 +145,12 @@ extension ProjectService {
         async let projectReady = prepareProjectData()
         
         let results = await [statReady, coreValueReady, projectReady]
-        return results.allSatisfy{ $0 }
+        if results.allSatisfy({$0}) {
+            self.projectRegistLimit = self.coreValue.projectRegistLimit
+            return true
+        } else {
+            return false
+        }
     }
     
     // fetch
@@ -170,7 +180,7 @@ extension ProjectService {
     // fetch
     private func prepareProjectData() async -> Bool {
         do {
-            let projectObjectList = try projectCD.getTargetObjects(with: userId)
+            let projectObjectList = try projectCD.getValidObjects(with: userId)
             for object in projectObjectList {
                 self.projectList.append(try await convertExistObjectToDTO(with: object))
             }
@@ -252,13 +262,13 @@ extension ProjectService {
     
     // update: projectObject
     private func saveProjectToStorage(with object: ProjectObject) async -> Bool {
-        do {
-            try projectCD.setObject(with: object)
-            return true
-        } catch {
-            print("[ProjectService] Failed to set project data at storage")
+        projectCD.setObject(with: object)
+        
+        guard await storageManager.saveContext() else {
+            print("[ProjectService] Failed to apply new project data at storage")
             return false
         }
+        return true
     }
     
     // update: projectDTO
@@ -283,10 +293,20 @@ extension ProjectService {
         self.statDTO.totalRegistedProjects = updatedValue
         
         do {
-            try statCD.updateObject(with: updated)
+            guard try statCD.updateObject(with: updated) else {
+                print("[ProjectService] StatObject change not detected")
+                self.statDTO.totalRegistedProjects = currentValue
+                return false
+            }
+            guard await storageManager.saveContext() else {
+                print("[ProjectService] Failed to apply updated StatObject at storage")
+                self.statDTO.totalRegistedProjects = currentValue
+                return false
+            }
             return true
+            
         } catch {
-            print("[ProjectService] Failed to Update StatObject")
+            print("[ProjectService] Failed to get original StatObject: \(error.localizedDescription)")
             self.statDTO.totalRegistedProjects = currentValue
             return false
         }
@@ -322,12 +342,21 @@ extension ProjectService {
     // update: projectObject
     private func updateProjectObjectAboutRename(with newTitle: String, and index: Int) async -> Bool {
         let updated = ProjectUpdateDTO(projectId: projectList[index].projectId, userId: userId, newTitle: newTitle)
-        
+
         do {
-            try projectCD.updateObject(with: updated)
+            guard try projectCD.updateObject(with: updated) else {
+                print("[ProjectService] ProjectObject change not detected")
+                return false
+            }
+            
+            guard await storageManager.saveContext() else {
+                print("[ProjectService] Failed to apply updated ProjectObject at storage")
+                return false
+            }
             return true
+            
         } catch {
-            print("[ProjectService] Failed to Update ProjectObject")
+            print("[ProjectService] Failed to get original projectObject: \(error.localizedDescription)")
             return false
         }
     }
@@ -361,9 +390,15 @@ extension ProjectService {
     private func updateProjectObjectAboutDelete(with projectId: Int) async -> Bool {
         do {
             try projectCD.deleteObject(with: userId, and: projectId)
+            
+            guard await storageManager.saveContext() else {
+                print("[ProjectService] Failed to apply delete ProjectObject at storage")
+                return false
+            }
             return true
+            
         } catch {
-            print("[ProjectService] Failed to Delete ProjectObject")
+            print("[ProjectService] Failed to get original projectObject: \(error.localizedDescription)")
             return false
         }
     }
@@ -438,11 +473,21 @@ extension ProjectService {
         // update object
         updated.newDeadline = newDeadline
         updated.newExtendedCount = previousObject.extendedCount + 1
+        
         do {
-            try projectCD.updateObject(with: updated)
+            guard try projectCD.updateObject(with: updated) else {
+                print("[ProjectService] ProjectObject change not detected")
+                return false
+            }
+            
+            guard await storageManager.saveContext() else {
+                print("[ProjectService] Failed to apply extend ProjectObject at storage")
+                return false
+            }
             return true
+            
         } catch {
-            print("[ProjectService] Failed to Update ProjectObject")
+            print("[ProjectService] Failed to get original projectObject: \(error.localizedDescription)")
             return false
         }
     }
@@ -475,10 +520,21 @@ extension ProjectService {
         self.statDTO.totalExtendedProjects = updatedVaule
         
         do {
-            try statCD.updateObject(with: updated)
+            guard try statCD.updateObject(with: updated) else {
+                print("[ProjectService] StatObject change not detected")
+                self.statDTO.totalExtendedProjects = previousValue
+                return false
+            }
+            
+            guard await storageManager.saveContext() else {
+                print("[ProjectService] Failed to apply extend StatObject at storage")
+                self.statDTO.totalExtendedProjects = previousValue
+                return false
+            }
             return true
+            
         } catch {
-            print("[ProjectService] Failed to Update StatObject")
+            print("[ProjectService] Failed to get original StatObject: \(error.localizedDescription)")
             self.statDTO.totalExtendedProjects = previousValue
             return false
         }
@@ -503,13 +559,13 @@ extension ProjectService {
     // executor
     private func completeProjectProcess(with projectId: Int, at completeDate: Date) async -> Bool {
         do {
-            // get index
-            let index = try await searchProjectIndex(with: projectId)
-            
             if await !updateProjectObjectAboutComplete(with: projectId, at: completeDate) {
                 print("[ProjectService] Stop complete project process")
                 return false
             }
+            // get index
+            let index = try await searchProjectIndex(with: projectId)
+            print("[ProjectService] projectId: \(projectId), index: \(index) ")
             
             if await !updateStatDataAboutComplete(with: index) {
                 print("[ProjectService] Stop complete project process")
@@ -537,17 +593,27 @@ extension ProjectService {
         
         // update object
         do {
-            try projectCD.updateObject(with: updated)
+            guard try projectCD.updateObject(with: updated) else {
+                print("[ProjectService] ProjectObject change not detected")
+                return false
+            }
+            
+            guard await storageManager.saveContext() else {
+                print("[ProjectService] Failed to apply complete ProjectObject at storage")
+                return false
+            }
+            print("[ProjectService] Successfully apply complete ProjectObject")
             return true
+            
         } catch {
-            print("[ProjectService] Failed to Update ProjectObject")
+            print("[ProjectService] Failed to get original ProjectObject: \(error.localizedDescription)")
             return false
         }
     }
     
     // update: projectDTO
     private func updateProjectDTOAboutComplete(with index: Int) {
-        self.projectList.remove(at: index)
+        let dto = self.projectList.remove(at: index)
     }
     
     // update: statObject & statDTO
@@ -564,14 +630,24 @@ extension ProjectService {
         updated.newTotalFinishedTodos = updatedTotalFinishedTodos
         
         do {
-            try statCD.updateObject(with: updated)
+            guard try statCD.updateObject(with: updated) else {
+                print("[ProjectService] StatObject change not detected")
+                return false
+            }
+            
+            guard await storageManager.saveContext() else {
+                print("[ProjectService] Failed to apply complete StatObject at storage")
+                return false
+            }
+            statDTO.totalFinishedProjects = updatedTotalFinishedProjects
+            statDTO.totalFinishedTodos = updatedTotalFinishedTodos
+            
+            print("[ProjectService] Successfully apply complete StatObject")
+            return true
         } catch {
-            print("[ProjectService] Failed to Update StatObject")
+            print("[ProjectService] Failed to get original StatObject: \(error.localizedDescription)")
             return false
         }
-        statDTO.totalFinishedProjects = updatedTotalFinishedProjects
-        statDTO.totalFinishedTodos = updatedTotalFinishedTodos
-        return true
     }
 }
 
@@ -606,10 +682,19 @@ extension ProjectService {
         
         // update object
         do {
-            try projectCD.updateObject(with: updated)
+            guard try projectCD.updateObject(with: updated) else {
+                print("[ProjectService] ProjectObject change not detected")
+                return false
+            }
+            
+            guard await storageManager.saveContext() else {
+                print("[ProjectService] Failed to apply explode ProjectObject at storage")
+                return false
+            }
             return true
+            
         } catch {
-            print("[ProjectService] Failed to Update ProjectObject")
+            print("[ProjectService] Failed to get original ProjectObject: \(error.localizedDescription)")
             return false
         }
     }
@@ -619,10 +704,20 @@ extension ProjectService {
         do {
             let currentValue = try statCD.getObject(with: userId).totalFailedProjects
             let updated = StatUpdateDTO(userId: userId, newTotalFailedProjects: currentValue + 1)
-            try statCD.updateObject(with: updated)
+            
+            guard try statCD.updateObject(with: updated) else {
+                print("[ProjectService] StatObject change not detected")
+                return false
+            }
+            
+            guard await storageManager.saveContext() else {
+                print("[ProjectService] Failed to apply explode StatObject at storage")
+                return false
+            }
             return true
+            
         } catch {
-            print("[ProjectService] Failed to update StatisticsObject: \(error)")
+            print("[ProjectService] Failed to get original StatisticsObject: \(error.localizedDescription)")
             return false
         }
     }
@@ -691,9 +786,15 @@ extension ProjectService {
     private func saveTodoAtStorage(with newTodo: TodoObject) async -> Bool {
         do {
             try todoCD.setObject(with: newTodo)
+            
+            guard await storageManager.saveContext() else {
+                print("[ProjectService] Failed to apply new todo data at storage")
+                return false
+            }
             return true
+            
         } catch {
-            print("[ProjectService] Failed to save todo object at storage: [ ProjectId: \(newTodo.projectId) / TodoId: \(newTodo.todoId)]")
+            print("[ProjectService] Failed to search containing Project - [ ProjectId: \(newTodo.projectId) / TodoId: \(newTodo.todoId)]: \(error.localizedDescription)")
             return false
         }
     }
@@ -724,10 +825,18 @@ extension ProjectService {
     // update: projectObject
     private func updateProjectObject(with updated: ProjectUpdateDTO) async -> Bool {
         do {
-            try projectCD.updateObject(with: updated)
+            guard try projectCD.updateObject(with: updated) else {
+                print("[ProjectService] ProjectObject change not detected")
+                return false
+            }
+            guard await storageManager.saveContext() else {
+                print("[ProjectService] Failed to apply updated ProjectObject at storage")
+                return false
+            }
             return true
+            
         } catch {
-            print("[ProjectService] Failed to update project object at storage: [\(updated.projectId)]")
+            print("[ProjectService] Failed to get original projectObject: \(error.localizedDescription)")
             return false
         }
     }
@@ -749,11 +858,20 @@ extension ProjectService {
             newTotalRegistedTodos: self.statDTO.totalRegistedTodos + 1
         )
         do {
-            try statCD.updateObject(with: updated)
+            guard try statCD.updateObject(with: updated) else {
+                print("[ProjectService] StatObject change not detected")
+                return false
+            }
+            
+            guard await storageManager.saveContext() else {
+                print("[ProjectService] Failed to apply updated StatObject at storage")
+                return false
+            }
             self.statDTO.totalRegistedTodos += 1
             return true
+            
         } catch {
-            print("[ProjectService] Failed to update stat object")
+            print("[ProjectService] Failed to get original StatObject: \(error.localizedDescription)")
             return false
         }
     }
@@ -799,17 +917,26 @@ extension ProjectService {
 
     // update: todoObject
     private func updateTodoObjectStatus(with projectId: Int, and todoId: Int, to newStatus: TodoStatus) async -> Bool {
+        let updated = TodoUpdateDTO(
+            projectId: projectId,
+            todoId: todoId,
+            userId: userId,
+            newStatus: newStatus
+        )
         do {
-            let updated = TodoUpdateDTO(
-                projectId: projectId,
-                todoId: todoId,
-                userId: userId,
-                newStatus: newStatus
-            )
-            try todoCD.updateObject(updated: updated)
+            guard try todoCD.updateObject(updated: updated) else {
+                print("[ProjectService] TodoObject change not detected: [\(todoId)] in project: [\(projectId)]")
+                return false
+            }
+            
+            guard await storageManager.saveContext() else {
+                print("[ProjectService] Failed to apply updated TodoObject at storage: [\(todoId)] in project: [\(projectId)]")
+                return false
+            }
             return true
+            
         } catch {
-            print("[ProjectService] Failed to update todo object for todo: [\(todoId)] in project: [\(projectId)]")
+            print("[ProjectService] Failed to search original object for todo: [\(todoId)] in project: [\(projectId)] - \(error.localizedDescription)")
             return false
         }
     }
@@ -825,16 +952,25 @@ extension ProjectService {
             updatedValue = currentCount - 1
         }
         
+        let updated = ProjectUpdateDTO(
+            projectId: projectId,
+            userId: userId,
+            newFinishedTodo: updatedValue
+        )
+        
         do {
-            let updated = ProjectUpdateDTO(
-                projectId: projectId,
-                userId: userId,
-                newFinishedTodo: updatedValue
-            )
-            try projectCD.updateObject(with: updated)
+            guard try projectCD.updateObject(with: updated) else {
+                print("[ProjectService] ProjectObject change not detected")
+                return false
+            }
+            guard await storageManager.saveContext() else {
+                print("[ProjectService] Failed to apply updated ProjectObject at storage")
+                return false
+            }
             return true
+            
         } catch {
-            print("[ProjectService] Failed to update project object: [\(projectId)]")
+            print("[ProjectService] Failed to get original projectObject: \(error.localizedDescription)")
             return false
         }
     }
@@ -877,10 +1013,18 @@ extension ProjectService {
         let updated = TodoUpdateDTO(projectId: projectId, todoId: todoId, userId: userId, newDesc: newDesc)
         
         do {
-            try todoCD.updateObject(updated: updated)
+            guard try todoCD.updateObject(updated: updated) else {
+                print("[ProjectService] TodoObject change not detected")
+                return false
+            }
+            guard await storageManager.saveContext() else {
+                print("[ProjectService] Failed to apply updated TodoObject at storage")
+                return false
+            }
             return true
+            
         } catch {
-            print("[ProjectService] Failed to update todo object [ Projectid: \(projectId) | TodoId: \(todoId) ]")
+            print("[ProjectService] Failed to search containing Project - [ ProjectId: \(projectId) / TodoId: \(todoId)]: \(error.localizedDescription)")
             return false
         }
     }

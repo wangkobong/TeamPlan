@@ -14,13 +14,21 @@ import KeychainSwift
 final class AuthGoogleService {
     
     private var keychain = KeychainSwift()
+    private let topViewManager = TopViewManager.shared
     
     // MARK: Main Func
     
     @MainActor
     func login() async throws -> AuthSocialLoginResDTO {
-        guard let topVC = GoogleLoginHelper.shared.topViewController() else {
-            throw GoogleSocialLoginError.topViewControllerSearchFailed(serviceName: .google)
+        guard let topVC = topViewManager.topViewController() else {
+            await topViewManager.redirectToLoginView (
+                title: "Warning!",
+                message: "서비스의 동작이상이 감지되었습니다! 지속될 경우 재설치 해주세요"
+            )
+            throw NSError(
+                domain: "TopViewManager",
+                code: 0,
+                userInfo: [NSLocalizedDescriptionKey: "Failed to get top view controller"])
         }
         do {
             // FirebaseAuth Authentication
@@ -39,6 +47,10 @@ final class AuthGoogleService {
             )
             // Excpetion Handling
         } catch {
+            await topViewManager.redirectToLoginView (
+                title: "Warning!",
+                message: "서비스의 동작이상이 감지되었습니다! 지속될 경우 재설치 해주세요"
+            )
             print("[GoogleLogin] Failed to SignIn with GoogleSocialLogin: \(error.localizedDescription)")
             throw error
         }
@@ -79,14 +91,5 @@ final class AuthGoogleService {
                 serviceName: .google, firebaseError: error.localizedDescription
             )
         }
-    }
-    
-    func logout() throws {
-        try Auth.auth().signOut()
-        keychain.delete("idToken")
-        keychain.delete("accessToken")
-        let userDefaultManager = UserDefaultManager.loadWith(key: "user")
-        userDefaultManager?.identifier = ""
-        userDefaultManager?.userName = ""
     }
 }

@@ -38,12 +38,6 @@
         <attribute name="title" optional="YES" attributeType="String"/>
         <attribute name="user_id" optional="YES" attributeType="String"/>
     </entity>
-    <entity name="ProjectDailyTodoEntity" representedClassName=".ProjectDailyTodoEntity" syncable="YES" codeGenerationType="class">
-        <attribute name="log_complete" optional="YES" attributeType="String"/>
-        <attribute name="log_id" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
-        <attribute name="log_upload_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="log_user_id" optional="YES" attributeType="String"/>
-    </entity>
     <entity name="ProjectEntity" representedClassName=".ProjectEntity" syncable="YES" codeGenerationType="class">
         <attribute name="alerted" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="daily_registed_todo" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
@@ -62,15 +56,23 @@
         <relationship name="todo_relationship" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="TodoEntity" inverseName="project_relationship" inverseEntity="TodoEntity"/>
     </entity>
     <entity name="ProjectExtendLogEntity" representedClassName=".ProjectExtendLogEntity" syncable="YES" codeGenerationType="class">
-        <attribute name="extended" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
-        <attribute name="extended_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="extend_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="extend_count" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="extend_period" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="finished_todo" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
-        <attribute name="log_deadline" optional="YES" attributeType="String"/>
+        <attribute name="new_deadline" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="project_id" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="registed_todo" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="stored_drop" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
-        <attribute name="updated_deadline" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="used_drop" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="user_id" optional="YES" attributeType="String"/>
+    </entity>
+    <entity name="ProjectTodoLogEntity" representedClassName=".ProjectTodoLogEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="finished_todo" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="log_id" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="project_id" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="registed_date" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="registed_todo" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="user_id" optional="YES" attributeType="String"/>
     </entity>
     <entity name="StatisticsEntity" representedClassName=".StatisticsEntity" syncable="YES" codeGenerationType="class">

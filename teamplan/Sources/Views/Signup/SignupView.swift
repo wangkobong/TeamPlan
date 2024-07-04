@@ -152,13 +152,11 @@ struct SignupView: View {
             .onTapGesture {
                 self.isLoading = true
                 Task {
-                    do {
-                        let userDTO = try await trySignup()
-                        print("userDTO: \(userDTO)")
+                    if await trySignup() {
                         self.signupSuccess = true
                         self.isLoading = false
                         mainViewState = .main
-                    } catch {
+                    } else {
                         self.showAlert = true
                         self.isLoading = false
                     }
@@ -182,13 +180,7 @@ struct SignupView: View {
         }
     }
     
-    private func trySignup() async throws -> UserInfoDTO {
-        
-        do {
-            let user = try await authViewModel.trySignup(userName: self.userName)
-            return user
-        } catch let error {
-            throw error
-        }
+    private func trySignup() async -> Bool {
+        return await authViewModel.trySignup(userName: self.userName)
     }
 }

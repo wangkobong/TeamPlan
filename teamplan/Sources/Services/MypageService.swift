@@ -7,14 +7,16 @@
 //
 
 import Foundation
+import FirebaseAuth
 
 final class MypageService {
     
     private let userCD = UserServicesCoredata()
     private let statCD = StatisticsServicesCoredata()
     private let challengeCD = ChallengeServicesCoredata()
+    
     private let loginService = LoginService()
-    private var syncServerWithLocal: SyncServerWithLocal
+    private let deleteSync: DeleteSynchronize
     
     private var userId: String
     private var completedChallenges: Int
@@ -22,11 +24,11 @@ final class MypageService {
     init(userId: String) {
         self.userId = userId
         self.completedChallenges = 0
-        self.syncServerWithLocal = SyncServerWithLocal(with: userId)
+        self.deleteSync = DeleteSynchronize(userId: userId)
     }
     
     func prepareService() async throws {
-        self.completedChallenges = try await challengeCD.getCompleteObjects(with: self.userId)
+        self.completedChallenges = try await challengeCD.countCompleteObjects(with: self.userId)
     }
     
     func getMypageDTO() throws -> MypageDTO {
@@ -48,11 +50,33 @@ final class MypageService {
     }
     
     // Delete every user data at local & server
-    func withdraw() async throws {
-        try await syncServerWithLocal.deleteExecutor(with: userId)
+    func withdraw() async -> Bool {
+        if await deleteSync.deleteExecutor() {
+            if let userDefault = UserDefaultManager.loadWith() {
+                userDefault.clear()
+            }
+            await removeUserAtAuth()
+            return true
+        } else {
+            print("[MypageService] Failed to withdraw process")
+            return false
+        }
+    }
+    
+    private func removeUserAtAuth() async {
+        guard let user = Auth.auth().currentUser else {
+            print("[MypageService] There is no user to remove at FirebaseAuth")
+            return
+        }
+        do {
+            try await user.delete()
+            print("[MypageService] Successfully remove user at FirebaseAuth")
+        } catch {
+            print("[MypageService] Failed to remove user at FirebaseAuth : \(error.localizedDescription)")
+            return
+        }
     }
 }
-
 
 struct MypageDTO {
     
@@ -91,7 +115,6 @@ struct MypageDTO {
         self.completedTodos = 0
     }
 }
-
 
 enum MypageMenu: String {
     case logout = "로그아웃"

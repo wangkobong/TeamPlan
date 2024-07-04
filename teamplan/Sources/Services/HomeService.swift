@@ -24,7 +24,6 @@ final class HomeService {
     private let userCD: UserServicesCoredata
     private let statCD: StatisticsServicesCoredata
     private let projectCD: ProjectServicesCoredata
-    private let projectMock: ProjectMock
     
     // MARK: - Initializer
     init(with userId: String, and userName: String) {
@@ -34,7 +33,6 @@ final class HomeService {
         self.userCD = UserServicesCoredata()
         self.statCD = StatisticsServicesCoredata()
         self.projectCD = ProjectServicesCoredata()
-        self.projectMock = ProjectMock()
         self.challengeSC = ChallengeService(with: userId)
     }
     

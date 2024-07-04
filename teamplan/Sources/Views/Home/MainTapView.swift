@@ -18,7 +18,7 @@ struct MainTapView: View {
                 ProjectView()
                     .tabItem {
                         Image("document")
-                        Text("프로젝트")
+                        Text("목표관리")
                     }
                     .tag(0)
                 

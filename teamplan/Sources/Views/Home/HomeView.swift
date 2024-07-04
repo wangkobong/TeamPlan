@@ -75,7 +75,7 @@ struct HomeView: View {
         .onChange(of: homeViewModel.userData.myChallenges) { newValue in
             isChallenging = !homeViewModel.userData.myChallenges.isEmpty
         }
-
+        
         // HomeViewModel Exception Handling
         .onChange(of: homeViewModel.isLoginRedirectNeed) { newValue in
             if newValue {
