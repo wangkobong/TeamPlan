@@ -18,6 +18,7 @@ final class ProjectViewModel: ObservableObject {
     private var isSubscribersAdded = false
     
     var service: ProjectService
+    var projectRegistLimit: Int
     
     @Published var statData: StatDTO = StatDTO()
     @Published var projectList: [ProjectDTO] = []
@@ -26,6 +27,7 @@ final class ProjectViewModel: ObservableObject {
     @Published var isReInitiNeed: Bool = false     // need to re-initilize viewModel
     @Published var isProejctCanAdd: Bool = false
     @Published var isProejctCanComplete: Bool = false
+    @Published var isProjectRemoved: Bool = false
     @Published var isTodoCanAdd: Bool = false
     
     // AddProjectView에 필요한 프로퍼티
@@ -37,7 +39,7 @@ final class ProjectViewModel: ObservableObject {
     
     @MainActor
     init() {
-        if let userDefault = UserDefaultManager.loadWith(key: UserDefaultKey.user.rawValue),
+        if let userDefault = UserDefaultManager.loadWith(),
            let identifier = userDefault.identifier,
            let userName = userDefault.userName {
             self.identifier = identifier
@@ -48,8 +50,9 @@ final class ProjectViewModel: ObservableObject {
             self.userName = "unknown"
         }
         self.service = ProjectService(userId: identifier, statData: StatDTO())
-        self.prepareData()
+        self.projectRegistLimit = 0
         
+        self.prepareData()
         self.createWaterDropArray(upTo: statData.drop)
     }
     
@@ -60,6 +63,7 @@ final class ProjectViewModel: ObservableObject {
             if result {
                 await updateProjectList()
                 await updateStatData()
+                self.projectRegistLimit = service.projectRegistLimit
                 self.isViewModelReady = true
             } else {
                 print("[ProjectViewModel] Failed to prepare data")
@@ -115,11 +119,11 @@ extension ProjectViewModel {
     
     func deleteProject(projectId: Int) {
         Task {
-            let result = await !service.executor(action:
+            let result = await service.executor(action:
                     .deleteProject(projectId: projectId)
             )
             if result {
-                await updateProjectList()
+                await updateArrayRemovedStatus()
             } else {
                 print("[ProjectViewModel] Failed to execute delete project")
                 self.isReInitiNeed = true
@@ -153,7 +157,7 @@ extension ProjectViewModel {
                     .renameProject(projectId: projectId, newTitle: newTitle)
             )
             if result {
-                await updateProjectList()
+                await updateProjectDTO(with: projectId)
             } else {
                 print("[ProjectViewModel] Failed to execute rename project")
                 self.isReInitiNeed = true
@@ -169,8 +173,8 @@ extension ProjectViewModel {
                     .extendProject(dto: dto)
             )
             if result {
-                await updateProjectList()
                 await updateStatData()
+                await updateProjectDTO(with: projectId)
             } else {
                 print("[ProjectViewModel] Failed to execute extend project")
                 self.isReInitiNeed = true
@@ -191,8 +195,8 @@ extension ProjectViewModel {
             let results = await [isRenamed, isExtended]
             
             if results.allSatisfy({ $0 }){
-                await updateProjectList()
                 await updateStatData()
+                await updateProjectDTO(with: projectId)
             } else {
                 print("[ProjectViewModel] Failed to execute rename and extend project")
                 self.isReInitiNeed = true
@@ -207,22 +211,21 @@ extension ProjectViewModel {
             self.isProejctCanComplete = false
             return
         }
-        executeCompleteProcess(with: projectId)
+        await executeCompleteProcess(with: projectId)
+        print("[ProjectViewModel] Successfully execute compelete project")
     }
     
-    private func executeCompleteProcess(with projectId: Int) {
-        Task {
-            let completeDate = Date()
-            let result = await service.executor(action:
-                    .completeProject(projectId: projectId, completeDate: completeDate)
-            )
-            if result {
-                await updateStatData()
-                await updateProjectList()
-            } else {
-                print("[ProjectViewModel] Failed to execute compelete project")
-                self.isReInitiNeed = true
-            }
+    private func executeCompleteProcess(with projectId: Int) async {
+        let completeDate = Date()
+        let result = await service.executor(action:
+                .completeProject(projectId: projectId, completeDate: completeDate)
+        )
+        if result {
+            await updateStatData()
+            await updateArrayRemovedStatus()
+        } else {
+            print("[ProjectViewModel] Failed to execute compelete project")
+            self.isReInitiNeed = true
         }
     }
     
@@ -245,6 +248,7 @@ extension ProjectViewModel {
         )
         if result {
             await updateStatData()
+            await updateProjectDTO(with: projectId)
             await updateTodoList(with: projectId)
         } else {
             print("[ProjectViewModel] Failed to execute add todo")
@@ -276,6 +280,7 @@ extension ProjectViewModel {
                     .updateTodoStatus(projectId: projectId, todoId: todoId, newStatus: newStatus)
             )
             if result {
+                await updateProjectDTO(with: projectId)
                 await updateTodoDTO(with: projectId, and: todoId)
             } else {
                 print("[ProjectViewModel] Failed to execute update todo status")
@@ -287,6 +292,7 @@ extension ProjectViewModel {
     // MARK: Util
     
     func createWaterDropArray(upTo number: Int) {
+        print("[ProjectViewModel] projectRegistLimit: \(projectRegistLimit)")
         guard number > 0 else { return }
         let waterDrops = Array(1...number)
         self.waterDrop = waterDrops.map { "\($0)일 연장하기" }
@@ -305,13 +311,18 @@ extension ProjectViewModel {
     }
     
     @MainActor
-    private func updateStatData() {
+    func updateStatData() {
         self.statData = self.service.statDTO
     }
     
     @MainActor
     func updateProjectList() {
         self.projectList = self.service.projectList
+    }
+    
+    @MainActor
+    private func updateArrayRemovedStatus() {
+        self.isProjectRemoved = true
     }
     
     @MainActor

@@ -28,7 +28,7 @@ final class HomeViewModel: ObservableObject {
     @MainActor
     init() {
         // UserDefault: Load Data
-        if let userDefault = UserDefaultManager.loadWith(key: UserDefaultKey.user.rawValue),
+        if let userDefault = UserDefaultManager.loadWith(),
            let identifier = userDefault.identifier,
            let userName = userDefault.userName {
             self.identifier = identifier

@@ -130,7 +130,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     }
     
     private func prepareBackgroundTask() async {
-        if let userDefault = UserDefaultManager.loadWith(key: UserDefaultKey.user.rawValue),
+        if let userDefault = UserDefaultManager.loadWith(),
            let identifier = userDefault.identifier,
            let userName = userDefault.userName {
             backgroundTask = BackgroundTask(userId: identifier, userName: userName)

@@ -8,6 +8,8 @@
 
 import SwiftUI
 
+// MARK: - properties
+
 enum MyPageAlertState {
     case none
     case logout
@@ -19,8 +21,6 @@ struct MyPageView: View {
     
     @ObservedObject private var vm = MypageViewModel()
     @AppStorage("mainViewState") var mainViewState: MainViewState?
-
-    // MARK: - private properties
     
     private var leftRightInset: CGFloat = 16
     private var menuTitles: [MypageMenu] = [.logout, .withdraw, .version]

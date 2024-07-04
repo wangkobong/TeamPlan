@@ -27,9 +27,6 @@ struct ProjectView: View {
                         ProjectEmptyView(projectViewModel: projectViewModel)
                     } else {
                         ProjectMainView(projectViewModel: projectViewModel)
-                            .onAppear {
-                                projectViewModel.updateProjectList()
-                            }
                     }
                 }
             }
@@ -46,7 +43,7 @@ struct ProjectView_Previews: PreviewProvider {
 extension ProjectView {
     private var navigationArea: some View {
         HStack {
-            Text("목표")
+            Text("목표관리")
                 .font(.archivoBlack(.regular, size: 20))
                 .foregroundColor(.theme.mainPurpleColor)
             Spacer()
@@ -54,9 +51,7 @@ extension ProjectView {
                 Image(systemName: "bell")
                     .foregroundColor(.black)
             }
-            
         }
         .padding(.horizontal, 16)
-
     }
 }

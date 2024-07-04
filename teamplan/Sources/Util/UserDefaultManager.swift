@@ -9,47 +9,55 @@
 import Foundation
 
 final class UserDefaultManager {
-    
-    private let key: String
-    
+
     var userName: String?
     var identifier: String?
     
-    private init(key: String, name: String?, identifier: String?) {
-        self.key = key
+    private let key: String = UserDefaultKey.user.rawValue
+    
+    private init(name: String?, identifier: String?) {
         self.userName = name
         self.identifier = identifier
     }
-    
-    static func loadWith(key: String) -> UserDefaultManager? {
-        guard let data = UserDefaults.standard.data(forKey: key),
-              let decoded = try? JSONDecoder().decode(UserDefaultManager.self, from: data) else {
+
+    static func loadWith() -> UserDefaultManager? {
+        guard let data = UserDefaults.standard.data(forKey: UserDefaultKey.user.rawValue),
+              let decoded = try? JSONDecoder().decode(UserDefaultManager.self, from: data)
+        else {
+            print("[UserDefault] Failed to load UserDefault")
             return nil
         }
         return decoded
     }
     
-    static func createWith(key: String) -> UserDefaultManager {
-        let newUserDefaultManager = UserDefaultManager(key: key)
-        newUserDefaultManager.save()
-        return newUserDefaultManager
+    static func createWith() -> UserDefaultManager? {
+        let newUserDefaultManager = UserDefaultManager(name: nil, identifier: nil)
+        if newUserDefaultManager.save() {
+            return newUserDefaultManager
+        } else {
+            print("[UserDefault] Failed to create UserDefault")
+            return nil
+        }
     }
     
-    func save() {
-        guard let data = try? JSONEncoder().encode(self) else { return }
-        UserDefaults.standard.set(data, forKey: self.key)
+    func save() -> Bool {
+        do {
+            let data = try JSONEncoder().encode(self)
+            UserDefaults.standard.set(data, forKey: self.key)
+            return true
+        } catch {
+            print("[UserDefault] Failed to save UserDefaultManager: \(error.localizedDescription)")
+            return false
+        }
     }
     
-    func clear(key: String) {
-        UserDefaults.standard.removeObject(forKey: key)
-    }
-
-    private init(key: String) {
-        self.key = key
+    func clear() {
+        UserDefaults.standard.removeObject(forKey: self.key)
     }
 }
 
 extension UserDefaultManager: Codable {
+    
     enum CodingKeys: CodingKey {
         case userName, identifier
     }
@@ -58,8 +66,7 @@ extension UserDefaultManager: Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let userName = try container.decodeIfPresent(String.self, forKey: .userName)
         let identifier = try container.decodeIfPresent(String.self, forKey: .identifier)
-        let key = UserDefaults.standard.string(forKey: "key") ?? UUID().uuidString
-        self.init(key: key, name: userName, identifier: identifier)
+        self.init(name: userName, identifier: identifier)
     }
     
     func encode(to encoder: Encoder) throws {

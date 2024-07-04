@@ -8,33 +8,6 @@
 
 import CoreData
 
-// MARK: - Coredata Controller
-protocol CoredataProtocol {
-    var container: NSPersistentContainer { get }
-    var context: NSManagedObjectContext { get }
-}
-
-enum CoredataConfig {
-    static let defaultModel = "Coredata"
-}
-
-final class CoredataMainController: CoredataProtocol {
-    static let shared = CoredataMainController()
-    var container: NSPersistentContainer
-    var context: NSManagedObjectContext {
-        return container.viewContext
-    }
-    
-    private init(){
-        container = NSPersistentContainer(name: CoredataConfig.defaultModel)
-        container.loadPersistentStores{ storeDescription, error in
-            if let error = error as NSError? {
-                fatalError("[Coredata] Unable to load persistent container: \(error)")
-            }
-        }
-    }
-}
-
 // MARK: - Basic
 protocol BasicObjectManage {
     associatedtype Entity: NSManagedObject
@@ -58,7 +31,7 @@ protocol FullObjectManage: BasicObjectManage {
     
     func getObject(with userId: String) throws -> Object
     func setObject(with object: Object) throws
-    func updateObject(with dto: DTO) throws
+    func updateObject(with dto: DTO) throws -> Bool
     func deleteObject(with userId: String) throws
     func isObjectExist(with userId: String) -> Bool
 }
@@ -89,20 +62,21 @@ protocol NotificationObjectManage: BasicObjectManage {
 protocol ChallengeObjectManage: BasicObjectManage {
     associatedtype DTO
     
-    func setObject(with object: Object) async throws
+    func setObject(with object: Object)
     func getObject(with challengeId: Int, and userId: String) async throws -> Object
     func deleteObject(with userId: String) throws
     func updateObject(with dto: DTO) throws
     
     func getObjects(with userId: String) throws -> [Object]
     func getObjects(with userId: String) async throws -> [Object]
-    func getCompleteObjects(with userId: String) async throws -> Int
+    func getTartgetObjects(with userId: String, syncDate: Date) async throws -> [Object]
+    func countCompleteObjects(with userId: String) async throws -> Int
     func isObjectExist(with userId: String) -> Bool
 }
 
 
 // MARK: - Log
-protocol LogObjectManage: BasicObjectManage {
+protocol AccessLogObjectManage: BasicObjectManage {
     
     func setObject(with object: Object) throws
     
@@ -113,6 +87,12 @@ protocol LogObjectManage: BasicObjectManage {
     func isObjectExist(with userId: String) -> Bool
 }
 
+protocol ProjectLogObjectManage: BasicObjectManage {
+    
+    func setObject(with object: Object) throws
+    func getObjects(with projectId: Int, and userId: String) throws -> [Object]
+    func deleteObject(with projectId: Int, and userId: String) async throws
+}
 
 // MARK: - Project
 protocol ProjectObjectManage: BasicObjectManage {
@@ -124,15 +104,15 @@ protocol ProjectObjectManage: BasicObjectManage {
     
     func getObject(with userId: String, and projectId: Int) throws -> Object
     func getObjects(with userId: String) throws -> [Object]
-    func getTargetObjects(with userId: String) throws -> [Object]
+    func getValidObjects(with userId: String) throws -> [Object]
     
     func getIdList(with userId: String) throws -> [Int]
     func getHomeDTOList(with userId: String) throws -> [HomeDTO]
     func getBackgroundDTOList(with userId:String) throws -> [BackgroundDTO]
     
-    func updateObject(with dto: UpdateDTO) throws
+    func updateObject(with dto: UpdateDTO) throws -> Bool
     func deleteObject(with userId: String, and projectId: Int) throws
-    func deleteAllObject(with userId: String) throws
+    func deleteTruncateObject(with userId: String) throws -> Bool
 }
 
 
@@ -143,7 +123,7 @@ protocol TodoObjectManage: BasicObjectManage {
     func setObject(with object: Object) throws
     func getObject(userId: String, projectId: Int, todoId: Int) throws -> Object
     func getObjects(userId: String, projectId: Int) throws -> [Object]
-    func updateObject(updated: DTO) throws
+    func updateObject(updated: DTO) throws -> Bool
     func deleteObject(userId: String, projectId: Int, todoId: Int) throws
 }
 
@@ -160,14 +140,19 @@ enum EntityPredicate {
     
     case accessLog
     case targetLog
+    case projectExtendLog
+    case totalProjectExtendLog
     
     case project
-    case projectList
-    case projectTargetList
+    case projectTotalList
+    case projectValidList
+    case projectUploadList
+    case projectTruncateList
     
     case fullChallenge
     case singleChallenge
     case completeChallenge
+    case targetChallenge
     
     var format: String {
         switch self {
@@ -183,20 +168,6 @@ enum EntityPredicate {
         case .categoryNotify:
             return "user_id == %@ AND category == %d"
             
-        // accesslog
-        case .accessLog:
-            return "user_id == %@"
-        case .targetLog:
-            return "user_id == %@ AND access_record > %@"
-            
-        // project
-        case .project:
-            return "user_id == %@ AND project_id == %d"
-        case .projectList:
-            return "user_id == %@"
-        case .projectTargetList:
-            return "user_id == %@ AND (status == %d OR status == %d)"
-            
         // challenge
         case .fullChallenge:
             return "user_id == %@"
@@ -204,6 +175,32 @@ enum EntityPredicate {
             return "user_id == %@ AND challenge_id == %d"
         case .completeChallenge:
             return "user_id == %@ AND status == %@"
+        case .targetChallenge:
+            return "user_id == %@ AND (selected_at > %@ OR unselected_at > %@ OR finished_at > %@)"
+            
+        // project
+        case .project:
+            return "user_id == %@ AND project_id == %d"
+        case .projectTotalList:
+            return "user_id == %@"
+        case .projectValidList:
+            return "user_id == %@ AND (status == %d OR status == %d)"
+        case .projectUploadList:
+            return "user_id == %@ AND (status == %d OR status == %d OR status == %d)"
+        case .projectTruncateList:
+            return "user_id == %@ AND (status == %d OR status == %d OR status == %d OR status == %d)"
+            
+        // accesslog
+        case .accessLog:
+            return "user_id == %@"
+        case .targetLog:
+            return "user_id == %@ AND access_record > %@"
+            
+        // projectLog
+        case .projectExtendLog:
+            return "user_id == %@ AND project_id == %d"
+        case .totalProjectExtendLog:
+            return "user_id == %@"
         }
     }
 }
