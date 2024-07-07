@@ -106,6 +106,7 @@ internal enum Gen {
     internal static let onboardingImage2 = ImageAsset(name: "onboarding_image2")
     internal static let onboardingImage3 = ImageAsset(name: "onboarding_image3")
     internal static let onboardingImage4 = ImageAsset(name: "onboarding_image4")
+    internal static let bombCompleteAlert = ImageAsset(name: "bomb_complete_alert")
     internal static let checkBoxDone = ImageAsset(name: "checkBox_done")
     internal static let checkBoxNone = ImageAsset(name: "checkBox_none")
     internal static let projectBombSmile = ImageAsset(name: "project_bomb_smile")

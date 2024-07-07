@@ -80,10 +80,10 @@ extension SignupLoadingService {
     // controller
     func executor() async {
         
-        if await !networkManager.checkNetworkConnection() {
-            await failedProcess(.network)
-            return
-        }
+//        if await !networkManager.checkNetworkConnection() {
+//            await failedProcess(.network)
+//            return
+//        }
         
         if await !serviceExecutor(.fetch) {
             await failedProcess(.fetch)
