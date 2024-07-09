@@ -20,7 +20,7 @@ final class AccessLogServicesCoredata: AccessLogObjectManage {
         self.context = LocalStorageManager.shared.context
     }
     
-    func setObject(with object: Object) {
+    func setObject(with object: Object) -> Bool {
         createEntity(with: object)
     }
     
@@ -33,11 +33,23 @@ final class AccessLogServicesCoredata: AccessLogObjectManage {
     // Get: Full Log
     func getFullObjects(with userId: String) throws -> [Object] {
         let entities = try getFullEntity(with: userId)
+        
+        if entities.isEmpty {
+            print("[AccessLogRepo] There is no log to get")
+            return []
+        }
+        
         return try convertToObjects(with: entities)
     }
     
     func deleteObject(with userId: String) throws {
         let entities = try getFullEntity(with: userId)
+        
+        if entities.isEmpty {
+            print("[AccessLogRepo] There is no log to delete")
+            return
+        }
+        
         for entity in entities {
             self.context.delete(entity)
         }
@@ -63,11 +75,22 @@ extension AccessLogServicesCoredata {
 
 extension AccessLogServicesCoredata {
     
-    private func createEntity(with log: Object) {
+    private func createEntity(with log: Object) -> Bool {
         let entity = Entity(context: context)
         
         entity.user_id = log.userId
         entity.access_record = log.accessRecord
+        
+        // Optional property nil checks
+        if entity.user_id == nil {
+            print("[AccessLogRepo] nil detected: 'user_id'")
+            return false
+        }
+        if entity.access_record == nil {
+            print("[AccessLogRepo] nil detected: 'access_record'")
+            return false
+        }
+        return true
     }
     
     private func getFullFetchRequest(with userId: String, sortNeed: Bool) -> NSFetchRequest<Entity> {

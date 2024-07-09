@@ -61,14 +61,15 @@ final class MypageViewModel: ObservableObject {
         switch menu {
             
         case .logout:
-            do {
-                try service.logout()
-            } catch let error as NSError {
-                print(error)
+            Task {
+                let result = await service.logout()
+                print("[MyPageViewModel] Logout action result: \(result)")
             }
-            
         case .withdraw:
-            Task{ _ = await service.withdraw() }
+            Task{
+                let result = await service.withdraw()
+                print("[MyPageViewModel] Withdraw action result: \(result)")
+            }
  
         default:
             return

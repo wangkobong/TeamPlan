@@ -33,11 +33,11 @@ final class LocalStorageManager {
     }
     
     func saveContext() async -> Bool {
-        let context = container.viewContext
         if context.hasChanges {
+            print("[localStorage] Context change detected")
             do {
-                try await context.perform {
-                    try context.save()
+                try await self.context.perform {
+                    try self.context.save()
                 }
                 return true
             } catch {

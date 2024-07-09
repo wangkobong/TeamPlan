@@ -262,7 +262,11 @@ extension ProjectService {
     
     // update: projectObject
     private func saveProjectToStorage(with object: ProjectObject) async -> Bool {
-        projectCD.setObject(with: object)
+        
+        guard projectCD.setObject(with: object) else {
+            print("[ProjectService] Failed to set new project data at storage context")
+            return false
+        }
         
         guard await storageManager.saveContext() else {
             print("[ProjectService] Failed to apply new project data at storage")
@@ -785,7 +789,10 @@ extension ProjectService {
     // set: todoObject
     private func saveTodoAtStorage(with newTodo: TodoObject) async -> Bool {
         do {
-            try todoCD.setObject(with: newTodo)
+            guard try todoCD.setObject(with: newTodo) else {
+                print("[ProjectService] Failed to set new todo data at storage context")
+                return false
+            }
             
             guard await storageManager.saveContext() else {
                 print("[ProjectService] Failed to apply new todo data at storage")

@@ -38,8 +38,6 @@ final class HomeService {
     
     // MARK: - PrepareDTO
     func prepareService() async -> Bool {
-        let dto: HomeDataDTO
-        
         do {
             try await prepareProperties()
             

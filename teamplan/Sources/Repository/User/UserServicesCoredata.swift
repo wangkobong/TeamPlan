@@ -21,8 +21,8 @@ final class UserServicesCoredata: FullObjectManage {
         self.context = LocalStorageManager.shared.context
     }
     
-    func setObject(with object: UserObject) {
-        createEntity(with: object, and: object.createdAt)
+    func setObject(with object: UserObject) -> Bool {
+        return createEntity(with: object, and: object.createdAt)
     }
     
     func getObject(with userId: String) throws -> UserObject {
@@ -60,7 +60,7 @@ extension UserServicesCoredata {
 
 extension UserServicesCoredata {
     
-    private func createEntity(with object: UserObject, and setDate: Date) {
+    private func createEntity(with object: UserObject, and setDate: Date) -> Bool {
         let entity = UserEntity(context: context)
         
         entity.user_id = object.userId
@@ -72,6 +72,40 @@ extension UserServicesCoredata {
         entity.created_at = object.createdAt
         entity.changed_at = object.changedAt
         entity.synced_at = object.syncedAt
+        
+        if entity.user_id == nil {
+            print("[UserRepo] nil detected: 'user_id'")
+            return false
+        }
+        if entity.email == nil {
+            print("[Error] nil detected: 'email'")
+            return false
+        }
+        if entity.name == nil {
+            print("[Error] nil detected: 'name'")
+            return false
+        }
+        if entity.social_type == nil {
+            print("[Error] nil detected: 'social_type'")
+            return false
+        }
+        if entity.status == nil {
+            print("[Error] nil detected: 'status' ")
+            return false
+        }
+        if entity.created_at == nil {
+            print("[Error] nil detected: 'created_at'")
+            return false
+        }
+        if entity.changed_at == nil {
+            print("[Error] nil detected: 'changed_at'")
+            return false
+        }
+        if entity.synced_at == nil {
+            print("[Error] nil detected: 'synced_at'")
+            return false
+        }
+        return true
     }
     
     private func getFetchRequest(with userId: String) -> NSFetchRequest<Entity> {

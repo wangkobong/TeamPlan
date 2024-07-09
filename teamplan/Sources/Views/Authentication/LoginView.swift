@@ -18,10 +18,11 @@ enum LoginViewState {
 
 struct LoginView: View {
     
-    @EnvironmentObject var authViewModel: AuthenticationViewModel
-    @State private var isLoading: Bool = false
-    @State private var showAlert: Bool = false
     @AppStorage("mainViewState") var mainViewState: MainViewState?
+    @EnvironmentObject var authViewModel: AuthenticationViewModel
+    
+    @State private var isLoading: Bool = false
+    @State private var showLoginAlert: Bool = false
     
     private var signInViewModel = GoogleSignInButtonViewModel(scheme: .dark, style: .standard, state: .normal)
     
@@ -38,7 +39,7 @@ struct LoginView: View {
                     LoadingView().zIndex(1)
                 }
             }
-            .alert(isPresented: $showAlert) {
+            .alert(isPresented: $showLoginAlert) {
                 Alert(
                     title: Text("로그인 실패"),
                     message: Text("로그인을 실패했습니다."),
@@ -235,7 +236,13 @@ struct LoginView: View {
                     mainViewState = .main
                 }
             } else {
-                showAlert = true
+                if authViewModel.isReSignupNeeded {
+                    withAnimation(.spring()) {
+                        mainViewState = .signup
+                    }
+                } else {
+                    showLoginAlert = true
+                }
             }
         case .new:
             withAnimation(.spring()) {

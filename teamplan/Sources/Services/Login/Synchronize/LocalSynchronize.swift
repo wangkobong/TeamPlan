@@ -69,7 +69,7 @@ extension LocalSynchronize{
 
 // MARK: - Fetch From Server
 
-extension LocalSynchronize{
+extension LocalSynchronize {
     
     private func serverFetchExecutor() async -> Bool {
         async let isCoreValueFetched = fetchCoreValueFromServer()
@@ -221,35 +221,57 @@ extension LocalSynchronize{
     }
     
     private func setCoreValueAtLocal() async -> Bool {
-        coreValueCD.setObject(with: self.coreValue)
-        return true
+        if coreValueCD.setObject(with: self.coreValue) {
+            print("[LocalSync] Successfully set CoreValue at Local")
+            return true
+        } else {
+            print("[LocalSync] Failed to set CoreValue at Local")
+            return false
+        }
     }
     
     private func setUserAtLocal() async -> Bool {
-        userCD.setObject(with: self.serverUser)
-        return true
+        if userCD.setObject(with: self.serverUser) {
+            print("[LocalSync] Successfully set userData at Local")
+            return true
+        } else {
+            print("[LocalSync] Failed to set userData at Local")
+            return false
+        }
     }
     
     private func setStatAtLocal() async -> Bool {
         do {
-            try statCD.setObject(with: self.serverStat)
-            return true
+            if try statCD.setObject(with: self.serverStat) {
+                print("[LocalSync] Successfully set statData at Local")
+                return true
+            } else {
+                print("[LocalSync] Failed to set statData at Local")
+                return false
+            }
         } catch {
-            print("[LocalSync] Failed to set StatData at Local")
+            print("[LocalSync] Failed to convert StatData")
             return false
         }
     }
     
     private func setProjectsAtLocal() async -> Bool {
+        
         for project in self.serverProjects {
-            projectCD.setObject(with: project)
+            if !projectCD.setObject(with: project) {
+                print("[LocalSync] Failed to set projectData at Local")
+                return false
+            }
         }
         return true
     }
     
     private func setChallengesAtLocal() async -> Bool {
         for challenge in self.serverChallenges {
-            challengeCD.setObject(with: challenge)
+            if !challengeCD.setObject(with: challenge) {
+                print("[LocalSync] Failed to set challengeData at Local")
+                return false
+            }
         }
         return true
     }

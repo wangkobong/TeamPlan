@@ -201,7 +201,7 @@ extension DeleteSynchronize {
     
     private func deleteChallengeAtLocal() async -> Bool {
         do {
-            try challengeCD.deleteObject(with: userId)
+            try await challengeCD.deleteObject(with: userId)
             return true
         } catch {
             print("[DeleteSync] Failed to delete 'Challenge' at local")

@@ -29,8 +29,8 @@ extension BasicObjectManage {
 protocol FullObjectManage: BasicObjectManage {
     associatedtype DTO
     
+    func setObject(with object: Object) throws -> Bool
     func getObject(with userId: String) throws -> Object
-    func setObject(with object: Object) throws
     func updateObject(with dto: DTO) throws -> Bool
     func deleteObject(with userId: String) throws
     func isObjectExist(with userId: String) -> Bool
@@ -40,7 +40,7 @@ protocol FullObjectManage: BasicObjectManage {
 // MARK: - CoreValue
 protocol CoreValueObjectManage: BasicObjectManage {
     
-    func setObject(with object: Object) throws
+    func setObject(with object: Object) -> Bool
     func getObject(with userId: String) throws -> Object
     func deleteObject(with userId: String) throws
     func isObjectExist(with userId: String) -> Bool
@@ -62,9 +62,9 @@ protocol NotificationObjectManage: BasicObjectManage {
 protocol ChallengeObjectManage: BasicObjectManage {
     associatedtype DTO
     
-    func setObject(with object: Object)
+    func setObject(with object: Object) -> Bool
     func getObject(with challengeId: Int, and userId: String) async throws -> Object
-    func deleteObject(with userId: String) throws
+    func deleteObject(with userId: String) async throws
     func updateObject(with dto: DTO) throws
     
     func getObjects(with userId: String) throws -> [Object]
@@ -78,7 +78,7 @@ protocol ChallengeObjectManage: BasicObjectManage {
 // MARK: - Log
 protocol AccessLogObjectManage: BasicObjectManage {
     
-    func setObject(with object: Object) throws
+    func setObject(with object: Object) -> Bool
     
     func getLatestObject(with userId: String) throws -> Object
     func getFullObjects(with userId: String) throws -> [Object]
@@ -89,7 +89,7 @@ protocol AccessLogObjectManage: BasicObjectManage {
 
 protocol ProjectLogObjectManage: BasicObjectManage {
     
-    func setObject(with object: Object) throws
+    func setObject(with object: Object) -> Bool
     func getObjects(with projectId: Int, and userId: String) throws -> [Object]
     func deleteObject(with projectId: Int, and userId: String) async throws
 }
@@ -100,7 +100,7 @@ protocol ProjectObjectManage: BasicObjectManage {
     associatedtype HomeDTO
     associatedtype BackgroundDTO
     
-    func setObject(with object: Object) throws
+    func setObject(with object: Object) -> Bool
     
     func getObject(with userId: String, and projectId: Int) throws -> Object
     func getObjects(with userId: String) throws -> [Object]
@@ -120,7 +120,7 @@ protocol ProjectObjectManage: BasicObjectManage {
 protocol TodoObjectManage: BasicObjectManage {
     associatedtype DTO
     
-    func setObject(with object: Object) throws
+    func setObject(with object: Object) throws -> Bool
     func getObject(userId: String, projectId: Int, todoId: Int) throws -> Object
     func getObjects(userId: String, projectId: Int) throws -> [Object]
     func updateObject(updated: DTO) throws -> Bool
