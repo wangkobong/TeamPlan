@@ -41,18 +41,25 @@ final class NetworkManager {
     
     func checkNetworkConnection() async -> Bool {
         let checkCount = 5
+        let monitor = NWPathMonitor()
+        let queue = DispatchQueue(label: "NetworkMonitor")
         var connectedCount = 0
+        
+        monitor.start(queue: queue)
         
         for _ in 0..<checkCount {
             let isConnected = await withCheckedContinuation { continuation in
                 let path = monitor.currentPath
-                self.updateConnectionStatus(isConnected: path.status == .satisfied)
                 continuation.resume(returning: path.status == .satisfied)
             }
             if isConnected {
                 connectedCount += 1
             }
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5초 대기
         }
+        
+        monitor.cancel()
+        
         return connectedCount > checkCount / 2
     }
 }

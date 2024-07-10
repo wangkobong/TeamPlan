@@ -94,9 +94,15 @@ struct HomeView: View {
     //MARK: Function
     
     private func logout() {
-        LoginService().logoutUser()
-        withAnimation(.easeIn(duration: 2)) {
-            mainViewState = .login
+        Task {
+            if await LoginService().logoutUser() {
+                withAnimation(.easeIn(duration: 2)) {
+                    mainViewState = .login
+                }
+            } else {
+                print("[HomeView] Unfinished Logout process detected")
+                mainViewState = .login
+            }
         }
     }
 }

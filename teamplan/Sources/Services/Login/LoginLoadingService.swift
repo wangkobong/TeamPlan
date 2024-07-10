@@ -14,6 +14,7 @@ final class LoginLoadingService{
     
     // shared
     var userData: UserInfoDTO
+    var isValidUser: Bool = true
     
     // private
     private let userCD = UserServicesCoredata()
@@ -22,6 +23,7 @@ final class LoginLoadingService{
     private let accessLogCD = AccessLogServicesCoredata()
     private let coreValueCD = CoreValueServicesCoredata()
     private let projectCD = ProjectServicesCoredata()
+    private let loginSC = LoginService()
     
     private var localSync: LocalSynchronize
     private var serverSync: ServerSynchronize
@@ -72,6 +74,11 @@ extension LoginLoadingService {
         // 1. Inspect local data
         if await !executeServiceAction(.checkData) {
             if await !executeServiceAction(.fetchDataFromServer){
+                if await resetUserStatus() {
+                    print("[LoginLoadingService] Successfully truncate unstable userData")
+                } else {
+                    print("[LoginLoadingService] Failed to truncate unstable userData")
+                }
                 return false
             }
         }
@@ -364,8 +371,13 @@ extension LoginLoadingService {
     // update: accessLog
     private func updateLoginAt(with loginDate: Date) async -> Bool {
         let log = AccessLog(userId: userId, accessDate: loginDate)
-        accessLogCD.setObject(with: log)
-        return true
+        if accessLogCD.setObject(with: log) {
+            print("[LoginLoading] Successfully regist new accesslog")
+            return true
+        } else {
+            print("[LoginLoading] Failed to regist new accesslog")
+            return false
+        }
     }
     
     // update: dailyRegistTodo
@@ -402,6 +414,13 @@ extension LoginLoadingService {
         }
         print("[LoginLoading] Updated Project (DailyTodoRegistLimit) : \(updatedProjectCount)")
         return true
+    }
+    
+    // truncate unstable userData
+    private func resetUserStatus() async -> Bool {
+        
+        self.isValidUser = false
+        return await loginSC.withdrawUser()
     }
 }
     

@@ -34,7 +34,8 @@ final class AuthenticationViewModel: ObservableObject {
     @Published var nonce: String?
     @Published var signupUser: AuthSocialLoginResDTO?
     @Published var loginUser: UserInfoDTO?
-
+    @Published var isReSignupNeeded: Bool = false
+    
     // private
     private let keychain = KeychainSwift()
     private let signupService = SignupService()
@@ -53,7 +54,10 @@ final class AuthenticationViewModel: ObservableObject {
         
         // process: execute login process
         if await !loginLoadingService.executor() {
-            print("[AuthViewModel] Failed to set UserDefault")
+            if !loginLoadingService.isValidUser {
+                self.isReSignupNeeded = true
+                print("[AuthViewModel] Unstable user detected, redirect to signup")
+            }
             return false
         }
         let user = loginLoadingService.userData
@@ -83,14 +87,18 @@ final class AuthenticationViewModel: ObservableObject {
         
         // set: new user data at Local & Server
         let signupService = SignupLoadingService(newUser: finalUserInfo)
-        await signupService.executor()
+        if await !signupService.executor() {
+            print("[AuthViewModel] Failed to proceed signup process")
+            return false
+        }
+        print("[AuthViewModel] Successfully proceed signup")
         let registedUser = signupService.userData
         
         // set: UserDefault
         if await setUserDefault(with: registedUser.userId, and: registedUser.nickName) {
             self.loginUser = registedUser
             
-            print("[AuthViewModel] Successfully proceed login process")
+            print("[AuthViewModel] Successfully set UserDefault")
             return true
         } else {
             print("[AuthViewModel] Failed to proceed login process")
@@ -129,11 +137,15 @@ final class AuthenticationViewModel: ObservableObject {
 extension AuthenticationViewModel {
     
     // Apple
+    @MainActor
     func requestNonceSignInApple() -> String {
-        self.nonce = loginService.requestNonce()
-        return loginService.reqeustNonceEncode(nonce: self.nonce!)
+        let candidateNonce = loginService.requestNonce()
+        let encodedNonce = loginService.reqeustNonceEncode(nonce: candidateNonce)
+        self.nonce = encodedNonce
+        return encodedNonce
     }
     
+    @MainActor
     func signInApple(with authResult: ASAuthorization) async throws -> AuthSocialLoginResDTO {
         guard let nonce = self.nonce else { throw SignupError.signupFailed }
         let userInfo = try await loginService.loginApple(appleAuthResult: authResult, nonce: nonce)

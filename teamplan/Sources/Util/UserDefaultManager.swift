@@ -24,7 +24,7 @@ final class UserDefaultManager {
         guard let data = UserDefaults.standard.data(forKey: UserDefaultKey.user.rawValue),
               let decoded = try? JSONDecoder().decode(UserDefaultManager.self, from: data)
         else {
-            print("[UserDefault] Failed to load UserDefault")
+            print("[UserDefault] UserDefault not detected")
             return nil
         }
         return decoded

@@ -138,10 +138,9 @@ final class ServerSynchronize {
             if results.allSatisfy({$0}) {
                 await preprocessExecutor(.quarterly, with: syncDate)
                 let isProjectLogFetched = await fetchProjectLogFromLocal()
-                print(localProjectLog)
                 let isServerUpdated = await serverUpdateExecutor(.quarterly, with: syncDate)
                 
-                if isServerUpdated {
+                if isProjectLogFetched && isServerUpdated {
                     return await localUpdateExecutor(.monthly, with: syncDate)
                 } else {
                     return false
