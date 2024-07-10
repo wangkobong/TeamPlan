@@ -212,7 +212,7 @@ extension ChallengesView {
                                 .onTapGesture {
                                     self.indexForAlert = absoluteIndex
                                     self.setAlert(challenge: item.wrappedValue)
-
+                                    print("클릭: \(item.wrappedValue)")
                                 }
                         }
                     }

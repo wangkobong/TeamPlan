@@ -134,13 +134,13 @@ extension ChallengeAlertView {
             Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].isUnlock, isComplete: self.allChallenge[index].isFinished))
                 .frame(width: 82, height: 82)
             
-            Text("\(getChallenge(index: self.index).title)")
+            Text("\(getChallenge(index: self.index).title) 선택")
                 .font(.appleSDGothicNeo(.bold, size: 24))
                 .multilineTextAlignment(.center)
                 .foregroundColor(.theme.mainPurpleColor)
     
             
-            Text("\(getChallenge(index: self.index).title)\n연속 해결하기")
+            Text("\(getChallenge(index: self.index).desc)")
                 .font(.appleSDGothicNeo(.regular, size: 17))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
@@ -178,7 +178,7 @@ extension ChallengeAlertView {
                 .foregroundColor(.theme.mainPurpleColor)
     
             
-            Text("\(getChallenge(index: self.index).title)프로젝트 5개\n연속 해결하기")
+            Text("\(getChallenge(index: self.index).desc)")
                 .font(.appleSDGothicNeo(.regular, size: 17))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
@@ -275,7 +275,7 @@ extension ChallengeAlertView {
                 .foregroundColor(.theme.mainPurpleColor)
     
             
-            Text("\(getChallenge(index: self.index).title)프로젝트 5개\n연속 해결하기")
+            Text("\(getChallenge(index: self.index).title) 프로젝트")
                 .font(.appleSDGothicNeo(.regular, size: 17))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)

@@ -240,7 +240,7 @@ extension MockGenerator {
         let titles = ["Project Alpha", "Project Beta", "Project Charlie", "Project Delta", "Project Echo"]
         
         for i in 1...5 {
-            if let registedAt = calendar.date(byAdding: .day, value: -i, to: date) {
+            if let registedAt = calendar.date(byAdding: .day, value: +i, to: date) {
                 let projectId = i
                 let project = ProjectObject(
                     projectId: projectId,

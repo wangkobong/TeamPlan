@@ -18,7 +18,7 @@ public struct ProjectCompleteAlertView: View {
         self._isPresented = isPresented
         self.action = action
     }
-
+    
     public var body: some View {
         ZStack {
             
@@ -27,8 +27,8 @@ public struct ProjectCompleteAlertView: View {
                 .ignoresSafeArea()
             ClearBackground()
             VStack {
-
-                Image(systemName: "star")
+                
+                Image("bomb_complete_alert")
                     .frame(width: 82, height: 160)
                 
                 Spacer()
@@ -37,9 +37,9 @@ public struct ProjectCompleteAlertView: View {
                     .font(.appleSDGothicNeo(.bold, size: 17))
                     .multilineTextAlignment(.center)
                     .foregroundColor(.theme.mainPurpleColor)
-        
                 
-                Text("OO지킴이 나를 지켜줘서 고마워\n다른 프로젝트에서 또 만나자!")
+                
+                Text("나를 지켜줘서 고마워\n다른 프로젝트에서 또 만나자!")
                     .font(.appleSDGothicNeo(.regular, size: 12))
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
@@ -70,13 +70,8 @@ public struct ProjectCompleteAlertView: View {
                         .font(.appleSDGothicNeo(.bold, size: 14))
                         .multilineTextAlignment(.center)
                         .foregroundColor(.theme.whiteColor)
+                        .background(Color.theme.mainPurpleColor)
                         .cornerRadius(8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .inset(by: 0.5)
-                                .stroke(Color(red: 0.45, green: 0.28, blue: 0.88), lineWidth: 1)
-                            
-                        )
                         .onTapGesture {
                             self.isPresented = false
                             action()
@@ -87,18 +82,17 @@ public struct ProjectCompleteAlertView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 16)
             }
+            .frame(width: 296, height: 333)
+            .background(.white)
+            .cornerRadius(4)
+            .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 0)
         }
-        .frame(width: 296, height: 323)
-        .background(.white)
-        .cornerRadius(4)
-        .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 0)
-        .onAppear {
-
-        }
-        
     }
+    
 }
-//
-//#Preview {
-//    ProjectCompleteAlertView()
-//}
+
+#Preview {
+    ProjectCompleteAlertView(isPresented: .constant(true), action: {
+        print("테스트")
+    })
+}
