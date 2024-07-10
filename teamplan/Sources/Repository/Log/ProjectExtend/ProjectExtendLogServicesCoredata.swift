@@ -20,8 +20,8 @@ final class ProjectExtendLogServicesCoredata: ProjectLogObjectManage {
         self.context = LocalStorageManager.shared.context
     }
     
-    func setObject(with object: ProjectExtendLog) {
-        createEntity(with: object)
+    func setObject(with object: ProjectExtendLog) -> Bool {
+        return createEntity(with: object)
     }
     
     func getObjects(with projectId: Int, and userId: String) throws -> [ProjectExtendLog] {        
@@ -48,7 +48,7 @@ final class ProjectExtendLogServicesCoredata: ProjectLogObjectManage {
 
 extension ProjectExtendLogServicesCoredata {
     
-    private func createEntity(with object: Object) {
+    private func createEntity(with object: Object) -> Bool {
         let entity = Entity(context: context)
         
         entity.project_id = Int32(object.projectId)
@@ -64,6 +64,21 @@ extension ProjectExtendLogServicesCoredata {
         
         entity.registed_todo = Int32(object.totalRegistedTodo)
         entity.finished_todo = Int32(object.totalFinshedTodo)
+        
+        // Optional property nil checks
+        if entity.user_id == nil {
+            print("[ExtendLogRepo] nil detected: 'user_id'")
+            return false
+        }
+        if entity.extend_at == nil {
+            print("[ExtendLogRepo] nil detected: 'extend_at'")
+            return false
+        }
+        if entity.new_deadline == nil {
+            print("[ExtendLogRepo] nil detected: 'new_deadline'")
+            return false
+        }
+        return true
     }
     
     private func getEntityList(with projectId: Int, and userId: String) throws -> [Entity] {

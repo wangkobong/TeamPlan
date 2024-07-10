@@ -21,8 +21,8 @@ final class TodoServiceCoredata: TodoObjectManage {
         self.context = LocalStorageManager.shared.context
     }
     
-    func setObject(with object: TodoObject) throws {
-        try createEntity(with: object)
+    func setObject(with object: TodoObject) throws -> Bool {
+        return try createEntity(with: object)
     }
     
     func getObject(userId: String, projectId: Int, todoId: Int) throws -> Object {
@@ -55,7 +55,7 @@ final class TodoServiceCoredata: TodoObjectManage {
 extension TodoServiceCoredata{
     
     // Set
-    private func createEntity(with object: TodoObject) throws {
+    private func createEntity(with object: TodoObject) throws -> Bool {
         let projectEntity = try getProjectEntity(userId: object.userId, projectId: object.projectId)
         let entity = Entity(context: context)
         
@@ -66,6 +66,21 @@ extension TodoServiceCoredata{
         entity.desc = object.desc
         entity.pinned = object.pinned
         entity.status = Int32(object.status.rawValue)
+        
+        // Optional property nil checks
+        if entity.project_relationship == nil {
+            print("[TodoRepo] nil detected: 'project_relationship'")
+            return false
+        }
+        if entity.user_id == nil {
+            print("[TodoRepo] nil detected: 'user_id'")
+            return false
+        }
+        if entity.desc == nil {
+            print("[TodoRepo] nil detected: 'desc'")
+            return false
+        }
+        return true
     }
     
     // Fetch: Project Entity

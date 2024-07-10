@@ -24,8 +24,8 @@ final class ProjectServicesCoredata: ProjectObjectManage {
     }
     
     // set
-    func setObject(with object: ProjectObject) {
-        createEntity(with: object)
+    func setObject(with object: ProjectObject) -> Bool {
+        return createEntity(with: object)
     }
     
     // get
@@ -63,6 +63,12 @@ final class ProjectServicesCoredata: ProjectObjectManage {
     
     func deleteObjectList(with userId: String) throws {
         let entities = try getEntities(with: userId)
+        
+        if entities.isEmpty {
+            print("[ProejctRepo] There is no project to delete")
+            return
+        }
+        
         for entity in entities {
             self.context.delete(entity)
         }
@@ -70,6 +76,12 @@ final class ProjectServicesCoredata: ProjectObjectManage {
     
     func deleteTruncateObject(with userId: String) throws -> Bool {
         let entities = try getTruncateEntities(with: userId)
+        
+        if entities.isEmpty {
+            print("[ProejctRepo] There is no project to truncate")
+            return true
+        }
+        
         for entity in entities {
             self.context.delete(entity)
         }
@@ -132,7 +144,7 @@ extension ProjectServicesCoredata {
 extension ProjectServicesCoredata {
     
     // set entity
-    private func createEntity(with object: Object) {
+    private func createEntity(with object: Object) -> Bool {
         let entity = Entity(context: context)
         
         entity.project_id = Int32(object.projectId)
@@ -149,6 +161,37 @@ extension ProjectServicesCoredata {
         entity.deadline = object.deadline
         entity.finished_at = object.finishedAt
         entity.synced_at = object.syncedAt
+        
+        // Optional property nil checks
+         if entity.user_id == nil {
+             print("[ProjectRepo] nil detected: 'user_id'")
+             return false
+         }
+         if entity.title == nil {
+             print("[ProjectRepo] nil detected: 'title'")
+             return false
+         }
+         if entity.registed_at == nil {
+             print("[ProjectRepo] nil detected: 'registed_at'")
+             return false
+         }
+         if entity.started_at == nil {
+             print("[ProjectRepo] nil detected: 'started_at'")
+             return false
+         }
+         if entity.deadline == nil {
+             print("[ProjectRepo] nil detected: 'deadline'")
+             return false
+         }
+         if entity.finished_at == nil {
+             print("[ProjectRepo] nil detected: 'finished_at'")
+             return false
+         }
+         if entity.synced_at == nil {
+             print("[ProjectRepo] nil detected: 'synced_at'")
+             return false
+         }
+         return true
     }
     
     // get single entity

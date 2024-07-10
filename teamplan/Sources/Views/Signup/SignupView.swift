@@ -11,36 +11,28 @@ import WrappingHStack
 
 struct SignupView: View {
     
-    @EnvironmentObject var authViewModel: AuthenticationViewModel
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var authViewModel: AuthenticationViewModel
+    @AppStorage("mainViewState") var mainViewState: MainViewState?
+    
     @State var signupState: Int = 0
     @State var userName: String = ""
+    
+    @State private var isLoading = false
+    @State private var showSignupAlert = false
     @State private var signupSuccess = false
-    @AppStorage("mainViewState") var mainViewState: MainViewState?
 
     let transition: AnyTransition = .asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading))
-
-    // onboarding inputs
-    @State var dateOfBirth: String = ""
-    @State var gender: String = ""
-    
-    // for the alert
-    @State private var alertTitle: String = ""
-    @State private var showAlert = false
-    
-    // goal
-    @State var goalCount: String = ""
-    
-    @State var showHome: Bool = false
-    @State private var isLoading = false
     
     var body: some View {
         NavigationView {
             ZStack {
                 VStack {
+                    /*
                     Spacer()
                         .frame(height: 34)
                     self.levelBar
+                     */
                     Spacer()
                         .frame(height: 42)
                     ZStack {
@@ -76,10 +68,10 @@ struct SignupView: View {
                     }
                 }
             }
-            .alert(isPresented: $showAlert) {
+            .alert(isPresented: $showSignupAlert) {
                 Alert(
                     title: Text("회원가입 실패"),
-                    message: Text("회원가입에 실패했습니다."),
+                    message: Text("회원가입에 실패했습니다. 다시 시도해주세요."),
                     dismissButton: .default(Text("확인"))
                 )
             }
@@ -122,9 +114,15 @@ struct SignupView: View {
                         .foregroundColor(Color(hex: "4B4B4B"))
                     Spacer()
                 }
-                TextField("닉네임을 입력해 주세요(10자 이내)", text: $userName)
+                TextField("닉네임을 입력해 주세요 ( 2글자 이상 / 10자 이내 )", text: $userName)
                     .padding(.horizontal, 10)
+                    .onChange(of: userName) { newValue in
+                        if newValue.count > 10 {
+                            userName = String(newValue.prefix(10))
+                        }
+                    }
                 Divider()
+                /*
                 HStack {
                     Text("이미 사용중인 닉네임이에요🥲")
                         .font(.appleSDGothicNeo(.regular, size: 16))
@@ -132,6 +130,7 @@ struct SignupView: View {
                         .opacity(0.0)
                     Spacer()
                 }
+                 */
                 Spacer()
                     .frame(height: 20)
             }
@@ -157,7 +156,7 @@ struct SignupView: View {
                         self.isLoading = false
                         mainViewState = .main
                     } else {
-                        self.showAlert = true
+                        self.showSignupAlert = true
                         self.isLoading = false
                     }
                 }
@@ -168,8 +167,7 @@ struct SignupView: View {
     // MARK: - private method
     
     private func checkValidUserName() -> Bool {
-        return self.userName.count > 5 ? true : false
-        
+        return self.userName.count >= 2 ? true : false
     }
     
     private func getCurrentLevelBarColor(index: Int) -> Color {

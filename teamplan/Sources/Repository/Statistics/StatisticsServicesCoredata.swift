@@ -21,8 +21,8 @@ final class StatisticsServicesCoredata: FullObjectManage {
         self.context = LocalStorageManager.shared.context
     }
     
-    func setObject(with object: Object) throws {
-        try createEntity(with: object)
+    func setObject(with object: Object) throws -> Bool {
+        return try createEntity(with: object)
     }
     
     func getObject(with userId: String) throws -> Object {
@@ -75,7 +75,7 @@ extension StatisticsServicesCoredata {
         return entity
     }
     
-    private func createEntity(with object: Object) throws {
+    private func createEntity(with object: StatisticsObject) throws -> Bool {
         let entity = StatisticsEntity(context: context)
         
         entity.user_id = object.userId
@@ -91,6 +91,25 @@ extension StatisticsServicesCoredata {
         entity.challenge_step_status = try Utilities().convertToJSON(data: object.challengeStepStatus)
         entity.mychallenges = try Utilities().convertToJSON(data: object.mychallenges)
         entity.synced_at = object.syncedAt
+        
+        // Optional property nil checks
+        if entity.user_id == nil {
+            print("[StatRepo] nil detected: 'user_id'")
+            return false
+        }
+        if entity.challenge_step_status == nil {
+            print("[StatRepo] nil detected: 'challenge_step_status'")
+            return false
+        }
+        if entity.mychallenges == nil {
+            print("[StatRepo] nil detected: 'mychallenges'")
+            return false
+        }
+        if entity.synced_at == nil {
+            print("[StatRepo] nil detected: 'synced_at'")
+            return false
+        }
+        return true
     }
 }
 

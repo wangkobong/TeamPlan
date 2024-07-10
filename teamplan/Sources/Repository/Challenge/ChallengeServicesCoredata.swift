@@ -23,8 +23,8 @@ final class ChallengeServicesCoredata: ChallengeObjectManage {
     }
     
     // Set
-    func setObject(with object: Object) {
-        createEntity(with: object)
+    func setObject(with object: Object) -> Bool {
+        return createEntity(with: object)
     }
     
     // Get
@@ -54,10 +54,20 @@ final class ChallengeServicesCoredata: ChallengeObjectManage {
     }
     
     // Delete
-    func deleteObject(with userId: String) throws {
-        let entities = try self.getFullEntity(owner: userId)
-        for entity in entities {
-            self.context.delete(entity)
+    func deleteObject(with userId: String) async throws {
+        
+        try await self.context.perform {
+            
+            let entities = try self.getFullEntity(owner: userId)
+            
+            if entities.isEmpty {
+                print("[ChallengeRepo] There is no challenge to delete")
+                return
+            }
+            
+            for entity in entities {
+                self.context.delete(entity)
+            }
         }
     }
 }
@@ -90,7 +100,7 @@ extension ChallengeServicesCoredata {
 extension ChallengeServicesCoredata {
     
     // set entity
-    private func createEntity(with object: Object) {
+    private func createEntity(with object: Object) -> Bool {
         let entity = Entity(context: self.context)
         
         entity.challenge_id = Int32(object.challengeId)
@@ -108,6 +118,33 @@ extension ChallengeServicesCoredata {
         entity.selected_at = object.selectedAt
         entity.unselected_at = object.unselectedAt
         entity.finished_at = object.finishedAt
+        
+        // Optional property nil checks
+        if entity.user_id == nil {
+            print("[ChallengeRepo] nil detected: 'user_id'")
+            return false
+        }
+        if entity.title == nil {
+            print("[ChallengeRepo] nil detected: 'title'")
+            return false
+        }
+        if entity.desc == nil {
+            print("[ChallengeRepo] nil detected: 'desc'")
+            return false
+        }
+        if entity.selected_at == nil {
+            print("[ChallengeRepo] nil detected: 'selected_at'")
+            return false
+        }
+        if entity.unselected_at == nil {
+            print("[ChallengeRepo] nil detected: 'unselected_at'")
+            return false
+        }
+        if entity.finished_at == nil {
+            print("[ChallengeRepo] nil detected: 'finished_at'")
+            return false
+        }
+        return true
     }
     
     // signle entity

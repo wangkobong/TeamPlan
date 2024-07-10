@@ -18,7 +18,7 @@ final class CoreValueServicesCoredata: CoreValueObjectManage {
         self.context = LocalStorageManager.shared.context
     }
     
-    func setObject(with object: CoreValueObject) {
+    func setObject(with object: CoreValueObject) -> Bool {
         createEntity(with: object)
     }
     
@@ -46,7 +46,7 @@ final class CoreValueServicesCoredata: CoreValueObjectManage {
 
 extension CoreValueServicesCoredata {
 
-    private func createEntity(with object: Object) {
+    private func createEntity(with object: Object) -> Bool {
         let entity = Entity(context: self.context)
         
         entity.user_id = object.userId
@@ -54,6 +54,13 @@ extension CoreValueServicesCoredata {
         entity.todo_regist_limit = Int32(object.todoRegistLimit)
         entity.drop_convert_ratio = object.dropConvertRatio
         entity.sync_cycle = Int32(object.syncCycle)
+        
+        // Optional property nil checks
+        if entity.user_id == nil {
+            print("[CoreValueRepo] nil detected: 'user_id'")
+            return false
+        }
+        return true
     }
     
     private func convertToObject(with entity: CoreValueEntity) throws -> CoreValueObject {

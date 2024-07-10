@@ -49,27 +49,68 @@ final class LoginService{
     
     // MARK: - Logout
     
-    func logoutUser() {
+    func logoutUser() async -> Bool {
         do {
-            try Auth.auth().signOut()   // logout from firebaseAuth
-            try resetUserDefault()      // reset userDefault
-            deleteFromKeyChain()        // reset keyChain
-        } catch let error as NSError {
-            print("Logout Error : \(error.localizedDescription)")
+            await clearUserDataTasks()
+            try Auth.auth().signOut()
+            return true
+        } catch {
+            print("[LoginService] Failed to signOut at FirebaseAuth: \(error.localizedDescription)")
+            return false
         }
     }
     
-    private func deleteFromKeyChain() {
+    // MARK: - Withdraw
+
+    func withdrawUser() async -> Bool {
+        do {
+            await clearUserDataTasks()
+            try await removeUserAtAuth()
+            return true
+        } catch {
+            print("[LoginService] Failed to withdraw user: \(error.localizedDescription)")
+            return false
+        }
+    }
+}
+
+// MARK: - Util
+
+extension LoginService {
+    
+    private func clearUserDataTasks() async {
+        async let isUserDefaultClear: () = clearUserDefault()
+        async let isKeyChainDelete: () = deleteFromKeyChain()
+        
+        await _ = [isUserDefaultClear, isKeyChainDelete]
+    }
+    
+    private func clearUserDefault() async {
+        if let userDefault = UserDefaultManager.loadWith() {
+            userDefault.clear()
+            print("[LoginService] Successfully cleared userDefault")
+        } else {
+            print("[LoginService] No userDefault to clear")
+        }
+    }
+    
+    private func deleteFromKeyChain() async {
         keyChain.delete(KeyChainArgs.id.rawValue)
         keyChain.delete(KeyChainArgs.access.rawValue)
     }
     
-    private func resetUserDefault() throws {
-        guard let userDefault = UserDefaultManager.loadWith() else {
-            //TODO: Custom Error
-            throw LoginLoadingError.getAccessLogFailure(serviceName: .login)
+    private func removeUserAtAuth() async throws {
+        guard let user = Auth.auth().currentUser else {
+            print("[MypageService] No user to remove at FirebaseAuth")
+            return
         }
-        userDefault.clear()
+        do {
+            try await user.delete()
+            print("[MypageService] Successfully removed user at FirebaseAuth")
+        } catch {
+            print("[MypageService] Failed to remove user at FirebaseAuth: \(error.localizedDescription)")
+            throw error
+        }
     }
 }
 

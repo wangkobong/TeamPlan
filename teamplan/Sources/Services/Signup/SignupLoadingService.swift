@@ -44,7 +44,6 @@ final class SignupLoadingService {
     private var coreValue = CoreValueObject()
     private var challengeList = [ChallengeObject]()
     private var challengeIdSet = Set<Int>()
-    private var rollbackStack: [() async -> Void ] = []
     
     private let viewManager: TopViewManager
     private let networkManager: NetworkManager
@@ -78,26 +77,26 @@ enum SignupLoadingServiceAction: String {
 extension SignupLoadingService {
 
     // controller
-    func executor() async {
+    func executor() async -> Bool {
         
-//        if await !networkManager.checkNetworkConnection() {
-//            await failedProcess(.network)
-//            return
-//        }
+        if await !networkManager.checkNetworkConnection() {
+            await failedProcess(.network)
+            return false
+        }
         
         if await !serviceExecutor(.fetch) {
             await failedProcess(.fetch)
-            return
+            return false
         }
         
         if await !serviceExecutor(.local) {
             await failedProcess(.localSet)
-            return
+            return false
         }
         
         if await !serviceExecutor(.server) {
             await failedProcess(.serverSet)
-            return
+            return false
         }
         
         /* Insert Mock Data
@@ -108,6 +107,7 @@ extension SignupLoadingService {
          */
         
         self.userData = UserInfoDTO(with: newProfile)
+        return true
     }
     
     private func actionExecutor(_ action: SignupLoadingServiceAction) async -> Bool {
@@ -160,13 +160,11 @@ extension SignupLoadingService {
         async let isCoreValueSet = setNewCoreValueAtLocal()
         
         let results = await [isNewUserDataSet, isNewStatDataSet, isAccessLogSet, isChallengeSet, isCoreValueSet]
+        
         return await localSetProcess(results: results)
     }
     
     private func localSetProcess(results: [Bool]) async -> Bool {
-        if !results.allSatisfy({$0}) {
-            return false
-        }
         if await localStorageManager.saveContext() {
             return true
         } else {
@@ -249,9 +247,12 @@ extension SignupLoadingService{
     
     // : Coredata
     private func setNewUserProfileAtLocal() async -> Bool {
-        userCD.setObject(with: newProfile)
-        print("[SingupLoading] Successfully set UserData at storage")
-        return true
+        if userCD.setObject(with: newProfile) {
+            print("[SingupLoading] Successfully set UserData at storage")
+            return true
+        }
+        print("[SingupLoading] Failed to set UserData at storage")
+        return false
     }
     
     // : Firestore
@@ -269,9 +270,13 @@ extension SignupLoadingService{
     // : Coredata
     private func setNewStatAtLocal() async -> Bool {
         do {
-            try statCD.setObject(with: newStat)
-            print("[SingupLoading] Successfully set StatData at storage")
-            return true
+            if try statCD.setObject(with: newStat) {
+                print("[SingupLoading] Successfully set StatData at storage")
+                return true
+            } else {
+                print("[SingupLoading] Failed to set StatData at storage")
+                return false
+            }
         } catch {
             print("[SingupLoading] Failed to set StatData at storage")
             return false
@@ -297,9 +302,13 @@ extension SignupLoadingService{
     
     // : CoreData
     private func setNewAccessLogAtLocal() async -> Bool {
-        accessLogCD.setObject(with: newLog)
-        print("[SingupLoading] Successfully set AccessLog at storage")
-        return true
+        if accessLogCD.setObject(with: newLog) {
+            print("[SingupLoading] Successfully set AccessLog at storage")
+            return true
+        } else {
+            print("[SingupLoading] Failed to set AccessLog at storage")
+            return false
+        }
     }
     
     // : Firestore
@@ -316,7 +325,10 @@ extension SignupLoadingService{
     // : Coredata
     private func setNewChallengeAtLocal() async -> Bool {
         for challenge in challengeList {
-            challengeCD.setObject(with: challenge)
+            if !challengeCD.setObject(with: challenge) {
+                print("[SingupLoading] Failed to set Challenge at storage: \(challenge.challengeId)")
+                return false
+            }
         }
         print("[SingupLoading] Successfully set Challenge at storage")
         return true
@@ -366,9 +378,13 @@ extension SignupLoadingService{
     }
     
     private func setNewCoreValueAtLocal() async -> Bool {
-        coreValueCD.setObject(with: coreValue)
-        print("[SingupLoading] Successfully set CoreValue at storage")
-        return true
+        if coreValueCD.setObject(with: coreValue) {
+            print("[SingupLoading] Successfully set CoreValue at storage")
+            return true
+        } else {
+            print("[SingupLoading] Failed to set CoreValue at storage")
+            return false
+        }
     }
 }
 

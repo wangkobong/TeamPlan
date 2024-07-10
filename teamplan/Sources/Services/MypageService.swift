@@ -45,35 +45,28 @@ final class MypageService {
         )
     }
     
-    func logout() throws {
-        loginService.logoutUser()
-    }
-    
-    // Delete every user data at local & server
-    func withdraw() async -> Bool {
-        if await deleteSync.deleteExecutor() {
-            if let userDefault = UserDefaultManager.loadWith() {
-                userDefault.clear()
-            }
-            await removeUserAtAuth()
+    func logout() async -> Bool {
+        if await loginService.logoutUser() {
+            print("[MypageService] Successfully proceed logout")
             return true
         } else {
-            print("[MypageService] Failed to withdraw process")
             return false
         }
     }
     
-    private func removeUserAtAuth() async {
-        guard let user = Auth.auth().currentUser else {
-            print("[MypageService] There is no user to remove at FirebaseAuth")
-            return
-        }
-        do {
-            try await user.delete()
-            print("[MypageService] Successfully remove user at FirebaseAuth")
-        } catch {
-            print("[MypageService] Failed to remove user at FirebaseAuth : \(error.localizedDescription)")
-            return
+    func withdraw() async -> Bool {
+        
+        // Delete every user data at local & server
+        if await deleteSync.deleteExecutor() {
+            
+            if await loginService.withdrawUser() {
+                print("[MypageService] Successfully proceed withdraw")
+                return true
+            } else {
+               return false
+            }
+        } else {
+            return false
         }
     }
 }
