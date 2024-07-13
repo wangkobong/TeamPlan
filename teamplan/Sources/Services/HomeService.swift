@@ -6,6 +6,7 @@
 //  Copyright © 2023 team1os. All rights reserved.
 //
 
+import CoreData
 import Foundation
 
 final class HomeService {
@@ -14,78 +15,69 @@ final class HomeService {
     
     // public
     var dto: HomeDataDTO
-    let challengeSC: ChallengeService
     
     // private
     private let userId: String
     private let userName: String
     private var projectList: [ProjectObject] = []
     
-    private let userCD: UserServicesCoredata
-    private let statCD: StatisticsServicesCoredata
-    private let projectCD: ProjectServicesCoredata
+    private let userCD = UserServicesCoredata()
+    private let statCD = StatisticsServicesCoredata()
+    private let projectCD = ProjectServicesCoredata()
+    private let challengeCD = ChallengeServicesCoredata()
+    private let localStorageManager: LocalStorageManager
     
-    // MARK: - Initializer
     init(with userId: String, and userName: String) {
         self.userId = userId
         self.userName = userName
         self.dto = HomeDataDTO(with: userName)
-        self.userCD = UserServicesCoredata()
-        self.statCD = StatisticsServicesCoredata()
-        self.projectCD = ProjectServicesCoredata()
-        self.challengeSC = ChallengeService(with: userId)
+        self.localStorageManager = LocalStorageManager.shared
     }
     
-    // MARK: - PrepareDTO
-    func prepareService() async -> Bool {
-        do {
-            try await prepareProperties()
-            
-            async let isPharseReady = getPhrase()
-            async let isStatDataReady = getStat()
-            async let isMyChallengeReady = getMyChallenge()
-            async let isChallengeReady = getChallenge()
-            async let isProjectReady = getProjectListAndDTO()
-            
-            let results = await [isPharseReady, isStatDataReady, isMyChallengeReady, isChallengeReady, isProjectReady]
-            if results.allSatisfy({$0}) {
-                print("[HomeService] Successfully prepare HomeDataDTO")
-                return true
-            } else {
-                print("[HomeService] Failed to prepare HomeDataDTO")
-                return false
-            }
-        } catch {
-            print("[HomeService] Failed to prepare challengeService")
+    // MARK: - Executor
+    
+    func prepareExecutor() -> Bool {
+        let context = localStorageManager.context
+        var results = [Bool]()
+        
+        context.performAndWait {
+            let isPharseReady = getPhrase()
+            let isStatDataReady = getStatData(with: context)
+            let isMyChallengeReady = getMyChallenges(with: context)
+            let isProjectReady = getProjects(with: context)
+            results =  [isPharseReady, isStatDataReady, isMyChallengeReady, isProjectReady]
+        }
+        if results.allSatisfy({$0}) {
+            print("[HomeService] Successfully prepare HomeDataDTO")
+            return true
+        } else {
+            print("[HomeService] Failed to prepare HomeDataDTO")
             return false
         }
     }
     
-    private func prepareProperties() async throws {
-        try await challengeSC.prepareService()
-    }
-    
-    // MARK: - UpdateDTO
-    
-    func updateService() async -> Bool {
-        do {
-            async let isStatDataReady = getStat()
-            async let isProjectReady = getProjectListAndDTO()
-            
-            let results = await [isStatDataReady, isProjectReady]
-            if results.allSatisfy({$0}) {
-                print("[HomeService] Successfully update HomeDataDTO")
-                return true
-            } else {
-                print("[HomeService] Failed to update HomeDataDTO")
-                return false
-            }
+    func updateExecutor() -> Bool {
+        let context = localStorageManager.context
+        var results = [Bool]()
+        
+        context.performAndWait{
+            let isStatDataReady = getStatData(with: context)
+            let isMyChallengeReady = getMyChallenges(with: context)
+            let isProjectReady = getProjects(with: context)
+            results =  [isStatDataReady, isMyChallengeReady, isProjectReady]
+        }
+        if results.allSatisfy({$0}) {
+            print("[HomeService] Successfully update HomeDataDTO")
+            return true
+        } else {
+            print("[HomeService] Failed to update HomeDataDTO")
+            return false
         }
     }
     
     // MARK: - Pharse
     
-    private func getPhrase() async -> Bool {
+    private func getPhrase() -> Bool {
         if let phrase = UserPhrase().stringAry.randomElement() {
             dto.phrase = phrase
             return true
@@ -97,56 +89,55 @@ final class HomeService {
     
     // MARK: - Statistics
     
-    func getStat() async -> Bool {
+    private func getStatData(with context: NSManagedObjectContext) -> Bool {
         do {
-            let statObject = try statCD.getObject(with: userId)
-            dto.statData = StatDTO(with: statObject)
-            return true
+            if try statCD.getObject(context: context, userId: userId) {
+                let object = statCD.object
+                self.dto.statData = StatDTO(with: object)
+                return true
+            } else {
+                print("[HomeService] Error detected while fetch StatData from storage")
+                return false
+            }
         } catch {
-            print("[Hom eService] Failed to get StatData: \(error.localizedDescription)")
+            print("[HomeService] Error detected while converting Stat entity")
             return false
         }
+        
     }
     
     // MARK: - Challenge
     
-    // MyChallenge
-    private func getMyChallenge() async -> Bool {
+    private func getMyChallenges(with context: NSManagedObjectContext) -> Bool {
         do {
-            let myChallenges = try challengeSC.getMyChallenges()
-            dto.myChallenges = myChallenges
-            return true
+            if try challengeCD.getMyObjects(context: context, userId: userId) {
+                let myChallenges = challengeCD.objects
+                
+                if myChallenges.isEmpty {
+                    dto.myChallenges = []
+                } else {
+                    dto.myChallenges = myChallenges.map{ MyChallengeDTO(with: $0) }
+                }
+                return true
+                
+            } else {
+                print("[HomeService] Error detected while fetch ChallengeData from storage")
+                return false
+            }
         } catch {
-            print("[HomeService] Failed to get myChallenge from challengeService: \(error.localizedDescription)")
-            return false
-        }
-    }
-    
-    // Challenge
-    private func getChallenge() async -> Bool {
-        do {
-            let challenges = try challengeSC.getChallenges()
-            dto.challenges = challenges
-            return true
-        } catch {
-            print("[HomeService] Failed to get TotalChallenge from challengeService: \(error.localizedDescription)")
+            print("[HomeService] Error detected while converting Challenge entity")
             return false
         }
     }
     
     // MARK: - Project
     
-    private func getProjectListAndDTO() async -> Bool {
-        do {
-            let projectList = try projectCD.getObjects(with: userId)
-            let sortedProjects = projectList.sorted { $0.deadline < $1.deadline }.prefix(3).map { $0 }
-            let dtoList = try sortedProjects.map { try projectCD.convertObjectToDTO(with: $0) }
-            
-            dto.projects = projectList
-            dto.projectsDTO = dtoList
+    private func getProjects(with context: NSManagedObjectContext) -> Bool {
+        if projectCD.getSortedDTOs(context: context, with: userId) {
+            dto.projectsDTOs = projectCD.sortedDTO
             return true
-        } catch {
-            print("[HomeService] Failed to get ProjectList or ProjectDTO from localStorage: \(error.localizedDescription)")
+        } else {
+            print("[HomeService] Error detected while fetch ProjectData from storage")
             return false
         }
     }
@@ -159,36 +150,28 @@ struct HomeDataDTO {
     var userName: String
     var phrase: String
     var statData: StatDTO
-    var challenges: [ChallengeDTO]
     var myChallenges: [MyChallengeDTO]
-    var projects: [ProjectObject]
-    var projectsDTO: [ProjectHomeDTO]
+    var projectsDTOs: [ProjectHomeDTO]
     
     init(with userName: String){
         self.userName = userName
         self.phrase = "unknown"
         self.statData = StatDTO()
-        self.challenges = []
         self.myChallenges = []
-        self.projects = []
-        self.projectsDTO = []
+        self.projectsDTOs = []
     }
     
     init(userName: String,
          phrase: String,
          statData: StatDTO,
-         challenges: [ChallengeDTO],
          myChallenges: [MyChallengeDTO],
-         projects: [ProjectObject],
          projectsDTO: [ProjectHomeDTO]
     ) {
         self.userName = userName
         self.phrase = phrase
         self.statData = statData
-        self.challenges = challenges
         self.myChallenges = myChallenges
-        self.projects = projects
-        self.projectsDTO = projectsDTO
+        self.projectsDTOs = projectsDTO
     }
 }
 

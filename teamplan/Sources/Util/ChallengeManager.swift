@@ -9,7 +9,7 @@
 import Foundation
 
 final class ChallengeManager {
-    
+    /*
     private let notificationService: NotificationServicesCoredata
     private let challengeService: ChallengeServicesCoredata
     
@@ -86,4 +86,5 @@ final class ChallengeManager {
             print("[ChallengeManager] Failed to save notification for challengeId \(challengeId): \(error)")
         }
     }
+     */
 }

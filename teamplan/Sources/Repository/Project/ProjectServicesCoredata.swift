@@ -11,79 +11,100 @@ import CoreData
 
 //MARK: Main
 
-final class ProjectServicesCoredata: ProjectObjectManage {
+final class ProjectServicesCoredata {
     typealias Entity = ProjectEntity
     typealias Object = ProjectObject
     typealias UpdateDTO = ProjectUpdateDTO
     
+    // shared
+    var object = ProjectObject()
+    var objectList: [ProjectObject] = []
+    var dto = ProjectHomeDTO()
+    var sortedDTO: [ProjectHomeDTO] = []
+    var backgroundDTO: [ProjectBackgroundDTO] = []
+    
+    // private
     private let util = Utilities()
     
-    var context: NSManagedObjectContext
-    init() {
-        self.context = LocalStorageManager.shared.context
+    func setObject(context: NSManagedObjectContext, object: ProjectObject) -> Bool {
+        let entity = ProjectEntity(context: context)
+        createEntity(with: object, at: entity)
+        return checkEntity(with: entity)
+    }
+        
+    func getSingleObject(context: NSManagedObjectContext, with userId: String, and projectId: Int) throws -> Bool {
+        do {
+            let entity = try getSingleEntity(context: context, with: projectId, and: userId)
+            return convertToObject(with: entity)
+        } catch {
+            print("[Coredata-Project] Failed to get project: \(error.localizedDescription)")
+            return false
+        }
     }
     
-    // set
-    func setObject(with object: ProjectObject) -> Bool {
-        return createEntity(with: object)
+    func getTotalObjects(context: NSManagedObjectContext, with userId: String) throws -> Bool {
+        do {
+            let entities = try getTotalEntities(context: context, with: userId)
+            return convertToObjects(with: entities)
+        } catch {
+            print("[Coredata-Project] Failed to get projects: \(error.localizedDescription)")
+            return false
+        }
     }
     
-    // get
-    func getObject(with userId: String, and projectId: Int) throws -> ProjectObject {
-        let entity = try getEntity(with: projectId, and: userId)
-        return try convertToObject(with: entity)
+    func getValidObjects(context: NSManagedObjectContext, with userId: String) throws -> Bool {
+        do {
+            let entities = try getValidEntities(context: context, with: userId)
+            return convertToObjects(with: entities)
+        } catch {
+            print("[Coredata-Project] Failed to get valid projects: \(error.localizedDescription)")
+            return false
+        }
     }
     
-    func getObjects(with userId: String) throws -> [ProjectObject] {
-        let entities = try getEntities(with: userId)
-        return try entities.map{ try convertToObject(with: $0) }
+    func getUploadObjects(context: NSManagedObjectContext, with userId: String) throws -> Bool {
+        do {
+            let entities = try getUploadEntities(context: context, with: userId)
+            return convertToObjects(with: entities)
+        } catch {
+            print("[Coredata-Project] Failed to get upload projects: \(error.localizedDescription)")
+            return false
+        }
     }
-    
-    func getValidObjects(with userId: String) throws -> [ProjectObject] {
-        let entities = try getValidEntities(with: userId)
-        return try entities.map{ try convertToObject(with: $0) }
-    }
-    
-    func getUploadObjects(with userId: String) throws -> [ProjectObject] {
-        let entities = try getUploadEntities(with: userId)
-        return try entities.map{ try convertToObject(with: $0) }
-    }
-    
-    // update
-    func updateObject(with dto: ProjectUpdateDTO) throws -> Bool {
-        let entity = try getEntity(with: dto.projectId, and: dto.userId)
+        
+    func updateObject(context: NSManagedObjectContext, with dto: ProjectUpdateDTO) throws -> Bool {
+        let entity = try getSingleEntity(context: context, with: dto.projectId, and: dto.userId)
         return checkUpdate(from: entity, to: dto)
     }
-    
-    // delete
-    func deleteObject(with userId: String, and projectId: Int) throws {
-        let entity = try getEntity(with: projectId, and: userId)
-        self.context.delete(entity)
+        
+    func deleteObject(context: NSManagedObjectContext, with userId: String, and projectId: Int) throws {
+        let entity = try getSingleEntity(context: context, with: projectId, and: userId)
+        context.delete(entity)
     }
-    
-    func deleteObjectList(with userId: String) throws {
-        let entities = try getEntities(with: userId)
+        
+    func deleteObjectList(context: NSManagedObjectContext, with userId: String) throws {
+        let entities = try getTotalEntities(context: context, with: userId)
         
         if entities.isEmpty {
-            print("[ProejctRepo] There is no project to delete")
+            print("[Coredata-Project] There is no project to delete")
             return
         }
         
         for entity in entities {
-            self.context.delete(entity)
+            context.delete(entity)
         }
     }
     
-    func deleteTruncateObject(with userId: String) throws -> Bool {
-        let entities = try getTruncateEntities(with: userId)
+    func deleteTruncateObject(context: NSManagedObjectContext, with userId: String) throws -> Bool {
+        let entities = try getTruncateEntities(context: context, with: userId)
         
         if entities.isEmpty {
-            print("[ProejctRepo] There is no project to truncate")
+            print("[Coredata-Project] There is no project to truncate")
             return true
         }
         
         for entity in entities {
-            self.context.delete(entity)
+            context.delete(entity)
         }
         return true
     }
@@ -93,49 +114,18 @@ final class ProjectServicesCoredata: ProjectObjectManage {
 
 extension ProjectServicesCoredata {
     
-    func getIdList(with userId: String) throws -> [Int] {
-        let entities = try getValidEntities(with: userId)
-        return entities.map{ Int($0.project_id) }
-    }
-    
-    func getHomeDTOList(with userId: String) throws -> [ProjectHomeDTO] {
-        let entities = try getEntities(with: userId)
-        return try entities.map { try convertEntityToDTO(with: $0) }
-    }
-    
-    func getBackgroundDTOList(with userId: String) throws -> [ProjectBackgroundDTO] {
-        let entities = try getValidEntities(with: userId)
-        return try entities.map { try convertEntityToDTO(with: $0) }
-    }
-    
-    func convertObjectToDTO(with object: ProjectObject) throws -> ProjectHomeDTO {
-        let today = Date()
-        let isFinished = object.status != .ongoing && object.status != .completable
-        let remainTodo = object.totalRegistedTodo - object.finishedTodo
-        var (remainDay, totalTerm, progressedTerm): (Int, Int, Int)
-        
+    func getSortedDTOs(context: NSManagedObjectContext, with userId: String) -> Bool {
         do {
-            remainDay = try util.calculateDatePeriod(with: today, and: object.deadline)
-            totalTerm = try util.calculateDatePeriod(with: object.startedAt, and: object.deadline)
-            progressedTerm = try util.calculateDatePeriod(with: object.startedAt, and: today)
+            let entities = try getAlertEntities(context: context, with: userId)
+            self.sortedDTO = entities.compactMap { entity -> ProjectHomeDTO? in
+                guard convertEntityToDTO(entity: entity) else { return nil }
+                return self.dto
+            }.sorted { $0.remainDay < $1.remainDay }
+            return true
         } catch {
-            print("[ProjectRepo] Failed to calculate Day Data for Struct ProjectHomeDTO: \(error.localizedDescription)")
-            remainDay = 0
-            totalTerm = 0
-            progressedTerm = 0
+            print("[Coredata-Project] Failed to convert alert entities to DTO: \(error.localizedDescription)")
+            return false
         }
-        
-        return ProjectHomeDTO(
-            projectId: object.projectId,
-            title: object.title,
-            startedAt: object.startedAt,
-            deadline: object.deadline,
-            finished: isFinished,
-            remainDay: remainDay,
-            remainTodo: remainTodo,
-            totalTerm: totalTerm,
-            progressedTerm: progressedTerm
-        )
     }
 }
 
@@ -143,10 +133,7 @@ extension ProjectServicesCoredata {
 
 extension ProjectServicesCoredata {
     
-    // set entity
-    private func createEntity(with object: Object) -> Bool {
-        let entity = Entity(context: context)
-        
+    private func createEntity(with object: Object, at entity: Entity) {
         entity.project_id = Int32(object.projectId)
         entity.user_id = object.userId
         entity.title = object.title
@@ -161,63 +148,61 @@ extension ProjectServicesCoredata {
         entity.deadline = object.deadline
         entity.finished_at = object.finishedAt
         entity.synced_at = object.syncedAt
-        
-        // Optional property nil checks
-         if entity.user_id == nil {
-             print("[ProjectRepo] nil detected: 'user_id'")
-             return false
-         }
-         if entity.title == nil {
-             print("[ProjectRepo] nil detected: 'title'")
-             return false
-         }
-         if entity.registed_at == nil {
-             print("[ProjectRepo] nil detected: 'registed_at'")
-             return false
-         }
-         if entity.started_at == nil {
-             print("[ProjectRepo] nil detected: 'started_at'")
-             return false
-         }
-         if entity.deadline == nil {
-             print("[ProjectRepo] nil detected: 'deadline'")
-             return false
-         }
-         if entity.finished_at == nil {
-             print("[ProjectRepo] nil detected: 'finished_at'")
-             return false
-         }
-         if entity.synced_at == nil {
-             print("[ProjectRepo] nil detected: 'synced_at'")
-             return false
-         }
-         return true
     }
     
-    // get single entity
-    private func getEntity(with projectId: Int, and userId: String) throws -> Entity {
-        
+    private func checkEntity(with entity: Entity) -> Bool {
+        if entity.user_id == nil {
+            print("[Coredata-Project] nil detected: 'user_id'")
+            return false
+        }
+        if entity.title == nil {
+            print("[Coredata-Project] nil detected: 'title'")
+            return false
+        }
+        if entity.registed_at == nil {
+            print("[Coredata-Project] nil detected: 'registed_at'")
+            return false
+        }
+        if entity.started_at == nil {
+            print("[Coredata-Project] nil detected: 'started_at'")
+            return false
+        }
+        if entity.deadline == nil {
+            print("[Coredata-Project] nil detected: 'deadline'")
+            return false
+        }
+        if entity.finished_at == nil {
+            print("[Coredata-Project] nil detected: 'finished_at'")
+            return false
+        }
+        if entity.synced_at == nil {
+            print("[Coredata-Project] nil detected: 'synced_at'")
+            return false
+        }
+        return true
+    }
+    
+    // sinlge entity
+    private func getSingleEntity(context: NSManagedObjectContext, with projectId: Int, and userId: String) throws -> Entity {
         let fetchReq: NSFetchRequest<Entity> = Entity.fetchRequest()
         fetchReq.predicate = NSPredicate(format: EntityPredicate.project.format, userId, projectId)
         fetchReq.fetchLimit = 1
         
-        guard let entity = try fetchEntity(with: fetchReq, and: self.context) else {
+        guard let entity = try context.fetch(fetchReq).first else {
             throw CoredataError.fetchFailure(serviceName: .cd, dataType: .project)
         }
         return entity
     }
     
-    // get entity list
-    private func getEntities(with userId: String) throws -> [ProjectEntity] {
-        
+    // total entities
+    private func getTotalEntities(context: NSManagedObjectContext, with userId: String) throws -> [ProjectEntity] {
         let fetchReq: NSFetchRequest<Entity> = Entity.fetchRequest()
         fetchReq.predicate = NSPredicate(format: EntityPredicate.projectTotalList.format, userId)
-        return try self.context.fetch(fetchReq)
+        return try context.fetch(fetchReq)
     }
     
-    // get valid entity list
-    private func getValidEntities(with userId: String) throws -> [ProjectEntity] {
-        
+    // valid entities
+    private func getValidEntities(context: NSManagedObjectContext, with userId: String) throws -> [ProjectEntity] {
         let fetchReq: NSFetchRequest<Entity> = Entity.fetchRequest()
         fetchReq.predicate = NSPredicate(
             format: EntityPredicate.projectValidList.format,
@@ -225,12 +210,29 @@ extension ProjectServicesCoredata {
             ProjectStatus.ongoing.rawValue,
             ProjectStatus.completable.rawValue
         )
-        return try self.context.fetch(fetchReq)
+        return try context.fetch(fetchReq)
+    }
+     
+    // alert entities
+    private func getAlertEntities(context: NSManagedObjectContext, with userId: String) throws -> [ProjectEntity] {
+        let fetchRequest: NSFetchRequest<ProjectEntity> = ProjectEntity.fetchRequest()
+        let today = Date()
+        
+        fetchRequest.predicate = NSPredicate(
+            format: EntityPredicate.projectAlertList.format,
+            userId,
+            today as NSDate,
+            ProjectStatus.ongoing.rawValue,
+            ProjectStatus.completable.rawValue
+        )
+        fetchRequest.sortDescriptors = [NSSortDescriptor(key: "deadline", ascending: true)]
+        fetchRequest.fetchLimit = 3
+        
+        return try context.fetch(fetchRequest)
     }
     
-    // get upload entity list
-    private func getUploadEntities(with userId: String) throws -> [ProjectEntity] {
-        
+    // upload entities
+    private func getUploadEntities(context: NSManagedObjectContext, with userId: String) throws -> [ProjectEntity] {
         let fetchReq: NSFetchRequest<Entity> = Entity.fetchRequest()
         fetchReq.predicate = NSPredicate(
             format: EntityPredicate.projectUploadList.format,
@@ -239,12 +241,11 @@ extension ProjectServicesCoredata {
             ProjectStatus.completable.rawValue,
             ProjectStatus.finished.rawValue
         )
-        return try self.context.fetch(fetchReq)
+        return try context.fetch(fetchReq)
     }
-    
-    // delete target entity list
-    private func getTruncateEntities(with userId: String) throws -> [ProjectEntity] {
         
+    // target entities
+    private func getTruncateEntities(context: NSManagedObjectContext, with userId: String) throws -> [ProjectEntity] {
         let fetchReq: NSFetchRequest<Entity> = Entity.fetchRequest()
         fetchReq.predicate = NSPredicate(
             format: EntityPredicate.projectTruncateList.format,
@@ -254,15 +255,16 @@ extension ProjectServicesCoredata {
             ProjectStatus.exploded.rawValue,
             ProjectStatus.finished.rawValue
         )
-        return try self.context.fetch(fetchReq)
+        return try context.fetch(fetchReq)
     }
 }
 
 //MARK: - Util
+
 extension ProjectServicesCoredata {
     
     // Project: Entity -> Object
-    private func convertToObject(with entity: Entity) throws -> Object {
+    private func convertToObject(with entity: Entity) -> Bool {
         guard let userId = entity.user_id,
               let title = entity.title,
               let status = ProjectStatus(rawValue: Int(entity.status)),
@@ -272,12 +274,14 @@ extension ProjectServicesCoredata {
               let finishedAt = entity.finished_at,
               let syncedAt = entity.synced_at
         else {
-            throw CoredataError.convertFailure(serviceName: .cd, dataType: .project)
+            print("[Coredata-Project] Failed to convert entity to object")
+            return false
         }
-        let todoEntities = entity.todo_relationship?.allObjects as? [TodoEntity] ?? []
-        let todos = try convertTodoEntity(with: todoEntities, projectId: Int(entity.project_id), userId: userId)
         
-        return ProjectObject(
+        let todoEntities = entity.todo_relationship?.allObjects as? [TodoEntity] ?? []
+        let todos = convertTodoEntities(with: todoEntities, projectId: Int(entity.project_id), userId: userId)
+        
+        self.object = ProjectObject(
             projectId: Int(entity.project_id),
             userId: userId,
             title: title,
@@ -294,52 +298,30 @@ extension ProjectServicesCoredata {
             finishedAt: finishedAt,
             syncedAt: syncedAt
         )
+        return true
     }
     
-    // Project: Entity -> DTO
-    private func convertEntityToDTO(with entity: Entity) throws -> ProjectHomeDTO {
-        guard let title = entity.title,
-              let type = ProjectStatus(rawValue: Int(entity.status)),
-              let startAt = entity.started_at,
-              let deadline = entity.deadline else {
-            throw CoredataError.convertFailure(serviceName: .cd, dataType: .project)
+    // Project: Entities -> ObjectList
+    private func convertToObjects(with entities: [Entity]) -> Bool {
+        self.objectList = []
+        for entity in entities {
+            if convertToObject(with: entity) {
+                self.objectList.append(self.object)
+            } else {
+                print("[Coredata-Project] Failed to convert entity to object")
+                return false
+            }
         }
-        let isFinished = (type != .ongoing)
-        let remainTodo = Int(entity.total_registed_todo) - Int(entity.finished_todo)
-        
-        var remainDay: Int
-        var totalTerm: Int
-        var progressedTerm: Int
-        do {
-            remainDay = try Utilities().calculateDatePeriod(with: Date(), and: deadline)
-            totalTerm = try Utilities().calculateDatePeriod(with: startAt, and: deadline)
-            progressedTerm = try Utilities().calculateDatePeriod(with: startAt, and: Date())
-        } catch {
-            print("[ProjectRepo] Failed to calculate Day Data for Struct ProjectHomeDTO: \(error.localizedDescription)")
-            remainDay = 0
-            totalTerm = 0
-            progressedTerm = 0
-        }
-
-        return ProjectHomeDTO(
-            projectId: Int(entity.project_id),
-            title: title,
-            startedAt: startAt,
-            deadline: deadline,
-            finished: isFinished,
-            remainDay: remainDay,
-            remainTodo: remainTodo,
-            totalTerm: totalTerm,
-            progressedTerm: progressedTerm
-        )
+        return true
     }
     
     // Todo: Entity -> Object
-    private func convertTodoEntity(with todos: [TodoEntity], projectId: Int, userId: String) throws -> [TodoObject] {
-        let todoObjects: [TodoObject] = todos.isEmpty ? [] : try todos.map { todoEntity in
+    private func convertTodoEntities(with todos: [TodoEntity], projectId: Int, userId: String) -> [TodoObject] {
+        return todos.compactMap { todoEntity in
             guard let desc = todoEntity.desc,
                   let status = TodoStatus(rawValue: Int(todoEntity.status)) else {
-                throw CoredataError.convertFailure(serviceName: .cd, dataType: .todo)
+                print("[Coredata-Project] Failed to convert todo entity")
+                return nil
             }
             return TodoObject(
                 projectId: projectId,
@@ -350,7 +332,38 @@ extension ProjectServicesCoredata {
                 status: status
             )
         }
-        return todoObjects
+    }
+    
+    // Project: Entity -> DTO
+    private func convertEntityToDTO(entity: ProjectEntity) -> Bool {
+        guard let title = entity.title,
+              let startAt = entity.started_at,
+              let deadline = entity.deadline else {
+            print("[Coredata-Project] Failed to convert entity to ProjectHomeDTO")
+            return false
+        }
+        do {
+            let today = Date()
+            let remainDay = try Utilities().calculateDatePeriod(with: today, and: deadline)
+            let totalTerm = try Utilities().calculateDatePeriod(with: startAt, and: deadline)
+            let progressedTerm = try Utilities().calculateDatePeriod(with: startAt, and: today)
+            
+            self.dto = ProjectHomeDTO(
+                projectId: Int(entity.project_id),
+                title: title,
+                startedAt: startAt,
+                deadline: deadline,
+                finished: entity.status != ProjectStatus.ongoing.rawValue,
+                remainDay: remainDay,
+                remainTodo: Int(entity.total_registed_todo) - Int(entity.finished_todo),
+                totalTerm: totalTerm,
+                progressedTerm: progressedTerm
+            )
+            return true
+        } catch {
+            print("[Coredata-Project] Failed to calculate project periods: \(error.localizedDescription)")
+            return false
+        }
     }
 
     // Project: Update
@@ -492,7 +505,8 @@ struct ProjectHomeDTO: Identifiable {
     }
 }
 
-// BackGround
+//MARK: BackGround
+
 struct ProjectBackgroundDTO {
     
     let projectId: Int
@@ -516,6 +530,21 @@ struct ProjectBackgroundDTO {
 
 extension ProjectServicesCoredata {
     
+    func getBackgroundDTOList(context: NSManagedObjectContext, userId: String) throws -> Bool {
+        do {
+            let entities = try getValidEntities(context: context, with: userId)
+            if entities.isEmpty {
+                print("[Coredata-Project] There is no project to convert to BackgroundDTO")
+                return true
+            }
+            self.backgroundDTO = try entities.map{ try convertEntityToDTO(with: $0) }
+            return true
+        } catch {
+            print("[Coredata-Project] Failed to get entity to ProjectHomeDTO: \(error.localizedDescription)")
+            return false
+        }
+    }
+    
     private func convertEntityToDTO(with entity: Entity) throws -> ProjectBackgroundDTO {
         guard let startedAt = entity.started_at,
               let deadline = entity.deadline else {
@@ -527,11 +556,5 @@ extension ProjectServicesCoredata {
             deadline: deadline
         )
     }
-}
-
-
-
-extension ProjectServicesCoredata {
-
 }
 

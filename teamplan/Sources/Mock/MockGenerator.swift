@@ -5,7 +5,7 @@
 //  Created by 크로스벨 on 6/27/24.
 //  Copyright © 2024 team1os. All rights reserved.
 //
-
+/*
 import Foundation
 
 final class MockGenerator {
@@ -13,7 +13,7 @@ final class MockGenerator {
     private var userId: String
     private let userCD = UserServicesCoredata()
     private let statCD = StatisticsServicesCoredata()
-    private let projectCD = ProjectServicesCoredata()
+    private let projectCD = ProjectLocalRepo()
     private let challengeCD = ChallengeServicesCoredata()
     private let accessLogCD = AccessLogServicesCoredata()
     private let projectLogCD = ProjectExtendLogServicesCoredata()
@@ -392,3 +392,4 @@ extension MockGenerator {
         }
     }
 }
+*/

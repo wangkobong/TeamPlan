@@ -9,32 +9,30 @@
 import Foundation
 import CoreData
 
-final class CoreValueServicesCoredata: CoreValueObjectManage {
+final class CoreValueServicesCoredata {
     typealias Entity = CoreValueEntity
     typealias Object = CoreValueObject
     
-    var context: NSManagedObjectContext
-    init() {
-        self.context = LocalStorageManager.shared.context
+    var object = CoreValueObject()
+    
+    func setObject(context: NSManagedObjectContext, object: CoreValueObject) -> Bool {
+        let entity = CoreValueEntity(context: context)
+        createEntity(with: object, at: entity)
+        return checkEntity(with: entity)
     }
     
-    func setObject(with object: CoreValueObject) -> Bool {
-        createEntity(with: object)
+    func getObject(context: NSManagedObjectContext, userId: String) throws -> Bool {
+        let entity = try getEntity(context: context, userId: userId)
+        return convertToObject(with: entity)
     }
     
-    func getObject(with userId: String) throws -> CoreValueObject {
-        let entity = try getEntity(with: userId)
-        return try convertToObject(with: entity)
+    func deleteObject(context: NSManagedObjectContext, userId: String) throws {
+        let entity = try getEntity(context: context, userId: userId)
+        context.delete(entity)
     }
     
-    func deleteObject(with userId: String) throws {
-        let entity = try getEntity(with: userId)
-        self.context.delete(entity)
-        try self.context.save()
-    }
-    
-    func isObjectExist(with userId: String) -> Bool {
-        let request = getFetchReqeust(with: userId)
+    func isObjectExist(context: NSManagedObjectContext, userId: String) -> Bool {
+        let request = getFetchRequest(with: userId)
         do {
             let count = try context.count(for: request)
             return count > 0
@@ -46,45 +44,47 @@ final class CoreValueServicesCoredata: CoreValueObjectManage {
 
 extension CoreValueServicesCoredata {
 
-    private func createEntity(with object: Object) -> Bool {
-        let entity = Entity(context: self.context)
-        
+    private func createEntity(with object: CoreValueObject, at entity: CoreValueEntity) {
         entity.user_id = object.userId
         entity.project_regist_limit = Int32(object.projectRegistLimit)
         entity.todo_regist_limit = Int32(object.todoRegistLimit)
         entity.drop_convert_ratio = object.dropConvertRatio
         entity.sync_cycle = Int32(object.syncCycle)
-        
-        // Optional property nil checks
+    }
+    
+    private func checkEntity(with entity: CoreValueEntity) -> Bool {
         if entity.user_id == nil {
-            print("[CoreValueRepo] nil detected: 'user_id'")
+            print("[Coredata-CoreValue] nil detected: 'user_id'")
             return false
         }
         return true
     }
     
-    private func convertToObject(with entity: CoreValueEntity) throws -> CoreValueObject {
+    private func convertToObject(with entity: CoreValueEntity) -> Bool {
         guard let userId = entity.user_id else {
-            throw CoredataError.convertFailure(serviceName: .cd, dataType: .coreValue)
+            print("[Coredata-CoreValue] Failed to fetch data from entity")
+            return false
         }
-        return CoreValueObject(
+        self.object = CoreValueObject(
             userId: userId,
             projectRegistLimit: Int(entity.project_regist_limit),
             todoRegistLimit: Int(entity.todo_regist_limit),
-            dropConvertRatio:  entity.drop_convert_ratio,
-            syncCycle:  Int(entity.sync_cycle))
+            dropConvertRatio: entity.drop_convert_ratio,
+            syncCycle: Int(entity.sync_cycle)
+        )
+        return true
     }
     
-    private func getFetchReqeust(with userId: String) -> NSFetchRequest<Entity> {
-        let fetchRequest: NSFetchRequest<Entity> = Entity.fetchRequest()
+    private func getFetchRequest(with userId: String) -> NSFetchRequest<CoreValueEntity> {
+        let fetchRequest: NSFetchRequest<CoreValueEntity> = CoreValueEntity.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: EntityPredicate.coreValue.format, userId)
         
         return fetchRequest
     }
     
-    private func getEntity(with userId: String) throws -> CoreValueEntity {
-        let reqeust = getFetchReqeust(with: userId)
-        guard let entity = try fetchEntity(with: reqeust, and: self.context) else {
+    private func getEntity(context: NSManagedObjectContext, userId: String) throws -> CoreValueEntity {
+        let request = getFetchRequest(with: userId)
+        guard let entity = try context.fetch(request).first else {
             throw CoredataError.fetchFailure(serviceName: .cd, dataType: .coreValue)
         }
         return entity

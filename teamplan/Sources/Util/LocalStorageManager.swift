@@ -21,8 +21,12 @@ final class LocalStorageManager {
         return container.viewContext
     }
     
-    private init(){
+    private init() {
         container = NSPersistentContainer(name: CoredataConfig.defaultModel)
+        loadPersistentStore()
+    }
+    
+    private func loadPersistentStore() {
         container.loadPersistentStores { storeDescription, error in
             if let error = error as NSError? {
                 Task {
@@ -32,30 +36,26 @@ final class LocalStorageManager {
         }
     }
     
-    func saveContext() async -> Bool {
+    func saveContext() -> Bool {
         if context.hasChanges {
             print("[localStorage] Context change detected")
             do {
-                try await self.context.perform {
-                    try self.context.save()
-                }
+                try self.context.save()
                 return true
             } catch {
                 print("[localStorage] Failed to save context: \(error)")
+                self.context.rollback()
                 return false
             }
         }
         print("[localStorage] Context change not detected")
-        return false
-    }
-    
-    func resetContext() async {
-        let context = container.viewContext
-        await context.perform {
-            context.reset()
-        }
+        return true
     }
 
+    func resetContext() {
+        context.reset()
+    }
+    
     func rebuildContext() async {
         let coordinator = container.persistentStoreCoordinator
         for store in coordinator.persistentStores {
@@ -80,20 +80,6 @@ final class LocalStorageManager {
         }
         await retryLoadingLocalStorage()
     }
-    
-    // Shared method to initialize the persistent container
-    private func initializePersistentContainer() async {
-        container = NSPersistentContainer(name: CoredataConfig.defaultModel)
-        container.loadPersistentStores { storeDescription, error in
-            if let error = error as NSError? {
-                Task {
-                    await self.handleLocalStorageError(error: error)
-                }
-            } else {
-                print("[Coredata] Persistent container loaded successfully")
-            }
-        }
-    }
 }
 
 //MARK: Error Handling
@@ -101,7 +87,8 @@ final class LocalStorageManager {
 extension LocalStorageManager {
     
     private func retryLoadingLocalStorage() async {
-        await initializePersistentContainer()
+        container = NSPersistentContainer(name: CoredataConfig.defaultModel)
+        loadPersistentStore()
     }
     
     @MainActor

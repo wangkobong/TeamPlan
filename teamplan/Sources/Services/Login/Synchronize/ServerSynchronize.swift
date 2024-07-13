@@ -6,6 +6,7 @@
 //  Copyright © 2024 team1os. All rights reserved.
 //
 
+import CoreData
 import Foundation
 import FirebaseFirestore
 import FirebaseFirestoreSwift
@@ -19,6 +20,7 @@ enum SyncType: String {
 final class ServerSynchronize {
     
     private let util = Utilities()
+    private let storageManager: LocalStorageManager
     
     // Local Storage
     private let userCD = UserServicesCoredata()
@@ -38,10 +40,8 @@ final class ServerSynchronize {
     
     private var updatedProject = Set<Int>()
     
-    // shared Properties
-    private var userId: String
-    
     // Local Properties
+    private var userId: String
     private var localUser: UserObject
     private var localStat : StatisticsObject
     private var localAccessLogHead : Int
@@ -80,6 +80,7 @@ final class ServerSynchronize {
         self.localUpdateNeedProjects = [:]
         self.localProjectLog = [:]
         
+        self.storageManager = LocalStorageManager.shared
         self.batch = Firestore.firestore().batch()
         self.serverUser = UserObject()
         self.serverStat = StatisticsObject()
@@ -92,17 +93,20 @@ final class ServerSynchronize {
         
         switch type {
         case .weekly:
+            // fetch data
             async let isLocalDataFetched = localFetchExecutor(.weekly, with: syncDate)
             async let isServerDataFetched = serverFetchExecutor(.weekly)
             
             results = await [isLocalDataFetched, isServerDataFetched]
             
             if results.allSatisfy({$0}) {
+                
+                // 
                 await preprocessExecutor(.weekly, with: syncDate)
                 let isServerUpdated = await serverUpdateExecutor(.weekly, with: syncDate)
 
                 if isServerUpdated {
-                    return await localUpdateExecutor(.weekly, with: syncDate)
+                    return localUpdateExecutor(.weekly, with: syncDate)
                 } else {
                     return false
                 }
@@ -111,6 +115,7 @@ final class ServerSynchronize {
             }
             
         case .monthly:
+            // fetch data
             async let isLocalDataFetched = localFetchExecutor(.monthly, with: syncDate)
             async let isServerDataFetched = serverFetchExecutor(.monthly)
             
@@ -121,7 +126,7 @@ final class ServerSynchronize {
                 let isServerUpdated = await serverUpdateExecutor(.monthly, with: syncDate)
                 
                 if isServerUpdated {
-                    return await localUpdateExecutor(.monthly, with: syncDate)
+                    return localUpdateExecutor(.monthly, with: syncDate)
                 } else {
                     return false
                 }
@@ -130,6 +135,7 @@ final class ServerSynchronize {
             }
             
         case .quarterly:
+            // fetch data
             async let isLocalDataFetched = localFetchExecutor(.quarterly, with: syncDate)
             async let isServerDataFetched = serverFetchExecutor(.quarterly)
             
@@ -137,11 +143,10 @@ final class ServerSynchronize {
             
             if results.allSatisfy({$0}) {
                 await preprocessExecutor(.quarterly, with: syncDate)
-                let isProjectLogFetched = await fetchProjectLogFromLocal()
                 let isServerUpdated = await serverUpdateExecutor(.quarterly, with: syncDate)
                 
-                if isProjectLogFetched && isServerUpdated {
-                    return await localUpdateExecutor(.monthly, with: syncDate)
+                if isServerUpdated {
+                    return localUpdateExecutor(.quarterly, with: syncDate)
                 } else {
                     return false
                 }
@@ -158,41 +163,48 @@ extension ServerSynchronize {
     
     private func localFetchExecutor(_ type: SyncType, with syncDate: Date) async -> Bool {
         var results: [Bool] = []
+        let context = storageManager.context
         
-        switch type {
-        case .weekly:
-            async let isLocalUserFetch = fetchUserFromLocal()
-            async let isLocalStatFetch = fetchStatFromLocal()
-            async let isLocalAccessLogFetch = fetchAccessLogFromLocal()
-            
-            results = await [isLocalUserFetch, isLocalStatFetch, isLocalAccessLogFetch]
-            
-        case .monthly:
-            async let isLocalChallengeFetch = fetchChallengeFromLocal(with: syncDate)
-            async let isLocalProjectFetch = fetchProjectFromLocal()
-            
-            results = await [isLocalChallengeFetch, isLocalProjectFetch]
-            
-        case .quarterly:
-            async let isLocalUserFetch = fetchUserFromLocal()
-            async let isLocalAccessLogFetch = fetchAccessLogFromLocal()
-            async let isLocalProjectFetch = fetchProjectFromLocal()
-            
-            results = await [isLocalUserFetch, isLocalAccessLogFetch, isLocalProjectFetch]
-        }
-        if results.allSatisfy({$0}){
-            print("[ServerSync] Successfully fetch local data")
-            return true
-        } else {
-            print("[ServerSync] Failed to fetch local data")
-            return false
+        return context.performAndWait {
+            switch type {
+            case .weekly:
+                results = [
+                    fetchUserFromLocal(context: context),
+                    fetchStatFromLocal(context: context),
+                    fetchAccessLogFromLocal(context: context)
+                ]
+                
+            case .monthly:
+                results = [
+                    fetchChallengeFromLocal(context: context, with: syncDate),
+                    fetchProjectFromLocal(context: context)
+                ]
+                
+            case .quarterly:
+                results = [
+                    fetchUserFromLocal(context: context),
+                    fetchAccessLogFromLocal(context: context),
+                    fetchProjectLogFromLocal(context: context)
+                ]
+            }
+            if results.allSatisfy({$0}){
+                print("[ServerSync] Successfully fetch local data")
+                return true
+            } else {
+                print("[ServerSync] Failed to fetch local data")
+                return false
+            }
         }
     }
     
     // User
-    private func fetchUserFromLocal() async -> Bool {
+    private func fetchUserFromLocal(context: NSManagedObjectContext) -> Bool {
         do {
-            self.localUser = try userCD.getObject(with: userId)
+            guard try userCD.getObject(context: context, userId: userId) else {
+                print("[ServerSync] Failed to convert UserData")
+                return false
+            }
+            self.localUser = userCD.object
             return true
         } catch {
             print("[ServerSync] Failed to fetch UserData from storage")
@@ -201,9 +213,13 @@ extension ServerSynchronize {
     }
     
     // Stat
-    private func fetchStatFromLocal() async -> Bool {
+    private func fetchStatFromLocal(context: NSManagedObjectContext) -> Bool {
         do {
-            self.localStat = try statCD.getObject(with: userId)
+            guard try statCD.getObject(context: context, userId: userId) else {
+                print("[ServerSync] Failed to convert StatData")
+                return false
+            }
+            self.localStat = statCD.object
             return true
         } catch {
             print("[ServerSync] Failed to fetch StatData from storage")
@@ -212,9 +228,13 @@ extension ServerSynchronize {
     }
     
     // AccessLog
-    private func fetchAccessLogFromLocal() async -> Bool {
+    private func fetchAccessLogFromLocal(context: NSManagedObjectContext) -> Bool {
         do {
-            self.localAccessLogs = try accessLogCD.getFullObjects(with: userId)
+            guard try accessLogCD.getFullObjects(context: context, userId: userId) else {
+                print("[ServerSync] Failed to convert AccessLog")
+                return false
+            }
+            self.localAccessLogs = accessLogCD.objects
             return true
         } catch {
             print("[ServerSync] Failed to fetch AccessLog from storage")
@@ -223,9 +243,13 @@ extension ServerSynchronize {
     }
     
     // Challenge
-    private func fetchChallengeFromLocal(with syncDate: Date) async -> Bool {
+    private func fetchChallengeFromLocal(context: NSManagedObjectContext, with syncDate: Date) -> Bool {
         do {
-            self.localChallenges = try await challengeCD.getTartgetObjects(with: userId, syncDate: syncDate)
+            guard try challengeCD.getChangedObjects(context: context, userId: userId, syncDate: syncDate) else {
+                print("[ServerSync] Failed to convert Challenge")
+                return false
+            }
+            self.localChallenges = challengeCD.objects
             return true
         } catch {
             print("[ServerSync] Failed to fetch Challenges from storage")
@@ -234,9 +258,13 @@ extension ServerSynchronize {
     }
     
     // Project
-    private func fetchProjectFromLocal() async -> Bool {
+    private func fetchProjectFromLocal(context: NSManagedObjectContext) -> Bool {
         do {
-            self.localProjects = try projectCD.getValidObjects(with: userId)
+            guard try projectCD.getValidObjects(context: context, with: userId) else {
+                print("[ServerSync] Failed to convert Project")
+                return false
+            }
+            self.localProjects = projectCD.objectList
             return true
         } catch {
             print("[ServerSync] Failed to fetch ProjectInfo from storage")
@@ -245,18 +273,16 @@ extension ServerSynchronize {
     }
     
     // ProjectLog
-    private func fetchProjectLogFromLocal() async -> Bool {
-        do {
-            for projectLogId in localProjectIds {
-                let logs = try projectExtendCD.getObjects(with: projectLogId, and: userId)
-                print("[ServerSync] ProjectLog that need to upload : \(logs.count)")
-                self.localProjectLog[projectLogId] = logs
+    private func fetchProjectLogFromLocal(context: NSManagedObjectContext) -> Bool {
+        for projectLogId in localProjectIds {
+            guard projectExtendCD.getObjects(context: context, with: projectLogId, and: userId) else {
+                print("[ServerSync] Failed to convert ExtendLog")
+                return false
             }
-            return true
-        } catch {
-            print("[ServerSync] Failed to fetch ProjectExtendLog from storage")
-            return false
+            print("[ServerSync] ProjectLog that need to upload : \(projectExtendCD.objects.count)")
+            self.localProjectLog[projectLogId] = projectExtendCD.objects
         }
+        return true
     }
 }
 
@@ -376,35 +402,37 @@ extension ServerSynchronize {
     
     private func serverUpdateExecutor(_ type: SyncType, with syncDate: Date) async -> Bool {
         let batch = Firestore.firestore().batch()
+        var tasks: [ () async -> Bool ] = []
         var results: [Bool] = []
         
         switch type {
         case .weekly:
-            async let isServerUserUpdated = updateUserAtServer(.weekly, with: syncDate, and: batch)
-            async let isServerStatUpdated = updateStatAtServer(with: syncDate, and: batch)
-            async let isServerAccessLogUpdated = updateAccessLogAtServer(type: .weekly, and: batch)
-            
-            results = await [isServerUserUpdated, isServerStatUpdated, isServerAccessLogUpdated]
+            tasks = [
+                { await self.updateUserAtServer(.weekly, with: syncDate, and: batch) },
+                { await self.updateStatAtServer(with: syncDate, and: batch) },
+                { await self.updateAccessLogAtServer(type: .weekly, and: batch) }
+            ]
             
         case .monthly:
-            async let isServerChallengeUpdated = updateChallengeStatusAtServer(batch: batch)
-            async let isServerProjectUpdated = updateProjectAtServer(.monthly, with: syncDate, batch: batch)
-
-            results = await [isServerChallengeUpdated, isServerProjectUpdated]
+            tasks = [
+                { await self.updateChallengeStatusAtServer(batch: batch) },
+                { await self.updateProjectAtServer(.monthly, with: syncDate, batch: batch) }
+            ]
             
         case .quarterly:
-            if await updateProjectAtServer(.quarterly, with: syncDate, batch: batch) {
-                async let isServerAccessLogUpdated = updateAccessLogAtServer(type: .quarterly, and: batch)
-                async let isServerUserUpdated = updateUserAtServer(.quarterly, with: syncDate, and: batch)
-                async let isServerProjectLogUploaded = uploadProjectExtendAtServer(batch: batch)
-                
-                results = await [isServerAccessLogUpdated, isServerUserUpdated, isServerProjectLogUploaded]
-            } else {
-                print("[ServerSync] Failed to update server")
+            tasks = [
+                { await self.updateProjectAtServer(.quarterly, with: syncDate, batch: batch) },
+                { await self.updateAccessLogAtServer(type: .quarterly, and: batch) },
+                { await self.updateUserAtServer(.quarterly, with: syncDate, and: batch) },
+                { await self.uploadProjectExtendAtServer(batch: batch) }
+            ]
+        }
+        for task in tasks {
+            if await !task() {
+                print("[ServerSync] Failed to add update data at batch")
                 return false
             }
         }
-        
         do {
             if results.allSatisfy({$0}){
                 try await batch.commit()
@@ -552,54 +580,54 @@ extension ServerSynchronize {
 extension ServerSynchronize {
     
     // executor
-    private func localUpdateExecutor(_ type: SyncType, with syncDate: Date) async -> Bool {
+    private func localUpdateExecutor(_ type: SyncType, with syncDate: Date) -> Bool {
+        let context = storageManager.context
         var results: [Bool] = []
         
-        switch type {
-        case .weekly:
-            async let isLocalUserUpdated = updateUserAtLocal(with: syncDate, type: .weekly)
-            async let isLocalStatUpdated = updateStatAtLocal(with: syncDate)
-            
-            results = await [isLocalUserUpdated, isLocalStatUpdated]
-            print("[ServerSync] Successfully proceed weekly update")
-            
-        case .monthly:
-            results.append(await updateProjectAtLocal(with: syncDate))
-            print("[ServerSync] Successfully proceed monthly update")
-            
-        case .quarterly:
-            async let isLocalUserUpdated = updateUserAtLocal(with: syncDate, type: .quarterly)
-            async let isLocalAccessLogCleanUp = cleanupAccessLogAtLocal()
-            async let isLocalProjectLogCleanUp = cleanupProjectLogAtLocal()
-            
-            results = await [isLocalUserUpdated, isLocalAccessLogCleanUp, isLocalProjectLogCleanUp]
-            print("[ServerSync] Successfully proceed quarterly update")
-        }
-
-        if results.allSatisfy({ $0 }) {
-            if await LocalStorageManager.shared.saveContext() {
-                print("[ServerSync] Successfully apply updatedData at local")
-                return true
+        return context.performAndWait {
+            switch type {
+            case .weekly:
+                results = [
+                    updateUserAtLocal(context: context, with: syncDate, type: .weekly),
+                    updateStatAtLocal(context: context, with: syncDate)
+                ]
+            case .monthly:
+                results = [
+                    updateProjectSyncedAt(context: context, with: syncDate),
+                    cleanupProjectAtLocal(context: context)
+                ]
+            case .quarterly:
+                results = [
+                    updateUserAtLocal(context: context, with: syncDate, type: .quarterly),
+                    cleanupAccessLogAtLocal(context: context),
+                    cleanupProjectLogAtLocal(context: context)
+                ]
+            }
+            if results.allSatisfy({ $0 }) {
+                if storageManager.saveContext() {
+                    print("[ServerSync] Successfully apply updatedData at local")
+                    return true
+                } else {
+                    print("[ServerSync] Failed to apply updatedData at local")
+                    return false
+                }
             } else {
-                print("[ServerSync] Failed to apply updatedData at local")
+                print("[ServerSync] Failed to local update process")
                 return false
             }
-        } else {
-            print("[ServerSync] Failed to local update process")
-            return false
         }
     }
     
     // User
-    private func updateUserAtLocal(with syncDate: Date, type: UpdateType) async -> Bool {
+    private func updateUserAtLocal(context: NSManagedObjectContext, with syncDate: Date, type: UpdateType) -> Bool {
         do {
             switch type {
             case .quarterly:
                 let updated = UserUpdateDTO(userId: userId, newLogHead: localAccessLogHead ,newSyncedAt: syncDate)
-                return try userCD.updateObject(with: updated)
+                return try userCD.updateObject(context: context, dto: updated)
             default:
                 let updated = UserUpdateDTO(userId: userId, newSyncedAt: syncDate)
-                return try userCD.updateObject(with: updated)
+                return try userCD.updateObject(context: context, dto: updated)
             }
         } catch {
             print("[ServerSync] Failed to update user data at local")
@@ -608,10 +636,10 @@ extension ServerSynchronize {
     }
     
     // Stat
-    private func updateStatAtLocal(with syncDate: Date) async -> Bool {
+    private func updateStatAtLocal(context: NSManagedObjectContext, with syncDate: Date) -> Bool {
         do {
             let updated = StatUpdateDTO(userId: userId, newSyncedAt: syncDate)
-            return try statCD.updateObject(with: updated)
+            return try statCD.updateObject(context: context, dto: updated)
         } catch {
             print("[ServerSync] Failed to update stat data at local")
             return false
@@ -619,9 +647,9 @@ extension ServerSynchronize {
     }
     
     // AccessLog
-    private func cleanupAccessLogAtLocal() async -> Bool {
+    private func cleanupAccessLogAtLocal(context: NSManagedObjectContext) -> Bool {
         do {
-            try accessLogCD.deleteObject(with: userId)
+            try accessLogCD.deleteObject(context: context, userId: userId)
             return true
         } catch {
             print("[ServerSync] Failed to update accessLog at local")
@@ -630,20 +658,12 @@ extension ServerSynchronize {
     }
     
     // Project
-    private func updateProjectAtLocal(with syncDate: Date) async -> Bool {
-        async let isProjectSyncedAtUpdated = updateProjectSyncedAt(with: syncDate)
-        async let isTruncatedProjectDeleted = cleanupProjectAtLocal()
-        
-        let results = await [isProjectSyncedAtUpdated, isTruncatedProjectDeleted]
-        return results.allSatisfy{ $0 }
-    }
-    
-    private func updateProjectSyncedAt(with syncDate: Date) async -> Bool {
+    private func updateProjectSyncedAt(context: NSManagedObjectContext, with syncDate: Date) -> Bool {
         do {
             var results: [Bool] = []
             for project in localProjects {
                 let updated = ProjectUpdateDTO(projectId: project.projectId, userId: userId, newSyncedAt: syncDate)
-                results.append(try projectCD.updateObject(with: updated))
+                results.append(try projectCD.updateObject(context: context, with: updated))
             }
             return results.allSatisfy{ $0 }
         } catch {
@@ -652,9 +672,9 @@ extension ServerSynchronize {
         }
     }
     
-    private func cleanupProjectAtLocal() async -> Bool {
+    private func cleanupProjectAtLocal(context: NSManagedObjectContext) -> Bool {
         do {
-            return try projectCD.deleteTruncateObject(with: userId)
+            return try projectCD.deleteTruncateObject(context: context, with: userId)
         } catch {
             print("[ServerSync] Failed to truncate project at local")
             return false
@@ -662,10 +682,10 @@ extension ServerSynchronize {
     }
     
     // ProjectLog
-    private func cleanupProjectLogAtLocal() async -> Bool {
+    private func cleanupProjectLogAtLocal(context: NSManagedObjectContext) -> Bool {
         do {
             for localProjectLogId in self.localProjectIds {
-                try await projectExtendCD.deleteObject(with: localProjectLogId, and: userId)
+                try projectExtendCD.deleteObject(context: context, with: localProjectLogId, and: userId)
             }
             return true
         } catch {
@@ -673,11 +693,4 @@ extension ServerSynchronize {
             return false
         }
     }
-}
-
-
-// MARK: - Fetch Mock Data
-extension ServerSynchronize{
-    
-
 }

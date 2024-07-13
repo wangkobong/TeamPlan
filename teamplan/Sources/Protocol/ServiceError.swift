@@ -8,26 +8,14 @@
 
 import Foundation
 
-protocol ServiceErrorProtocol: Error {
-    var errorService: ServiceType { get }
-    var errorData: DataType { get }
-    var errorMessage: String { get }
-}
-
-extension ServiceErrorProtocol {
-    var errorDescription: String {
-        "[\(errorService.rawValue)] Failed \(errorMessage)"
-    }
-}
-
 enum ServiceType: String {
     // Storage
     case cd = "Coredata"
     case fs = "Firestore"
     
     // Authentication
-    case signup = "Signup"
-    case login = "Login Loading"
+    case signup = "SignupLoading"
+    case login = "LoginLoading"
     case google = "GoogleSocialLogin"
     case apple = "AppleSocialLogin"
     
@@ -44,13 +32,27 @@ enum ServiceType: String {
 
 enum DataType: String {
     case null = "Null"
-    case user = "User"
-    case log = "AccessLog"
-    case stat = "Statistics"
+    
     case coreValue = "CoreValue"
+    case user = "User"
+    case stat = "Statistics"
     case challenge = "Challenge"
-    case todo = "todo"
     case project = "Project"
+    case todo = "todo"
+    case aclog = "AccessLog"
+    case exlog = "ExtendLog"
+}
+
+protocol ServiceErrorProtocol: Error {
+    var errorService: ServiceType { get }
+    var errorData: DataType { get }
+    var errorMessage: String { get }
+}
+
+extension ServiceErrorProtocol {
+    var errorDescription: String {
+        "[\(errorService.rawValue)-\(errorData.rawValue)] Failed to \(errorMessage)"
+    }
 }
 
 // MARK: - Coredata

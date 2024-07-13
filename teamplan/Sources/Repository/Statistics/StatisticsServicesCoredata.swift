@@ -11,33 +11,33 @@ import CoreData
 
 //MARK: Main
 
-final class StatisticsServicesCoredata: FullObjectManage {
+final class StatisticsServicesCoredata {
     typealias Entity = StatisticsEntity
     typealias Object = StatisticsObject
     typealias DTO = StatUpdateDTO
     
-    var context: NSManagedObjectContext
-    init() {
-        self.context = LocalStorageManager.shared.context
+    var object = StatisticsObject()
+    private let util = Utilities()
+    
+    func setObject(context: NSManagedObjectContext, object: StatisticsObject) throws -> Bool {
+        let entity = StatisticsEntity(context: context)
+        try createEntity(with: object, at: entity)
+        return checkEntity(with: entity)
     }
     
-    func setObject(with object: Object) throws -> Bool {
-        return try createEntity(with: object)
+    func getObject(context: NSManagedObjectContext, userId: String) throws -> Bool {
+        let entity = try getEntity(context: context, userId: userId)
+        return convertToObject(with: entity)
     }
     
-    func getObject(with userId: String) throws -> Object {
-        let entity = try getEntity(with: userId)
-        return try convertToObject(with: entity)
+    func updateObject(context: NSManagedObjectContext, dto: StatUpdateDTO) throws -> Bool {
+        let entity = try getEntity(context: context, userId: dto.userId)
+        return try checkUpdate(from: entity, to: dto)
     }
     
-    func updateObject(with dto: StatUpdateDTO) throws -> Bool {
-        let entity = try getEntity(with: dto.userId)
-        return try checkUpdate(from: entity, to: dto) 
-    }
-    
-    func deleteObject(with userId: String) throws {
-        let entity = try getEntity(with: userId)
-        self.context.delete(entity)
+    func deleteObject(context: NSManagedObjectContext, userId: String) throws {
+        let entity = try getEntity(context: context, userId: userId)
+        context.delete(entity)
     }
 }
 
@@ -45,8 +45,8 @@ final class StatisticsServicesCoredata: FullObjectManage {
 
 extension StatisticsServicesCoredata {
     
-    func isObjectExist(with userId: String) -> Bool {
-        let reqeust = getFetchRequest(with: userId)
+    func isObjectExist(context: NSManagedObjectContext, userId: String) -> Bool {
+        let reqeust = constructFetchRequest(with: userId)
         do {
             let count = try context.count(for: reqeust)
             return count > 0
@@ -60,23 +60,24 @@ extension StatisticsServicesCoredata {
 
 extension StatisticsServicesCoredata {
     
-    private func getFetchRequest(with userId: String) -> NSFetchRequest<Entity> {
+    private func constructFetchRequest(with userId: String) -> NSFetchRequest<Entity> {
         let fetchRequest: NSFetchRequest<Entity> = Entity.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: EntityPredicate.stat.format, userId)
         
         return fetchRequest
     }
     
-    private func getEntity(with userId: String) throws -> Entity {
-        let request = getFetchRequest(with: userId)
-        guard let entity = try fetchEntity(with: request, and: self.context) else {
+    private func getEntity(context: NSManagedObjectContext, userId: String) throws -> Entity {
+        let request = constructFetchRequest(with: userId)
+        guard let entity = try context.fetch(request).first else {
             throw CoredataError.fetchFailure(serviceName: .cd, dataType: .stat)
         }
         return entity
     }
     
-    private func createEntity(with object: StatisticsObject) throws -> Bool {
-        let entity = StatisticsEntity(context: context)
+    private func createEntity(with object: StatisticsObject, at entity: StatisticsEntity) throws {
+        let stringChallengeStep = try util.convertToJSON(data: object.challengeStepStatus)
+        let stringMyChallenges = try util.convertToJSON(data: object.mychallenges)
         
         entity.user_id = object.userId
         entity.term = Int32(object.term)
@@ -88,25 +89,26 @@ extension StatisticsServicesCoredata {
         entity.total_extended_projects = Int32(object.totalExtendedProjects)
         entity.total_registed_todos = Int32(object.totalRegistedTodos)
         entity.total_finished_todos = Int32(object.totalFinishedTodos)
-        entity.challenge_step_status = try Utilities().convertToJSON(data: object.challengeStepStatus)
-        entity.mychallenges = try Utilities().convertToJSON(data: object.mychallenges)
+        entity.challenge_step_status = stringChallengeStep
+        entity.mychallenges = stringMyChallenges
         entity.synced_at = object.syncedAt
-        
-        // Optional property nil checks
+    }
+    
+    private func checkEntity(with entity: StatisticsEntity) -> Bool {
         if entity.user_id == nil {
-            print("[StatRepo] nil detected: 'user_id'")
+            print("[Coredata-Stat] nil detected: 'user_id'")
             return false
         }
         if entity.challenge_step_status == nil {
-            print("[StatRepo] nil detected: 'challenge_step_status'")
+            print("[Coredata-Stat] nil detected: 'challenge_step_status'")
             return false
         }
         if entity.mychallenges == nil {
-            print("[StatRepo] nil detected: 'mychallenges'")
+            print("[Coredata-Stat] nil detected: 'mychallenges'")
             return false
         }
         if entity.synced_at == nil {
-            print("[StatRepo] nil detected: 'synced_at'")
+            print("[Coredata-Stat] nil detected: 'synced_at'")
             return false
         }
         return true
@@ -117,31 +119,39 @@ extension StatisticsServicesCoredata {
 
 extension StatisticsServicesCoredata {
     
-    private func convertToObject(with entity: Entity) throws -> Object {
+    private func convertToObject(with entity: StatisticsEntity) -> Bool {
         guard let userId = entity.user_id,
               let challengeStepStatusString = entity.challenge_step_status,
-              let myChallengesString = entity.mychallenges 
+              let myChallengesString = entity.mychallenges
         else {
-            throw CoredataError.convertFailure(serviceName: .cd, dataType: .stat)
+            print("[Coredata-Stat] Failed to fetch entity data")
+            return false
         }
-        let challengeStepStatus = try Utilities().convertFromJSON(jsonString: challengeStepStatusString, type: [Int: Int].self)
-        let myChallenges = try Utilities().convertFromJSON(jsonString: myChallengesString, type: [Int].self)
-        
-        return StatisticsObject (
-            userId: userId,
-            term: Int(entity.term),
-            drop: Int(entity.drop),
-            totalRegistedProjects: Int(entity.total_registed_projects),
-            totalFinishedProjects: Int(entity.total_finished_projects),
-            totalFailedProjects: Int(entity.total_failed_projects),
-            totalAlertedProjects: Int(entity.total_alerted_projects),
-            totalExtendedProjects: Int(entity.total_extended_projects),
-            totalRegistedTodos: Int(entity.total_registed_todos),
-            totalFinishedTodos: Int(entity.total_finished_todos),
-            challengeStepStatus: challengeStepStatus,
-            mychallenges: myChallenges,
-            syncedAt: entity.synced_at ?? Date()
-        )
+        do {
+            let challengeStepStatus = try util.convertFromJSON(jsonString: challengeStepStatusString, type: [Int: Int].self)
+            let myChallenges = try util.convertFromJSON(jsonString: myChallengesString, type: [Int].self)
+            
+            self.object = StatisticsObject(
+                userId: userId,
+                term: Int(entity.term),
+                drop: Int(entity.drop),
+                totalRegistedProjects: Int(entity.total_registed_projects),
+                totalFinishedProjects: Int(entity.total_finished_projects),
+                totalFailedProjects: Int(entity.total_failed_projects),
+                totalAlertedProjects: Int(entity.total_alerted_projects),
+                totalExtendedProjects: Int(entity.total_extended_projects),
+                totalRegistedTodos: Int(entity.total_registed_todos),
+                totalFinishedTodos: Int(entity.total_finished_todos),
+                challengeStepStatus: challengeStepStatus,
+                mychallenges: myChallenges,
+                syncedAt: entity.synced_at ?? Date()
+            )
+            return true
+            
+        } catch {
+            print("[Coredata-Stat] Failed to convert entity to object: \(error.localizedDescription)")
+            return false
+        }
     }
     
     private func checkUpdate(from entity: StatisticsEntity, to dto: StatUpdateDTO) throws -> Bool {

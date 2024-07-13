@@ -6,6 +6,7 @@
 //  Copyright © 2023 team1os. All rights reserved.
 //
 
+import CoreData
 import Foundation
 import FirebaseAuth
 import FirebaseFirestore
@@ -14,12 +15,9 @@ final class SignupLoadingService {
     
     // shared
     var userData: UserInfoDTO
-    var isDataPrepared: Bool = false            // false : fetch failed, need to re-signup
-    var isCompletelyDeleted: Bool = false       // false : rollback failed, need to reset
-    var isReadyToReSignup = false               // false : reset failed, need to inform user
     
     // private
-    private let mock: MockGenerator
+    //private let mock: MockGenerator
     
     private let userCD = UserServicesCoredata()
     private let statCD = StatisticsServicesCoredata()
@@ -59,10 +57,10 @@ final class SignupLoadingService {
         self.newStat = StatisticsObject(with: newUser.userId, and: self.signupDate)
         self.newLog = AccessLog(with: newUser.userId, and: self.signupDate)
         
-        self.mock = MockGenerator(userId: newUser.userId)
+        //self.mock = MockGenerator(userId: newUser.userId)
         self.viewManager = TopViewManager.shared
-        self.localStorageManager = LocalStorageManager.shared
         self.networkManager = NetworkManager.shared
+        self.localStorageManager = LocalStorageManager.shared
     }
 }
 
@@ -153,22 +151,33 @@ extension SignupLoadingService {
     
     // set at local
     private func localExecutor() async -> Bool {
-        async let isNewUserDataSet = setNewUserProfileAtLocal()
-        async let isNewStatDataSet = setNewStatAtLocal()
-        async let isAccessLogSet = setNewAccessLogAtLocal()
-        async let isChallengeSet = setNewChallengeAtLocal()
-        async let isCoreValueSet = setNewCoreValueAtLocal()
+        let context = localStorageManager.context
+        var results = [Bool]()
         
-        let results = await [isNewUserDataSet, isNewStatDataSet, isAccessLogSet, isChallengeSet, isCoreValueSet]
-        
-        return await localSetProcess(results: results)
+        context.performAndWait {
+            let isCoreValueSet = setNewCoreValueAtLocal(with: context)
+            let isNewUserDataSet = setNewUserProfileAtLocal(with: context)
+            let isNewStatDataSet = setNewStatAtLocal(with: context)
+            let isNewAccessLogSet = setNewAccessLogAtLocal(with: context)
+            let isChallengeDataSet = setNewChallengeAtLocal(with: context)
+            results = [isCoreValueSet, isNewUserDataSet, isNewStatDataSet, isNewAccessLogSet, isChallengeDataSet]
+        }
+        return localSetProcess(with: results)
     }
     
-    private func localSetProcess(results: [Bool]) async -> Bool {
-        if await localStorageManager.saveContext() {
+    private func localSetProcess(with results: [Bool]) -> Bool {
+        
+        // data set check
+        guard results.allSatisfy({$0}) else {
+            print("[SignupLoading] Failed to set newUserData at context")
+            return false
+        }
+    
+        // context apply check
+        if localStorageManager.saveContext() {
             return true
         } else {
-            await localStorageManager.resetContext()
+            print("[SignupLoading] Failed to apply newUserData at localStorage")
             return false
         }
     }
@@ -176,22 +185,22 @@ extension SignupLoadingService {
     // set at server
     private func serverExecutor() async -> Bool {
         let batch = Firestore.firestore().batch()
-        
-        async let isNewUserDataSet = setNewUserProfileAtServer(with: batch)
-        async let isNewStatDataSet = setNewStatAtServer(with: batch)
-        async let isNewAccessLogSet = setNewAccessLogAtServer(with: batch)
-        async let isChallengeSet = setNewChallengeStatusAtServer(with: batch)
-        
-        let results = await [isNewUserDataSet, isNewStatDataSet, isNewAccessLogSet, isChallengeSet]
-        return await serverSetProcess(results: results, batch: batch)
+        let tasks: [() async -> Bool] = [
+            { await self.setNewUserProfileAtServer(with: batch) },
+            { await self.setNewStatAtServer(with: batch) },
+            { await self.setNewAccessLogAtServer(with: batch) },
+            { await self.setNewChallengeStatusAtServer(with: batch) }
+        ]
+        for task in tasks {
+            if await !task() {
+                print("[SignupLoading] Failed to set newUserData at batch")
+                return false
+            }
+        }
+        return await serverSetProcess(with: batch)
     }
     
-    private func serverSetProcess(results: [Bool], batch: WriteBatch) async -> Bool {
-        // set batch failed
-        if !results.allSatisfy({$0}) {
-            print("[SignupLoading] Failed to struct set newUserData batch")
-            return false
-        }
+    private func serverSetProcess(with batch: WriteBatch) async -> Bool {
         if await commitBatch(with: batch) {
             print("[SignupLoading] Successfully Set newUserData batch at Server")
             return true
@@ -234,10 +243,9 @@ extension SignupLoadingService {
             print("[SignupLoading] Unable to set data on server")
             title = "오류확인!"
             message = "서버와의 연결이 불안정합니다. 회원가입을 재시도해 주세요"
-            
-            await localStorageManager.rebuildContext()
         }
         await removeUserAtAuth()
+        localStorageManager.resetContext()
         await viewManager.redirectToLoginView(title: title, message: message)
     }
 }
@@ -246,8 +254,8 @@ extension SignupLoadingService {
 extension SignupLoadingService{
     
     // : Coredata
-    private func setNewUserProfileAtLocal() async -> Bool {
-        if userCD.setObject(with: newProfile) {
+    private func setNewUserProfileAtLocal(with context: NSManagedObjectContext) -> Bool {
+        if userCD.setObject(context: context, object: newProfile) {
             print("[SingupLoading] Successfully set UserData at storage")
             return true
         }
@@ -268,9 +276,9 @@ extension SignupLoadingService{
 extension SignupLoadingService{
     
     // : Coredata
-    private func setNewStatAtLocal() async -> Bool {
+    private func setNewStatAtLocal(with context: NSManagedObjectContext) -> Bool {
         do {
-            if try statCD.setObject(with: newStat) {
+            if try statCD.setObject(context: context, object: newStat) {
                 print("[SingupLoading] Successfully set StatData at storage")
                 return true
             } else {
@@ -301,8 +309,8 @@ extension SignupLoadingService{
 extension SignupLoadingService{
     
     // : CoreData
-    private func setNewAccessLogAtLocal() async -> Bool {
-        if accessLogCD.setObject(with: newLog) {
+    private func setNewAccessLogAtLocal(with context: NSManagedObjectContext) -> Bool {
+        if accessLogCD.setObject(context: context, object: newLog) {
             print("[SingupLoading] Successfully set AccessLog at storage")
             return true
         } else {
@@ -323,9 +331,9 @@ extension SignupLoadingService{
 extension SignupLoadingService{
 
     // : Coredata
-    private func setNewChallengeAtLocal() async -> Bool {
+    private func setNewChallengeAtLocal(with context: NSManagedObjectContext) -> Bool {
         for challenge in challengeList {
-            if !challengeCD.setObject(with: challenge) {
+            if !challengeCD.setObject(context: context, object: challenge) {
                 print("[SingupLoading] Failed to set Challenge at storage: \(challenge.challengeId)")
                 return false
             }
@@ -346,7 +354,6 @@ extension SignupLoadingService{
             return true
         } catch {
             print("[SingupLoading] Failed fetch Challenge from server")
-            self.isDataPrepared = false
             return false
         }
     }
@@ -365,6 +372,18 @@ extension SignupLoadingService{
 // MARK: - CoreValue
 extension SignupLoadingService{
     
+    // : Coredata
+    private func setNewCoreValueAtLocal(with context: NSManagedObjectContext) -> Bool {
+        if coreValueCD.setObject(context: context, object: coreValue) {
+            print("[SingupLoading] Successfully set CoreValue at storage")
+            return true
+        } else {
+            print("[SingupLoading] Failed to set CoreValue at storage")
+            return false
+        }
+    }
+    
+    // : Firestore
     private func fetchCoreValueFromServer() async -> Bool {
         do {
             self.coreValue = try await coreValueFS.getDocs(with: userId)
@@ -372,17 +391,6 @@ extension SignupLoadingService{
             return true
         } catch {
             print("[SingupLoading] Failed fetch CoreValue from server")
-            self.isDataPrepared = false
-            return false
-        }
-    }
-    
-    private func setNewCoreValueAtLocal() async -> Bool {
-        if coreValueCD.setObject(with: coreValue) {
-            print("[SingupLoading] Successfully set CoreValue at storage")
-            return true
-        } else {
-            print("[SingupLoading] Failed to set CoreValue at storage")
             return false
         }
     }

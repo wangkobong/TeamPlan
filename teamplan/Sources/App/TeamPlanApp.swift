@@ -44,9 +44,9 @@ struct TeamPlanApp: App {
 
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     
-    private var backgroundTask: BackgroundTask?
-    private var isBackgroudTaskReady: Bool = false
-    private var isRequestRegisted: Bool = false
+    private var backgroundTask: BackgroundTaskAboutNotification?
+    private var isBackgroundTaskReady: Bool = false
+    private var isRequestRegistered: Bool = false
     
     // Google Social Login
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
@@ -74,7 +74,67 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         return true
     }
 
-    //MARK: Local Push
+    //MARK: Local Push Schedule
+    
+    private func handleAppRefresh(task: BGAppRefreshTask) {
+        Task {
+            await executeBackgroundTask()
+            task.setTaskCompleted(success: true)
+        }
+        scheduleAppRefresh()
+    }
+    
+    private func scheduleAppRefresh() {
+        let nextTiming = Calendar.current.nextDate(after: Date(), matching: DateComponents(hour: 0), matchingPolicy: .nextTime)!
+        let request = BGAppRefreshTaskRequest(identifier: "com.teamplan.refresh")
+        request.earliestBeginDate = nextTiming
+        
+        do {
+            try BGTaskScheduler.shared.submit(request)
+            self.isRequestRegistered = false
+            print("[AppDelegate] App refresh scheduled at: \(nextTiming)")
+        } catch {
+            print("[AppDelegate] Could not schedule app refresh: \(error.localizedDescription)")
+        }
+    }
+    
+    private func requestNotificationAuthorization() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+            if granted {
+                print("[AppDelegate] Notification authorization granted")
+            } else {
+                print("[AppDelegate] Notification authorization denied")
+            }
+        }
+    }
+    
+    //MARK: Background Task
+    // executor
+    private func executeBackgroundTask() async {
+        await prepareBackgroundTask()
+        
+        if isBackgroundTaskReady {
+            if !isRequestRegistered {
+                await scheduleLocalPushTask()
+            } else {
+                print("[AppDelegate] Local push already scheduled")
+            }
+        } else {
+            print("[AppDelegate] Failed to initialize background task")
+        }
+    }
+    
+    private func prepareBackgroundTask() async {
+        if let userDefault = UserDefaultManager.loadWith(),
+           let identifier = userDefault.identifier,
+           let userName = userDefault.userName {
+            backgroundTask = BackgroundTaskAboutNotification(userId: identifier, userName: userName)
+            isBackgroundTaskReady = true
+        } else {
+            print("[AppDelegate] Failed to fetch user data from UserDefault")
+            isBackgroundTaskReady = false
+        }
+    }
     
     private func scheduleLocalPushTask() async {
         guard let backgroundTask = backgroundTask else { return }
@@ -94,10 +154,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             
             do {
                 try await UNUserNotificationCenter.current().add(request)
-                self.isRequestRegisted = true
+                self.isRequestRegistered = true
                 print("[AppDelegate] Successfully scheduled Notification")
             } catch {
-                self.isRequestRegisted = false
+                self.isRequestRegistered = false
                 print("[AppDelegate] Failed to scheduled Notification: \(error.localizedDescription)")
             }
         
@@ -105,61 +165,5 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         } else {
             print("[AppDelegate] Background Task Not Needed")
         }
-    }
-    
-    private func requestNotificationAuthorization() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
-            if granted {
-                print("[AppDelegate] Notification authorization granted")
-            } else {
-                print("[AppDelegate] Notification authorization denied")
-            }
-        }
-    }
-    
-    //MARK: Background Task
-    
-    private func executeBackgroundTask() async {
-        await prepareBackgroundTask()
-        
-        if isBackgroudTaskReady && !isRequestRegisted {
-            await scheduleLocalPushTask()
-        } else {
-            print("[AppDelegate] Failed to initialize background task")
-        }
-    }
-    
-    private func prepareBackgroundTask() async {
-        if let userDefault = UserDefaultManager.loadWith(),
-           let identifier = userDefault.identifier,
-           let userName = userDefault.userName {
-            backgroundTask = BackgroundTask(userId: identifier, userName: userName)
-            isBackgroudTaskReady = true
-        } else {
-            print("[AppDelegate] Failed to fetch user data from UserDefault")
-            isBackgroudTaskReady = false
-        }
-    }
-    
-    private func scheduleAppRefresh() {
-        let nextTiming = Calendar.current.nextDate(after: Date(), matching: DateComponents(hour: 0), matchingPolicy: .nextTime)!
-        let request = BGAppRefreshTaskRequest(identifier: "com.teamplan.refresh")
-        request.earliestBeginDate = nextTiming
-        
-        do {
-            try BGTaskScheduler.shared.submit(request)
-            self.isRequestRegisted = false
-            print("[AppDelegate] App refresh scheduled at: \(nextTiming)")
-        } catch {
-            print("[AppDelegate] Could not schedule app refresh: \(error.localizedDescription)")
-        }
-    }
-        
-    private func handleAppRefresh(task: BGAppRefreshTask) {
-        Task {
-            await executeBackgroundTask()
-            task.setTaskCompleted(success: true)
-        }
-        scheduleAppRefresh()
     }
 }

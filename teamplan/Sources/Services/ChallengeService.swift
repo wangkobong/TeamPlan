@@ -6,84 +6,144 @@
 //  Copyright © 2023 team1os. All rights reserved.
 //
 
+import CoreData
 import Foundation
 
 final class ChallengeService {
-
-    private let statCD = StatisticsServicesCoredata()
-    private let challengeCD = ChallengeServicesCoredata()
-    
-    private var userId: String
-    private var challengeDict: [Int : ChallengeObject] = [:]
-    private var challengeIdSet = Set<Int>()
     
     // shared
-    @Published var statDTO: StatDTO
-    @Published var myChallenges: [MyChallengeDTO] = []
-    @Published var challengesDTO: [ChallengeDTO] = []
+    var rewardDTO: ChallengeRewardDTO
+    var myChallenges: [MyChallengeDTO] = []
+    var challengesDTO: [ChallengeDTO] = []
     
-    /// `ChallengeService` 클래스의 인스턴스를 초기화합니다.
-    ///
-    /// 이 초기화 과정에서는 다음과 같은 작업이 수행됩니다:
-    /// - 사용자 ID를 입력받은 'userId' 로 초기화 합니다.
-    /// - 도전과제 기능에서 사용되는 통계정보 `StatChallengeDTO`를 기본형으로 초기화합니다.
-    /// - 'ChallengeLog' 기록을 위한 'LogManager' 를 초기화합니다.
-    ///
-    /// 이 과정은 앱 내에서 도전과제 기능을 수행하기 위한 기본 설정을 제공합니다.
+    // private
+    private let statCD = StatisticsServicesCoredata()
+    private let challengeCD = ChallengeServicesCoredata()
+    private let localStorageManager: LocalStorageManager
+    
+    private var userId: String
+    private var statDTO: StatDTO
+    private var challengeDTOIndex: Int
+    private var challengeData: ChallengeObject
+    private var challengeList: [Int : ChallengeObject] = [:]
+    private var isFianlChallenge: Bool = false
+    
     init(with userId: String) {
         self.userId = userId        
         self.statDTO = StatDTO()
+        self.rewardDTO = ChallengeRewardDTO()
+        self.challengeDTOIndex = 0
+        self.challengeData = ChallengeObject()
+        self.localStorageManager = LocalStorageManager.shared
     }
 }
 
-
-// MARK: - Prepare Service
+// MARK: - Prepare Data
 
 extension ChallengeService {
 
-    // main executor
-    func prepareService() async throws {
-        let challenges = try await challengeCD.getObjects(with: userId)
-        var tempDict = [Int: ChallengeObject]()
+    // Executor
+    func prepareExecutor() -> Bool {
+        let context = localStorageManager.context
+        var fetchResults = [Bool]()
+        var prepareResults = [Bool]()
         
-        for challenge in challenges where !challengeIdSet.contains(challenge.challengeId) {
-            challengeIdSet.insert(challenge.challengeId)
-            tempDict[challenge.challengeId] = challenge
+        context.performAndWait {
+            fetchResults = [
+                fetchStatObject(with: context),
+                fetchChallengeObject(with: context)
+            ]
         }
-        challengeDict = tempDict
-        statDTO = StatDTO(with: try statCD.getObject(with: userId))
         
-        try await prepareChallenges()
-        try await prepareMyChallenges()
+        if fetchResults.allSatisfy({ $0 }) {
+            prepareResults = [
+                prepareMyChallengeDTO(),
+                prepareChallengeDTO()
+            ]
+        } else {
+            print("[ChallengeService] Failed to fetch data")
+            return false
+        }
+        
+        let isSuccess = prepareResults.allSatisfy { $0 }
+        print("[ChallengeService] \(isSuccess ? "Successfully" : "Failed to") prepare service")
+        return isSuccess
     }
     
-    // myChallenges
-    private func prepareMyChallenges() async throws {
-        // reset array
-        myChallenges.removeAll()
-        if statDTO.myChallenges.isEmpty { return }
-        
-        // fill array
-        for idx in statDTO.myChallenges {
-            guard let data = challengeDict[idx] else {
-                throw ChallengeError.UnexpectedMyChallengeSearchError
-            }
-            myChallenges.append(MyChallengeDTO(with: data))
-        }
-    }
-    
-    // challenges
-    private func prepareChallenges() async throws {
-        challengesDTO = try challengeDict.values.map { challenge in
-            if challenge.step == 1 {
-                return mapFirstStepChallenge(with: challenge)
+    // fetch: Statistics
+    private func fetchStatObject(with context: NSManagedObjectContext) -> Bool {
+        do {
+            if try statCD.getObject(context: context, userId: userId) {
+                self.statDTO = StatDTO(with: statCD.object)
+                return true
             } else {
-                return try mapOtherStepChallenges(with: challenge)
+                print("[ChallengeService] Error detected while converting StatEntity to object")
+                return false
             }
+        } catch {
+            print("[ChallengeService] Error detected while converting StatEntity: \(error.localizedDescription)")
+            return false
         }
     }
-     
-    // Struct ChallengeInfo: first step
+    
+    // fetch: Total Challenges
+    private func fetchChallengeObject(with context: NSManagedObjectContext) -> Bool {
+        do {
+            if try challengeCD.getTotalObject(context: context, userId: userId) {
+                for challenge in challengeCD.objects {
+                    self.challengeList[challenge.challengeId] = challenge
+                }
+                return true
+            } else {
+                print("[ChallengeService] Error detected while converting ChallengeEntity to object")
+                return false
+            }
+        } catch {
+            print("[ChallengeService] Error detected while fetching entities: \(error.localizedDescription)")
+            return false
+        }
+    }
+    
+    // prepare: MyChallenge
+    private func prepareMyChallengeDTO() -> Bool {
+        
+        if statDTO.myChallenges.isEmpty {
+            self.myChallenges = []
+            return true
+        }
+        print("[ChallengeService] statData myChallenge: \(statDTO.myChallenges)")
+        
+        var challengeList = [MyChallengeDTO]()
+        for index in statDTO.myChallenges {
+            guard let challenge = self.challengeList[index] else {
+                print("[ChallengeService] Error detected while search myChallenge data")
+                return false
+            }
+            challengeList.append(MyChallengeDTO(with: challenge))
+        
+        }
+        print("[ChallengeService] challengeList: \(challengeList)")
+        self.myChallenges = challengeList.sorted{ $0.selectedAt < $1.selectedAt }
+        return true
+    }
+    
+    // prepare: ChallengeDTOs
+    private func prepareChallengeDTO() -> Bool {
+        
+        for challenge in challengeList.values {
+            if challenge.step == 1 {
+                self.challengesDTO.append(mapFirstStepChallenge(with: challenge))
+            } else {
+                guard let previous = self.challengeList[challenge.challengeId - 1] else {
+                    print("[ChallengeService] Failed to search previous challengeData")
+                    return false
+                }
+                self.challengesDTO.append(mapOtherStepChallenges(with: challenge, and: previous))
+            }
+        }
+        return true
+    }
+    
     private func mapFirstStepChallenge(with object: ChallengeObject) -> ChallengeDTO {
         return ChallengeDTO(
                 challengeId: object.challengeId,
@@ -100,11 +160,7 @@ extension ChallengeService {
             )
     }
     
-   // Struct ChallengeInfo: other step (need previous info)
-    private func mapOtherStepChallenges(with object: ChallengeObject) throws -> ChallengeDTO {
-        guard let previous = challengeDict[object.challengeId - 1] else {
-            throw ChallengeError.UnexpectedPrevChallengeSearchError
-        }
+    private func mapOtherStepChallenges(with object: ChallengeObject, and prevObject: ChallengeObject) -> ChallengeDTO {
         return ChallengeDTO(
             challengeId: object.challengeId,
             title: object.title,
@@ -117,17 +173,16 @@ extension ChallengeService {
             isSelected: object.selectStatus,
             isUnlock: object.lock,
             finishedAt: object.status ? object.finishedAt : nil,
-            prevId: previous.challengeId,
-            prevTitle: previous.title,
-            prevDesc: previous.desc,
-            prevGoal: previous.goal
+            prevId: prevObject.challengeId,
+            prevTitle: prevObject.title,
+            prevDesc: prevObject.desc,
+            prevGoal: prevObject.goal
         )
     }
 }
 
+// MARK: - Set myChallenge
 
-
-// MARK: - MyChallenge CRUD
 extension ChallengeService {
     
     /// 특정 도전과제를 '나의 도전과제'로 등록합니다.
@@ -135,70 +190,169 @@ extension ChallengeService {
     /// - Throws: 중복 도전과제, 최대 도전과제 수 초과 등으로 인한 오류를 던집니다.
     /// - 이 함수는 중복 검사를 수행하고, 도전과제를 'myChallenges'에 추가하며, 해당 도전과제의 상태를 업데이트합니다.
     /// - 또한 관련 통계 정보를 갱신하고, 모든 변경 사항을 로그로 출력합니다.
-    func setMyChallenges(with challengeId: Int) async throws {
-        
-        if canAppendMyChallenge(with: challengeId) {
-            // properties
-            let updatedAt = Date()
-            let data = try getDataFromChallengeDict(with: challengeId)
-            let userProgress = try getUserProgress(with: data.type)
-            
-            // DTO
-            try updateMyChallengeDTO(with: challengeId, type: .set)
-            try updateChallengeDTO(with: challengeId, type: .set)
-            try updateChallengeStatDTO(with: challengeId, type: .set)
-            
-            // Object
-            try updateChallengeObject(with: challengeId, userProgress: userProgress, type: .set, at: updatedAt)
-            try updateStatObject(type: .set)
-        }
-    }
+    func setMyChallenges(with challengeId: Int) -> Bool {
     
-    /// 사용자의 '나의 도전과제' 목록을 반환합니다.
-    /// - Returns:사용자의 챌린지 목록을 `MyChallengeDTO` 배열로 반환합니다.
-    /// - 단, '나의 도전과제'를 지정하지 않은경우 '[]' 형태로 반환됩니다.
-    func getMyChallenges() throws -> [MyChallengeDTO] {
-        // myChallenge check
-        if statDTO.myChallenges.isEmpty { return [] }
-        var updatedArray: [MyChallengeDTO] = []
+        // inspection
+        if !canAppendMyChallenge(with: challengeId) {
+            print("[ChallengeService] Can't regist anymore myChallenges")
+            return false
+        }
         
-        // fill array
-        for idx in statDTO.myChallenges {
-            guard let data = challengeDict[idx] else {
-                throw ChallengeError.UnexpectedMyChallengeSearchError
+        // extract data
+        if !getChallengeDataFromList(with: challengeId) || !getChallengeIndexFromDTOs(with: challengeId) {
+            print("[ChallengeService] Unknown ChallengeId Detected")
+            return false
+        }
+        
+        let updatedAt = Date()
+        let context = localStorageManager.context
+        
+        return context.performAndWait {
+            // update dto
+            updateDTOAboutSet(with: challengeId)
+            
+           // update object
+            let results = [
+                updateStatObjectAboutSet(with: context),
+                updateChallengeObjectAboutSet(with: context, and: challengeId, at: updatedAt)
+            ]
+            
+            // apply storage
+            if results.allSatisfy({ $0 }) {
+                if localStorageManager.saveContext() {
+                    print("[ChallengeService] Successfully set new mychallenge at context")
+                    return true
+                } else {
+                    print("[ChallengeService] Failed to set new mychallenge at context")
+                    return false
+                }
+            } else {
+                print("[ChallengeService] Failed to update objects")
+                return false
             }
-            updatedArray.append(MyChallengeDTO(with: data))
         }
-        myChallenges = updatedArray
-        return myChallenges
     }
     
-    /// 전체 도전과제 목록 정보를 제공합니다.
-    /// - Returns: 도전과제 목록관련 정보들이 담긴 `ChallengeDTO` 타입의 배열을 반환합니다.
-    /// - 이 함수는 도전과제 화면에서 도전과제 목록를 표시할 때 사용됩니다.
-    /// - 목록을 표시하는데 필요한 정보만 담고있습니다.
-    func getChallenges() throws -> [ChallengeDTO] {
-        return challengesDTO
+    private func canAppendMyChallenge(with challengeId: Int) -> Bool {
+        return myChallenges.count < 3 &&
+        statDTO.myChallenges.count < 3 &&
+        !myChallenges.contains(where: { $0.challengeID == challengeId })
     }
+    
+    private func updateDTOAboutSet(with challengeId: Int) {
+            
+        self.statDTO.myChallenges.append(challengeId)
+        self.myChallenges.append(MyChallengeDTO(with: self.challengeData))
+        self.challengesDTO[self.challengeDTOIndex].isSelected = true
+    }
+    
+    private func updateChallengeObjectAboutSet(with context: NSManagedObjectContext, and challengeId: Int, at updatedAt: Date) -> Bool {
+        
+        var updated = ChallengeUpdateDTO(challengeId: challengeId, userId: userId)
+        let userProgress = getUserProgress(with: self.challengeData.type)
+        
+        updated.newProgress = userProgress
+        updated.newSelectStatus = true
+        updated.newSelectedAt = updatedAt
+        
+        do {
+            return try challengeCD.updateObject(context: context, dto: updated)
+        } catch {
+            print("[ChallengeService] Error detected while search entity: \(error.localizedDescription)")
+            return false
+        }
+    }
+    
+    private func updateStatObjectAboutSet(with context: NSManagedObjectContext) -> Bool {
+        do {
+            let newMyChallenges = self.statDTO.myChallenges
+            let updated = StatUpdateDTO(userId: userId, newMyChallenges: newMyChallenges)
+            return try statCD.updateObject(context: context, dto: updated)
+        } catch {
+            print("[ChallengeService] Error detected while search entity: \(error.localizedDescription)")
+            return false
+        }
+    }
+    
+    // MARK: - Disable myChallenge
     
     /// '나의 도전과제'로 등록된 특정 도전과제를 해제합니다.
     /// - Parameter challengeId: '나의 도전과제'에서 해제할 도전과제의 ID입니다.
     /// - Throws: 도전과제 해제 및 상태 업데이트에서 발생한 오류들을 던집니다.
     /// - 이 함수는 도전과제를 'myChallenges'에 제거하며, 해당 도전과제의 상태를 업데이트합니다.
     /// - 또한 관련 통계 정보를 갱신하고, 모든 변경 사항을 로그로 출력합니다.
-    func disableMyChallenge(with challengeId: Int) async throws {
-        // properties
-        let updatedAt = Date()
+    func disableMyChallenge(with challengeId: Int) -> Bool {
         
-        // DTO
-        try updateMyChallengeDTO(with: challengeId, type: .disable)
-        try updateChallengeDTO(with: challengeId, type: .disable)
-        try updateChallengeStatDTO(with: challengeId, type: .disable)
-
-        // Object
-        try updateChallengeObject(with: challengeId, type: .disable, at: updatedAt)
-        try updateStatObject(type: .disable)
+        // extract data
+        if !getChallengeDataFromList(with: challengeId) || !getChallengeIndexFromDTOs(with: challengeId) {
+            print("[ChallengeService] Unknown ChallengeId Detected")
+            return false
+        }
+        
+        let updatedAt = Date()
+        let context = localStorageManager.context
+ 
+        return context.performAndWait {
+            // update dto
+            updateDTOAboutDisable(with: challengeId)
+            
+           // update object
+            let results = [
+                updateStatObjectAboutDisable(with: context),
+                updateChallengeObjectAboutDisable(with: context, and: challengeId, at: updatedAt)
+            ]
+            
+            // apply storage
+            if results.allSatisfy({ $0 }) {
+                if localStorageManager.saveContext() {
+                    print("[ChallengeService] Successfully saved context")
+                    return true
+                } else {
+                    print("[ChallengeService] Failed to save context")
+                    return false
+                }
+            } else {
+                print("[ChallengeService] Failed to update objects")
+                return false
+            }
+        }
     }
+    
+    private func updateDTOAboutDisable(with challengeId: Int) {
+        
+        self.statDTO.myChallenges.removeAll { $0 == challengeId }
+        self.myChallenges.removeAll{ $0.challengeID == challengeId }
+        self.challengesDTO[self.challengeDTOIndex].isSelected = false
+    }
+    
+    private func updateChallengeObjectAboutDisable(with context: NSManagedObjectContext, and challengeId: Int, at updatedAt: Date) -> Bool {
+        
+        var updated = ChallengeUpdateDTO(challengeId: challengeId, userId: userId)
+        
+        updated.newSelectStatus = false
+        updated.newUnSelectedAt = updatedAt
+        
+        do {
+            return try challengeCD.updateObject(context: context, dto: updated)
+        } catch {
+            print("[ChallengeService] Error detected while search entity: \(error.localizedDescription)")
+            return false
+        }
+    }
+    
+    private func updateStatObjectAboutDisable(with context: NSManagedObjectContext) -> Bool {
+        do {
+            let newMyChallenges = self.statDTO.myChallenges
+            let updated = StatUpdateDTO(userId: userId, newMyChallenges: newMyChallenges)
+            
+            return try statCD.updateObject(context: context, dto: updated)
+        } catch {
+            print("[ChallengeService] Error detected while search entity: \(error.localizedDescription)")
+            return false
+        }
+    }
+    
+    // MARK: - Reward myChallenge
 
     /// 완료한 도전과제에 대한 보상을 처리합니다.
     /// - Parameter challengeId: 보상을 받을 도전과제의 ID입니다.
@@ -207,205 +361,235 @@ extension ChallengeService {
     /// - 이 함수는 도전과제 보상을 지급하며, 해당 도전과제와 다음 도전과제의 상태를 업데이트합니다.
     /// - 또한 관련 통계 정보를 갱신하고, '나의 도전과제'에서 해당 도전과제를 해제합니다.
     /// - 모든 변경 사항 및 보상정보를 로그로 출력합니다.
-    func rewardMyChallenge(with challengeId: Int) throws -> ChallengeRewardDTO {
-        // properties
+    func rewardMyChallenge(with challengeId: Int) -> Bool {
+        
+        guard getChallengeDataFromList(with: challengeId),
+              getChallengeIndexFromDTOs(with: challengeId),
+              getNextChallengeData(with: self.challengeData) else {
+            print("[ChallengeService] Unknown or invalid ChallengeId Detected")
+            return false
+        }
+
         let updatedAt = Date()
-        let currentChallenge = try getDataFromChallengeDict(with: challengeId)
-        let nextChallengeId = try getNextChallengeId(with: currentChallenge)
-        let nextChallenge = try getDataFromChallengeDict(with: nextChallengeId)
-        
-        // DTO
-        try updateMyChallengeDTO(with: challengeId, type: .reward)
-        try updateChallengeDTO(with: challengeId, type: .reward, finishedAt: updatedAt)
-        try updateChallengeStatDTO(with: challengeId, type: .reward)
-        
-        // Object
-        try updateChallengeObject(with: challengeId, type: .reward, at: updatedAt)
-        try updateChallengeObject(with: nextChallengeId, type: .next, at: updatedAt)
-        try updateStatObject(type: .reward)
-        
-        return ChallengeRewardDTO(with: currentChallenge, and: nextChallenge)
-    }
-}
+        let currentChallengeData = self.challengeData
+        let currentChallengeIndex = self.challengeDTOIndex
+        let context = localStorageManager.context
 
+        return context.performAndWait {
+            // Update current challenge
+            updateCurrentDTOAboutReward(with: challengeId, and: currentChallengeIndex, at: updatedAt)
+            let updateCurrentResults = [
+                updateCurrentChallengeAboutReward(with: context, with: challengeId, at: updatedAt),
+                updateCurrentStatAboutReward(with: context)
+            ]
 
-
-// MARK: Update DTO
-enum FunctionType {
-    case set
-    case disable
-    case reward
-    case next
-}
-
-extension ChallengeService {
-    
-    // MyChallengeDTO
-    private func updateMyChallengeDTO(with challengeId: Int, type: FunctionType) throws {
-        switch type {
-        case .set:
-            let dto = MyChallengeDTO(with: try getDataFromChallengeDict(with: challengeId))
-            self.myChallenges.append(dto)
-            
-        case .disable, .reward:
-            self.myChallenges.removeAll { $0.challengeID == challengeId }
-            
-        case .next:
-            break
-        }
-    }
-    
-    // ChallengeDTO
-    private func updateChallengeDTO(with challengeId: Int, type: FunctionType, finishedAt: Date? = nil) throws {
-        let index = try getChallengeDictIndex(with: challengeId)
-        
-        switch type {
-        case .set:
-            challengesDTO[index].isSelected = true
-            
-        case .disable:
-            challengesDTO[index].isSelected = false
-            
-        case .reward:
-            challengesDTO[index].isSelected = false
-            challengesDTO[index].isFinished = true
-            challengesDTO[index].finishedAt = finishedAt
-            
-        case .next:
-            break
-        }
-    }
-    
-    // StatDTO
-    private func updateChallengeStatDTO(with challengeId: Int, type: FunctionType) throws {
-        switch type {
-        case .set:
-            statDTO.myChallenges.append(challengeId)
-            
-        case .disable:
-            statDTO.myChallenges.removeAll { $0 == challengeId }
-            
-        case .reward:
-            let data = try getDataFromChallengeDict(with: challengeId)
-            
-            statDTO.drop += data.reward
-            statDTO.myChallenges.removeAll { $0 == challengeId }
-            if let currentStep = statDTO.challengeStepStatus[data.type.rawValue] {
-                statDTO.challengeStepStatus[data.type.rawValue] = currentStep + 1
-            } else {
-                throw ChallengeError.UnexpectedGetStatDTOError
+            guard updateCurrentResults.allSatisfy({ $0 }) else {
+                print("[ChallengeService] Failed to update current reward objects")
+                return false
             }
-            
-        case .next:
-            break
+
+            self.rewardDTO = ChallengeRewardDTO(with: currentChallengeData)
+
+            // Update next challenge if not the final challenge
+            if !self.isFianlChallenge {
+                let nextChallenge = self.challengeData
+                let nextChallengeId = nextChallenge.challengeId
+                guard getChallengeIndexFromDTOs(with: nextChallengeId) else {
+                    print("[ChallengeService] Unknown Next ChallengeId Detected")
+                    return false
+                }
+                let nextChallengeIndex = self.challengeDTOIndex
+
+                updateNextDTOAboutReward(with: currentChallengeIndex, and: nextChallengeIndex)
+                let updateNextResults = [
+                    updateNextChallengeAboutReward(with: context, with: nextChallengeId),
+                    updateNextStatAboutReward(with: context)
+                ]
+
+                guard updateNextResults.allSatisfy({ $0 }) else {
+                    print("[ChallengeService] Failed to update next reward objects")
+                    return false
+                }
+                self.rewardDTO = ChallengeRewardDTO(with: currentChallengeData, and: nextChallenge)
+            }
+
+            guard localStorageManager.saveContext() else {
+                print("[ChallengeService] Failed to apply localStorage")
+                return false
+            }
+            return true
         }
     }
-}
     
-
-// MARK: Update Object
-extension ChallengeService {
+    // update current: dto
+    private func updateCurrentDTOAboutReward(with challengeId: Int, and index: Int, at updatedAt: Date) {
+        
+        self.statDTO.drop += self.challengesDTO[index].reward
+        self.statDTO.myChallenges.removeAll{ $0 == challengeId }
+        
+        self.myChallenges.removeAll{ $0.challengeID == challengeId }
+        
+        self.challengesDTO[index].isSelected = false
+        self.challengesDTO[index].isFinished = true
+        self.challengesDTO[index].finishedAt = updatedAt
+    }
     
-    private func updateChallengeObject(with challengeId: Int, userProgress: Int? = nil, type: FunctionType, at updatedAt: Date) throws {
+    // update current: object
+    private func updateCurrentChallengeAboutReward(with context: NSManagedObjectContext, with challengeId: Int,at updatedAt: Date) -> Bool {
+        
         var updated = ChallengeUpdateDTO(challengeId: challengeId, userId: userId)
         
-        switch type{
-        case .set:
-            updated.newProgress = userProgress
-            updated.newSelectStatus = true
-            updated.newSelectedAt = updatedAt
-            print(updated)
-            
-        case .disable:
-            updated.newStatus = false
-            updated.newUnSelectedAt = updatedAt
-            
-        case .reward:
-            updated.newStatus = true
-            updated.newSelectStatus = false
-            updated.newFinishedAt = updatedAt
-            
-        case .next:
-            updated.newLock = false
+        updated.newStatus = true
+        updated.newSelectStatus = false
+        updated.newFinishedAt  = updatedAt
+        
+        do {
+            return try challengeCD.updateObject(context: context, dto: updated)
+        } catch {
+            print("[ChallengeService] Error detected while search entity: \(error.localizedDescription)")
+            return false
         }
-        try challengeCD.updateObject(with: updated)
     }
     
-    private func updateStatObject(type: FunctionType) throws {
+    private func updateCurrentStatAboutReward(with context: NSManagedObjectContext) -> Bool {
+        
         var updated = StatUpdateDTO(userId: userId)
         
-        switch type{
-            
-        case .set, .disable:
-            updated.newMyChallenges = statDTO.myChallenges
-            
-        case .reward:
-            updated.newDrop = statDTO.drop
-            updated.newMyChallenges = statDTO.myChallenges
-            updated.newChallengeStepStatus = statDTO.challengeStepStatus
-            
-        case .next:
-            break
+        updated.newDrop = statDTO.drop
+        updated.newMyChallenges = statDTO.myChallenges
+        
+        do {
+            return try statCD.updateObject(context: context, dto: updated)
+        } catch {
+            print("[ChallengeService] Error detected while search entity: \(error.localizedDescription)")
+            return false
         }
-        try statCD.updateObject(with: updated)
+    }
+    
+    // update next: dto
+    private func updateNextDTOAboutReward(with currentIndex: Int, and nextIndex: Int) {
+        
+        let currentType = self.challengesDTO[currentIndex].type.rawValue
+        
+        self.statDTO.challengeStepStatus[currentType]! += 1
+        self.challengesDTO[nextIndex].islock = true
+    }
+    
+    // update next: object
+    private func updateNextChallengeAboutReward(with context: NSManagedObjectContext, with challengeId: Int) -> Bool {
+        
+        var updated = ChallengeUpdateDTO(challengeId: challengeId, userId: userId)
+        
+        updated.newLock = false
+        
+        do {
+            return try challengeCD.updateObject(context: context, dto: updated)
+        } catch {
+            print("[ChallengeService] Error detected while search entity: \(error.localizedDescription)")
+            return false
+        }
+    }
+    
+    private func updateNextStatAboutReward(with context: NSManagedObjectContext) -> Bool {
+        
+        var updated = StatUpdateDTO(userId: userId)
+        
+        updated.newChallengeStepStatus = statDTO.challengeStepStatus
+        
+        do {
+            return try statCD.updateObject(context: context, dto: updated)
+        } catch {
+            print("[ChallengeService] Error detected while search entity: \(error.localizedDescription)")
+            return false
+        }
     }
 }
 
-
 // MARK: Util
+
 extension ChallengeService {
     
-    private func canAppendMyChallenge(with challengeId: Int) -> Bool {
-        return myChallenges.count < 3 && !myChallenges.contains(where: { $0.challengeID == challengeId })
+    private func getChallengeDataFromList(with challengeId: Int) -> Bool {
+        guard let data = challengeList[challengeId] else {
+            print("[ChallengeService] Failed to search ChallengeData at List")
+            return false
+        }
+        self.challengeData = data
+        return true
     }
     
-    private func getChallengeDictIndex(with challengeId: Int) throws -> Int {
+    private func getChallengeIndexFromDTOs(with challengeId: Int) -> Bool {
         guard let index = challengesDTO.firstIndex(where: { $0.challengeId == challengeId}) else {
-            throw ChallengeError.UnexpectedChallengeArrayError
+            print("[ChallengeService] Failed to search ChallengeIndex at List")
+            return false
         }
-        return index
+        self.challengeDTOIndex = index
+        return true
     }
     
-    private func getDataFromChallengeDict(with challengeId: Int) throws -> ChallengeObject {
-        guard let data = challengeDict[challengeId] else {
-            throw ChallengeError.UnexpectedChallengeArrayError
-        }
-        return data
-    }
-    
-    private func getNextChallengeId(with currentChallenge: ChallengeObject) throws -> Int {
-        if let nextChallenge = challengeDict.values.first(where: {
+    private func getNextChallengeData(with currentChallenge: ChallengeObject) -> Bool {
+        // Final Challenge
+        if currentChallenge.step == getChallengeStepLimit(with: currentChallenge.type) {
+            print("[ChallengeService] Final challenge step complete")
+            self.isFianlChallenge = true
+            return true
+        
+        // onGoing Challenge
+        } else if let nextChallenge = challengeList.values.first(where: {
             ( $0.type == currentChallenge.type ) && ( $0.step == currentChallenge.step + 1 )
         }) {
-            return nextChallenge.challengeId
+            self.challengeData = nextChallenge
+            return true
+            
+        // unknown challenge
         } else {
-            throw ChallengeError.NoMoreNextChallenge
+            print("[ChallengeService] Failed to search NextChallenge")
+            self.challengeData = ChallengeObject()
+            return false
         }
     }
     
-    private func getUserProgress(with type: ChallengeType) throws -> Int {
-        let stat = try statCD.getObject(with: userId)
+    private func getUserProgress(with type: ChallengeType) -> Int {
         switch type {
         case .onboarding:
             return 1
         case .serviceTerm:
-            return stat.term
+            return statDTO.term
         case .totalTodo:
-            return stat.totalRegistedTodos
+            return statDTO.totalRegistedTodos
         case .projectAlert:
-            return stat.totalAlertedProjects
+            return statDTO.totalAlertedProjects
         case .projectFinish:
-            return stat.totalFinishedProjects
+            return statDTO.totalFinishedProjects
         case .waterDrop:
-            return stat.drop
+            return statDTO.drop
+        case .unknownType:
+            return 0
+        }
+    }
+    
+    private func getChallengeStepLimit(with type: ChallengeType) -> Int {
+        switch type {
+        case .onboarding:
+            return 0
+        case .serviceTerm:
+            return 7
+        case .totalTodo:
+            return 7
+        case .projectAlert:
+            return 5
+        case .projectFinish:
+            return 6
+        case .waterDrop:
+            return 11
         case .unknownType:
             return 0
         }
     }
 }
 
+// MARK: DTO
 
-// MARK: ChallengeDTO
 public struct ChallengeDTO: Equatable {
 
     var challengeId: Int
@@ -418,7 +602,7 @@ public struct ChallengeDTO: Equatable {
     
     var isFinished: Bool
     var isSelected: Bool
-    var isUnlock: Bool
+    var islock: Bool
     var finishedAt: Date?
     
     let prevId: Int?
@@ -451,7 +635,7 @@ public struct ChallengeDTO: Equatable {
         self.step = step
         self.isFinished = isFinished
         self.isSelected = isSelected
-        self.isUnlock = isUnlock
+        self.islock = isUnlock
         self.finishedAt = finishedAt
         self.prevId = prevId
         self.prevTitle = prevTitle
@@ -460,8 +644,6 @@ public struct ChallengeDTO: Equatable {
     }
 }
 
-
-// MARK: MyChallengeDTO
 struct MyChallengeDTO: Hashable, Identifiable {
 
     let id = UUID().uuidString
@@ -471,6 +653,7 @@ struct MyChallengeDTO: Hashable, Identifiable {
     let desc: String
     let goal: Int
     let progress: Int
+    let selectedAt: Date
     
     init() {
         self.challengeID = 0
@@ -479,6 +662,7 @@ struct MyChallengeDTO: Hashable, Identifiable {
         self.desc = "unknown"
         self.goal = 0
         self.progress = 0
+        self.selectedAt = Date()
     }
     
     init(with object: ChallengeObject){
@@ -488,12 +672,10 @@ struct MyChallengeDTO: Hashable, Identifiable {
         self.desc = object.desc
         self.goal = object.goal
         self.progress = object.progress
+        self.selectedAt = object.selectedAt
     }
-
 }
 
-
-// MARK: - ChallengeRewardDTO
 struct ChallengeRewardDTO {
 
     let title: String
@@ -503,6 +685,24 @@ struct ChallengeRewardDTO {
     let setMyChallengeAt: Date
     let completeAt: Date
     
+    init() {
+        self.title = "unknown"
+        self.desc = "unknown"
+        self.type = .unknownType
+        self.reward = 0
+        self.setMyChallengeAt = Date()
+        self.completeAt = Date()
+    }
+    
+    init(with object: ChallengeObject) {
+        self.title = "마지막 도전과제!"
+        self.desc = "축하합니다! 관련된 모든 도전과제를 해결하였습니다!"
+        self.type = object.type
+        self.reward = object.reward
+        self.setMyChallengeAt = object.selectedAt
+        self.completeAt = object.finishedAt
+    }
+    
     init(with object: ChallengeObject, and nextObject: ChallengeObject) {
         self.title = nextObject.title
         self.desc = nextObject.desc
@@ -510,39 +710,5 @@ struct ChallengeRewardDTO {
         self.reward = object.reward
         self.setMyChallengeAt = object.selectedAt
         self.completeAt = object.finishedAt
-    }
-}
-
-
-// MARK: - Exception
-enum ChallengeError: LocalizedError {
-    case UnexpectedGetStatDTOError
-    case UnexpectedChallengeArrayError
-    case UnexpectedMyChallengeSearchError
-    case UnexpectedPrevChallengeSearchError
-    case UnexpectedStepUpdateError
-    case UnexpectedChallengeDataInspectionError
-    case MyChallengeLimitExceeded
-    case NoMoreNextChallenge
-    
-    var errorDescription: String?{
-        switch self {
-        case .MyChallengeLimitExceeded:
-            return "[Critical]ChallengeService - Throw: MyChallenge limit exceeded"
-        case .UnexpectedGetStatDTOError:
-            return "[Critical]ChallengeService - Throw: There was an unexpected error while Get StatDTO"
-        case .UnexpectedChallengeArrayError:
-            return "[Critical]ChallengeService - Throw: There was an unexpected error while get challenge from array"
-        case .UnexpectedMyChallengeSearchError:
-            return "[Critical]ChallengeService - Throw: There was an unexpected error while search myChallenge"
-        case .UnexpectedPrevChallengeSearchError:
-            return "[Critical]ChallengeService - Throw: There was an unexpected error while search previousChallenge"
-        case .UnexpectedChallengeDataInspectionError:
-            return "[Critical]ChallengeService - Throw: There was an unexpected error while processing challenge data inspection"
-        case .UnexpectedStepUpdateError:
-            return "[Critical]ChallengeService - Throw: There was an unexpected error while update challengeStep"
-        case .NoMoreNextChallenge:
-            return "[Critical]ChallengeService - Throw: No more Available Challenge"
-        }
     }
 }

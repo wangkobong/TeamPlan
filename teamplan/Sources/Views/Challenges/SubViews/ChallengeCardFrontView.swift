@@ -20,14 +20,6 @@ struct ChallengeCardFrontView: View {
     }
 }
 
-//struct ChallengeCardView_Previews: PreviewProvider {
-//    static var previews: some View {
-//        ChallengeCardFrontView(challenge: ChallengeCardModel(image: "applelogo", title: "목표달성의 쾌감!", description: "물방울 3개 모으기"), parentsWidth: 400)
-//            .previewLayout(.sizeThatFits)
-//    }
-//
-//}
-
 extension ChallengeCardFrontView {
     private var front: some View {
         VStack {
@@ -50,7 +42,6 @@ extension ChallengeCardFrontView {
                 .foregroundColor(.theme.greyColor)
         
         }
-        
     }
 }
 
@@ -79,3 +70,11 @@ extension ChallengeCardFrontView {
         }
     }
 }
+
+//struct ChallengeCardView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        ChallengeCardFrontView(challenge: ChallengeCardModel(image: "applelogo", title: "목표달성의 쾌감!", description: "물방울 3개 모으기"), parentsWidth: 400)
+//            .previewLayout(.sizeThatFits)
+//    }
+//
+//}

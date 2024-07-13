@@ -6,6 +6,7 @@
 //  Copyright © 2023 team1os. All rights reserved.
 //
 
+import CoreData
 import Foundation
 
 final class LoginLoadingService{
@@ -36,18 +37,22 @@ final class LoginLoadingService{
     private var updateType: UpdateType
     
     private let util = Utilities()
+    private let storageManager: LocalStorageManager
     
     private init(userId: String){
         self.loginDate = Date()
         self.userId = userId
-        self.userData = UserInfoDTO()
+        
         self.userTerm = 0
         self.syncTerm = 0
         self.registLimit = 0
+        
+        self.userData = UserInfoDTO()
+        
         self.updateType = .unknown
-    
         self.localSync = LocalSynchronize(with: userId)
         self.serverSync = ServerSynchronize(with: userId)
+        self.storageManager = LocalStorageManager.shared
     }
 
     static func createInstance(with dto: AuthSocialLoginResDTO) async -> LoginLoadingService {
@@ -98,20 +103,22 @@ extension LoginLoadingService {
     
     // service action
     private func executeDetailAction(_ action: LoginLoadingServiceAction) async -> Bool {
+        let context = storageManager.context
+        
         switch action {
         case .checkData:
-            return await checkData()
+            return checkData(context: context)
         case .fetchDataFromServer:
             return await fetchDataFromServer()
         case .isReloginUser:
-            return await filteringUser()
+            return filteringUser(context: context)
         case .prepareServiceData:
-            return await prepareServiceData()
+            return prepareServiceData(context: context)
         case .prepareReturnData:
-            return await prepareReturnData()
+            return prepareReturnData(context: context)
         case .excuteUpdate:
             await decideUpdateType()
-            return await updateExecutor()
+            return await updateExecutor(context: context)
         }
     }
 }
@@ -130,21 +137,19 @@ extension LoginLoadingService{
     
     /// 로컬에 필요한 모든 데이터가 존재하는지 확인합니다.
     /// - Returns: 모든 데이터(사용자, 통계정보, 접속 로그, 도전과제 로그)가 존재하면 true, 그렇지 않으면 false를 반환합니다.
-    private func checkData() async -> Bool {
-        async let isUserDataExist = userCD.isObjectExist(with: userId)
-        async let isStatDataExist = statCD.isObjectExist(with: userId)
-        async let isCoreValueExist = coreValueCD.isObjectExist(with: userId)
-        async let isAccessLogExist = accessLogCD.isObjectExist(with: userId)
-        async let isChallengeDataExist = challengeCD.isObjectExist(with: userId)
+    private func checkData(context: NSManagedObjectContext) -> Bool {
+        var results = [Bool]()
         
-        let results = await [
-            isUserDataExist,
-            isStatDataExist,
-            isCoreValueExist,
-            isAccessLogExist,
-            isChallengeDataExist
-        ]
-        return results.allSatisfy { $0 }
+        return context.performAndWait {
+            results = [
+                userCD.isObjectExist(context: context, userId: userId),
+                statCD.isObjectExist(context: context, userId: userId),
+                coreValueCD.isObjectExist(context: context, userId: userId),
+                accessLogCD.isObjectExist(context: context, userId: userId),
+                challengeCD.isObjectExist(context: context, userId: userId)
+            ]
+            return results.allSatisfy { $0 }
+        }
     }
     
     // MARK: - Check Re-Login User
@@ -152,12 +157,16 @@ extension LoginLoadingService{
     /// 이전 로그인 시간과 현재 시간을 비교하여 사용자를 필터링합니다. 사용자는 당일 첫 로그인 사용자와 재로그인 사용자로 나뉩니다.
     /// - Returns: 재로그인 사용자는  true, 당일 첫 로그인 사용자는 false를 반환합니다.
     /// - Throws: `LoginLoadingServiceError.EmptyAccessLog` 접속로그가 비어 있을 경우 발생합니다.
-    private func filteringUser() async -> Bool {
+    private func filteringUser(context: NSManagedObjectContext) -> Bool {
         do {
-            let log = try accessLogCD.getLatestObject(with: userId)
+            guard try accessLogCD.getLatestObject(context: context, userId: userId) else {
+                print("[LoginLoading] Failed to convert Accesslog Data")
+                return false
+            }
+            let log = accessLogCD.object
             return util.compareTime(currentTime: loginDate, lastTime: log.accessRecord)
         } catch {
-            print("[LoginLoading] Failed to get Accesslog Data")
+            print("[LoginLoading] Failed to get Accesslog Data: \(error)")
             return false
         }
     }
@@ -190,49 +199,50 @@ extension LoginLoadingService {
         }
     }
     
-    private func updateExecutor() async -> Bool {
+    private func updateExecutor(context: NSManagedObjectContext) async -> Bool {
         switch self.updateType {
         case .unknown:
             print("[LoginLoading] Unknown userType detected!")
             return false
         case .daily:
-            return await dailyUpdateProcess()
+            return dailyUpdateProcess(context: context)
         case .weekly:
-            return await weeklyUpdateProcess()
+            return await weeklyUpdateProcess(context: context)
         case .monthly:
-            return await monthlyUpdateProcess()
+            return await monthlyUpdateProcess(context: context)
         case .quarterly:
-            return await quarterlyUpdateProcess()
+            return await quarterlyUpdateProcess(context: context)
         }
     }
     
     //MARK: Daily Update
     
-    private func dailyUpdateProcess() async -> Bool {
-        async let isServiceTermUpdated = updateServiceTerm()
-        async let isAccessLogUpdated = updateLoginAt(with: loginDate)
-        async let isProjectReset = resetDailyRegistTodo()
+    private func dailyUpdateProcess(context: NSManagedObjectContext) -> Bool {
+        var results = [Bool]()
         
-        let results = await [isServiceTermUpdated, isAccessLogUpdated, isProjectReset]
-        
-        if results.allSatisfy({ $0 }) {
-            if await LocalStorageManager.shared.saveContext(){
-                print("[LoginLoading] Successfully process Daily update")
+        return context.performAndWait{
+            results = [
+                updateServiceTerm(context: context),
+                updateLoginAt(context: context, with: loginDate),
+                resetDailyRegistTodo(context: context)
+            ]
+            if results.allSatisfy({$0}){
+                guard storageManager.saveContext() else {
+                    print("[LoginLoading] Failed to apply daily update at storage")
+                    return false
+                }
+                print("[LoginLoading] Successfully apply daily update at storage")
                 return true
-            } else {
-                print("[LoginLoading] Failed to update context")
-                return false
             }
-        } else {
-            print("[LoginLoading] Daily Update Failed")
+            print("[LoginLoading] Daily update process failed")
             return false
         }
     }
     
     //MARK: Weekly Update
     
-    private func weeklyUpdateProcess() async -> Bool {
-        let isDailyUpdateProcessed = await dailyUpdateProcess()
+    private func weeklyUpdateProcess(context: NSManagedObjectContext) async -> Bool {
+        let isDailyUpdateProcessed = dailyUpdateProcess(context: context)
         let isServerDataUpdated = await updateDataAtServer(.weekly, at: loginDate)
         
         if isDailyUpdateProcessed && isServerDataUpdated {
@@ -246,8 +256,8 @@ extension LoginLoadingService {
     
     //MARK: Monthly Update
     
-    private func monthlyUpdateProcess() async -> Bool {
-        let isDailyUpdateProcessed = await dailyUpdateProcess()
+    private func monthlyUpdateProcess(context: NSManagedObjectContext) async -> Bool {
+        let isDailyUpdateProcessed = dailyUpdateProcess(context: context)
         let isServerDataUpdated = await updateDataAtServer(.monthly, at: loginDate)
         
         if isDailyUpdateProcessed && isServerDataUpdated {
@@ -261,8 +271,8 @@ extension LoginLoadingService {
     
     //MARK: Quarterly Update
     
-    private func quarterlyUpdateProcess() async -> Bool {
-        let isDailyUpdateProcessed = await dailyUpdateProcess()
+    private func quarterlyUpdateProcess(context: NSManagedObjectContext) async -> Bool {
+        let isDailyUpdateProcessed = dailyUpdateProcess(context: context)
         let isQuarterlyUpdatedProcessed = await updateDataAtServer(.quarterly, at: loginDate)
         
         if isDailyUpdateProcessed && isQuarterlyUpdatedProcessed {
@@ -305,28 +315,45 @@ extension LoginLoadingService {
 extension LoginLoadingService {
 
     // prepare: data for service
-    private func prepareServiceData() async -> Bool {
-        do {
-            let coreValue = try coreValueCD.getObject(with: userId)
-            self.userTerm = try statCD.getObject(with: userId).term
-            self.registLimit = coreValue.todoRegistLimit
-            self.syncTerm = coreValue.syncCycle
-            return true
-        } catch {
-            print("[LoginLoading] Failed to fetch Statistics & CoreValue from localStorage")
-            return false
+    private func prepareServiceData(context: NSManagedObjectContext) -> Bool {
+        
+        return context.performAndWait {
+            do {
+                let isStatDataReady = try statCD.getObject(context: context, userId: userId)
+                let isCoreValueReady = try coreValueCD.getObject(context: context, userId: userId)
+                
+                if isStatDataReady && isCoreValueReady {
+                    self.userTerm = statCD.object.term
+                    self.syncTerm = coreValueCD.object.syncCycle
+                    self.registLimit = coreValueCD.object.todoRegistLimit
+                    return true
+                } else {
+                    print("[LoginLoading] Failed to fetch Statistics & CoreValue from localStorage")
+                    return false
+                }
+            } catch {
+                print("[LoginLoading] Prepare service data process failed: \(error.localizedDescription)")
+                return false
+            }
         }
     }
     
     // prepare: data for return
-    private func prepareReturnData() async -> Bool {
-        do {
-            let userData = try userCD.getObject(with: userId)
-            self.userData = UserInfoDTO(with: userData)
-            return true
-        } catch {
-            print("[LoginLoading] Failed to fetch userData from localStorage")
-            return false
+    private func prepareReturnData(context: NSManagedObjectContext) -> Bool {
+        
+        return context.performAndWait{
+            do {
+                guard try userCD.getObject(context: context, userId: userId) else {
+                    print("[LoginLoading] Failed to fetch userData from localStorage")
+                    return false
+                }
+                self.userData = UserInfoDTO(with: userCD.object)
+                return true
+                
+            } catch {
+                print("[LoginLoading] Prepare UserData process failed: \(error.localizedDescription)")
+                return false
+            }
         }
     }
     
@@ -358,62 +385,70 @@ extension LoginLoadingService {
     }
     
     // update: serviceTerm
-    private func updateServiceTerm() async -> Bool {
+    private func updateServiceTerm(context: NSManagedObjectContext) -> Bool {
         let updated = StatUpdateDTO(userId: userId, newTerm: userTerm + 1)
         do {
-            return try statCD.updateObject(with: updated)
+            guard try statCD.updateObject(context: context, dto: updated) else {
+                print("[LoginLoading] failed to detect update about serviceTerm")
+                return false
+            }
+            return true
         } catch {
-            print("[LoginLoading] Failed to update service Term")
+            print("[LoginLoading] Failed to update service Term: \(error.localizedDescription)")
             return false
         }
     }
     
     // update: accessLog
-    private func updateLoginAt(with loginDate: Date) async -> Bool {
+    private func updateLoginAt(context: NSManagedObjectContext, with loginDate: Date) -> Bool {
         let log = AccessLog(userId: userId, accessDate: loginDate)
-        if accessLogCD.setObject(with: log) {
-            print("[LoginLoading] Successfully regist new accesslog")
-            return true
-        } else {
+        guard accessLogCD.setObject(context: context, object: log) else {
             print("[LoginLoading] Failed to regist new accesslog")
             return false
         }
+        return true
     }
     
     // update: dailyRegistTodo
-    private func resetDailyRegistTodo() async -> Bool {
+    private func resetDailyRegistTodo(context: NSManagedObjectContext) -> Bool {
         var updatedProjectCount: Int = 0
-        let projectIdList: [Int]
+        let projectList: [ProjectObject]
         
         do {
-            projectIdList = try projectCD.getIdList(with: userId)
-        } catch {
-            print("[LoginLoading] Failed to search projectList")
-            return false
-        }
-        
-        if projectIdList.isEmpty {
-            print("[LoginLoading] There is no project to update")
-            return true
-        }
-        
-        for projectId in projectIdList {
-            let updated = ProjectUpdateDTO(
-                projectId: projectId,
-                userId: userId,
-                newDailyRegistedTodo: registLimit
-            )
-            do {
-                if try projectCD.updateObject(with: updated) {
-                    updatedProjectCount += 1
-                }
-            } catch {
-                print("[LoginLoading] Failed to update project \(projectId)")
+            // fetch projectData
+            guard try projectCD.getValidObjects(context: context, with: userId) else {
+                print("[LoginLoading] Failed to search projectList")
                 return false
             }
+            
+            // projectList check
+            if projectCD.objectList.isEmpty {
+                print("[LoginLoading] There is no project to update")
+                return true
+            } else {
+                projectList = projectCD.objectList
+            }
+            
+            // update projectList
+            for project in projectList {
+                let updated = ProjectUpdateDTO(
+                    projectId: project.projectId, 
+                    userId: userId,
+                    newDailyRegistedTodo: registLimit
+                )
+                guard try projectCD.updateObject(context: context, with: updated) else {
+                    print("[LoginLoading] Failed to update project \(project.projectId)")
+                    return false
+                }
+                updatedProjectCount += 1
+            }
+            print("[LoginLoading] Updated Project (DailyTodoRegistLimit) : \(updatedProjectCount)")
+            return true
+            
+        } catch {
+            print("[LoginLoading] Failed to reset daily registred todo process: \(error.localizedDescription)")
+            return false
         }
-        print("[LoginLoading] Updated Project (DailyTodoRegistLimit) : \(updatedProjectCount)")
-        return true
     }
     
     // truncate unstable userData

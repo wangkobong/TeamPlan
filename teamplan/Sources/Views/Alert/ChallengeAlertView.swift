@@ -93,7 +93,7 @@ extension ChallengeAlertView {
             
             Spacer()
             
-            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].isUnlock, isComplete: self.allChallenge[index].isFinished))
+            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].islock, isComplete: self.allChallenge[index].isFinished))
                 .frame(width: 82, height: 82)
             
             Text("\(allChallenge[self.index].desc)")
@@ -131,7 +131,7 @@ extension ChallengeAlertView {
 
             Spacer()
             
-            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].isUnlock, isComplete: self.allChallenge[index].isFinished))
+            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].islock, isComplete: self.allChallenge[index].isFinished))
                 .frame(width: 82, height: 82)
             
             Text("\(getChallenge(index: self.index).title) 선택")
@@ -169,7 +169,7 @@ extension ChallengeAlertView {
 
             Spacer()
             
-            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].isUnlock, isComplete: self.allChallenge[index].isFinished))
+            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].islock, isComplete: self.allChallenge[index].isFinished))
                 .frame(width: 82, height: 82)
             
             Text("\(getChallenge(index: self.index).title)")
@@ -228,7 +228,7 @@ extension ChallengeAlertView {
 
             Spacer()
             
-            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].isUnlock, isComplete: self.allChallenge[index].isFinished))
+            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].islock, isComplete: self.allChallenge[index].isFinished))
                 .frame(width: 82, height: 82)
             
             Text("\(getChallenge(index: self.index).title)")
@@ -266,7 +266,7 @@ extension ChallengeAlertView {
 
             Spacer()
             
-            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].isUnlock, isComplete: self.allChallenge[index].isFinished))
+            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].islock, isComplete: self.allChallenge[index].isFinished))
                 .frame(width: 82, height: 82)
             
             Text("\(getChallenge(index: self.index).title)")
@@ -403,7 +403,7 @@ extension ChallengeAlertView {
             
             Spacer()
             
-            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].isUnlock, isComplete: self.allChallenge[index].isFinished))
+            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].islock, isComplete: self.allChallenge[index].isFinished))
                 .frame(width: 82, height: 82)
             
             Text("\(allChallenge[self.index].desc)")

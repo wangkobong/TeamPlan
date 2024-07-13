@@ -27,7 +27,7 @@ final class NotificationViewModel: ObservableObject {
         Task {
             do {
                 self.prepareNotiSection()
-                self.projectNotiList = try await prepareProjectNotify(with: homeVM)
+                //self.projectNotiList = try await prepareProjectNotify(with: homeVM)
                 self.challengeNotiList = try await prepareChallengeNotify()
                 self.addSubscribers()
                 self.filterNotifications(type: .all)
@@ -47,8 +47,9 @@ final class NotificationViewModel: ObservableObject {
         ]
     }
     
+    /*
     private func prepareProjectNotify(with homeVM: HomeViewModel) async throws -> [NotificationModel] {
-        let projectList = homeVM.userData.projects
+        let projectList = homeVM.userData.projectsDTOs
         let userName = homeVM.userData.userName
         
         return try await withThrowingTaskGroup(of: NotificationModel?.self) { group in
@@ -68,7 +69,8 @@ final class NotificationViewModel: ObservableObject {
             return notificationList
         }
     }
-    
+    */
+     
     private func createNotificationModel(for project: ProjectObject, type: projectNotification, userName: String) -> NotificationModel? {
         let today = Date()
         switch type {

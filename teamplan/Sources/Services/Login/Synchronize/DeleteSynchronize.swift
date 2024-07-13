@@ -6,6 +6,7 @@
 //  Copyright © 2024 team1os. All rights reserved.
 //
 
+import CoreData
 import Foundation
 import FirebaseFirestore
 import FirebaseFirestoreSwift
@@ -17,7 +18,7 @@ final class DeleteSynchronize {
     private let statCD = StatisticsServicesCoredata()
     private let challengeCD = ChallengeServicesCoredata()
     private let accessLogCD = AccessLogServicesCoredata()
-    private let projectCD = ProjectServicesCoredata()
+    private let projectCD = ProjectExtendLogServicesCoredata()
     private let projectExtendCD = ProjectExtendLogServicesCoredata()
     
     // Server Storage
@@ -30,14 +31,16 @@ final class DeleteSynchronize {
     
     // properties
     private let userId: String
+    private let storageManager: LocalStorageManager
     
     init(userId: String) {
         self.userId = userId
+        self.storageManager = LocalStorageManager.shared
     }
     
     func deleteExecutor() async -> Bool {
         let isServerDataDeleted = await serverDeleteExecutor()
-        let isLocalDataDeleted = await localDeleteExecutor()
+        let isLocalDataDeleted = localDeleteExecutor()
         
         if isServerDataDeleted && isLocalDataDeleted {
             print("[DeleteSync] Successfully delete total data about user")
@@ -55,34 +58,26 @@ extension DeleteSynchronize {
     
     private func serverDeleteExecutor() async -> Bool {
         let batch = Firestore.firestore().batch()
-        
-        async let isUserDeleted = deleteUserAtServer(with: batch)
-        async let isStatDeleted = deleteStatAtServer(with: batch)
-        async let isChallengeDeleted = deleteChallengeAtServer(with: batch)
-        async let isProjectDeleted = deleteProjectAtServer(with: batch)
-        async let isAccessLogDeleted = deleteAccessLogAtServer(with: batch)
-        async let isExtendLogDeleted = deleteExtendLogAtServer(with: batch)
-        
-        let results = await [
-            isUserDeleted,
-            isStatDeleted,
-            isChallengeDeleted,
-            isProjectDeleted,
-            isAccessLogDeleted,
-            isExtendLogDeleted
+        let tasks: [() async -> Bool] = [
+            { await self.deleteUserAtServer(with: batch) },
+            { await self.deleteStatAtServer(with: batch) },
+            { await self.deleteChallengeAtServer(with: batch) },
+            { await self.deleteProjectAtServer(with: batch) },
+            { await self.deleteAccessLogAtServer(with: batch) },
+            { await self.deleteExtendLogAtServer(with: batch) }
         ]
-        
-        if results.allSatisfy({$0}) {
-            do {
-                try await batch.commit()
-                print("[DeleteSync] Successfully delete total data at server")
-                return true
-            } catch {
-                print("[DeleteSync] Failed to commit delete batch")
+        for task in tasks {
+            if await !task() {
+                print("[DeleteSync] Failed to set userData at batch")
                 return false
             }
-        } else {
-            print("[DeleteSync] Failed to delete total data at server")
+        }
+        do {
+            try await batch.commit()
+            print("[DeleteSync] Successfully delete total data at server")
+            return true
+        } catch {
+            print("[DeleteSync] Failed to commit delete batch")
             return false
         }
     }
@@ -148,40 +143,36 @@ extension DeleteSynchronize {
 
 extension DeleteSynchronize {
     
-    private func localDeleteExecutor() async -> Bool {
-        async let isUserDeleted = deleteUserAtLocal()
-        async let isStatDeleted = deleteStatAtLocal()
-        async let isChallengeDeleted = deleteChallengeAtLocal()
-        async let isProjectDeleted = deleteProjectAtLocal()
-        async let isAccessLogDeleted = deleteAccessLogAtLocal()
-        async let isExtendLogDeleted = deleteExtendLogAtLocal()
+    private func localDeleteExecutor() -> Bool {
+        let context = storageManager.context
+        var results = [Bool]()
         
-        let results = await [
-            isUserDeleted,
-            isStatDeleted,
-            isChallengeDeleted,
-            isProjectDeleted,
-            isAccessLogDeleted,
-            isExtendLogDeleted
-        ]
-        
-        if results.allSatisfy({$0}) {
-            if await LocalStorageManager.shared.saveContext() {
-                print("[DeleteSync] Successfully delete total data at local")
-                return true
-            } else {
+        return context.performAndWait{
+            results = [
+                deleteUserAtLocal(context: context),
+                deleteStatAtLocal(context: context),
+                deleteChallengeAtLocal(context: context),
+                deleteProjectAtLocal(context: context),
+                deleteAccessLogAtLocal(context: context),
+                deleteExtendLogAtLocal(context: context)
+            ]
+            
+            guard results.allSatisfy({$0}) else {
+                print("[DeleteSync] Local data delete process failed")
+                return false
+            }
+            
+            guard storageManager.saveContext() else {
                 print("[DeleteSync] Failed to apply delete at local")
                 return false
             }
-        } else {
-            print("[DeleteSync] Total data delete process failed")
-            return false
+            return true
         }
     }
     
-    private func deleteUserAtLocal() async -> Bool {
+    private func deleteUserAtLocal(context: NSManagedObjectContext) -> Bool {
         do {
-            try userCD.deleteObject(with: userId)
+            try userCD.deleteObject(context: context, userId: userId)
             return true
         } catch {
             print("[DeleteSync] Failed to delete 'User' at local")
@@ -189,9 +180,9 @@ extension DeleteSynchronize {
         }
     }
     
-    private func deleteStatAtLocal() async -> Bool {
+    private func deleteStatAtLocal(context: NSManagedObjectContext) -> Bool {
         do {
-            try statCD.deleteObject(with: userId)
+            try statCD.deleteObject(context: context, userId: userId)
             return true
         } catch {
             print("[DeleteSync] Failed to delete 'Statistics' at local")
@@ -199,9 +190,9 @@ extension DeleteSynchronize {
         }
     }
     
-    private func deleteChallengeAtLocal() async -> Bool {
+    private func deleteChallengeAtLocal(context: NSManagedObjectContext) -> Bool {
         do {
-            try await challengeCD.deleteObject(with: userId)
+            try challengeCD.deleteObject(context: context, userId: userId)
             return true
         } catch {
             print("[DeleteSync] Failed to delete 'Challenge' at local")
@@ -209,9 +200,9 @@ extension DeleteSynchronize {
         }
     }
     
-    private func deleteProjectAtLocal() async -> Bool {
+    private func deleteProjectAtLocal(context: NSManagedObjectContext) -> Bool {
         do {
-            try projectCD.deleteObjectList(with: userId)
+            try projectCD.deleteObjects(context: context, with: userId)
             return true
         } catch {
             print("[DeleteSync] Failed to delete 'Project' at local")
@@ -219,9 +210,9 @@ extension DeleteSynchronize {
         }
     }
     
-    private func deleteAccessLogAtLocal() async -> Bool {
+    private func deleteAccessLogAtLocal(context: NSManagedObjectContext) -> Bool {
         do {
-            try accessLogCD.deleteObject(with: userId)
+            try accessLogCD.deleteObject(context: context, userId: userId)
             return true
         } catch {
             print("[DeleteSync] Failed to delete 'AccessLog' at local")
@@ -229,9 +220,9 @@ extension DeleteSynchronize {
         }
     }
     
-    private func deleteExtendLogAtLocal() async -> Bool {
+    private func deleteExtendLogAtLocal(context: NSManagedObjectContext) -> Bool {
         do {
-            try projectExtendCD.deleteObjects(with: userId)
+            try projectExtendCD.deleteObjects(context: context, with: userId)
             return true
         } catch {
             print("[DeleteSync] Failed to delete 'ProjectExtendLog' at local")

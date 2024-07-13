@@ -58,7 +58,7 @@ final class ProjectViewModel: ObservableObject {
     
     private func prepareData() {
         Task {
-            let result = await service.executor(action: .prepareService)
+            let result = service.executor(action: .prepareService)
             
             if result {
                 await updateProjectList()
@@ -100,7 +100,7 @@ extension ProjectViewModel {
     
     private func executeAddProcess(with newDTO: NewProjectDTO, at addDate: Date) {
         Task {
-            let result = await service.executor(action:
+            let result = service.executor(action:
                     .setNewProject(newData: newDTO, setDate: addDate)
             )
             if result {
@@ -119,7 +119,7 @@ extension ProjectViewModel {
     
     func deleteProject(projectId: Int) {
         Task {
-            let result = await service.executor(action:
+            let result = service.executor(action:
                     .deleteProject(projectId: projectId)
             )
             if result {
@@ -153,7 +153,7 @@ extension ProjectViewModel {
     
     private func executeRenameProcess(with projectId: Int, and newTitle: String) {
         Task {
-            let result = await service.executor(action: 
+            let result = service.executor(action:
                     .renameProject(projectId: projectId, newTitle: newTitle)
             )
             if result {
@@ -169,7 +169,7 @@ extension ProjectViewModel {
         let dto = ExtendProjectDTO(projectId: projectId, usedDrop: usedDrop, newDeadline: newDeadline)
         
         Task {
-            let result = await service.executor(action: 
+            let result = service.executor(action:
                     .extendProject(dto: dto)
             )
             if result {
@@ -207,7 +207,7 @@ extension ProjectViewModel {
     // MARK: Project - Complete
     
     func completeProject(with projectId: Int) async {
-        guard await service.canCompleteProject(with: projectId) else {
+        guard service.canCompleteProject(with: projectId) else {
             self.isProejctCanComplete = false
             return
         }
@@ -217,7 +217,7 @@ extension ProjectViewModel {
     
     private func executeCompleteProcess(with projectId: Int) async {
         let completeDate = Date()
-        let result = await service.executor(action:
+        let result = service.executor(action:
                 .completeProject(projectId: projectId, completeDate: completeDate)
         )
         if result {
@@ -233,7 +233,7 @@ extension ProjectViewModel {
     
     func addNewTodo(projectId: Int) {
         Task {
-            guard await service.canRegistNewTodo(with: projectId) else {
+            guard service.canRegistNewTodo(with: projectId) else {
                 print("[ProjectViewModel] Todo regist limit detected")
                 self.isTodoCanAdd = false
                 return
@@ -243,7 +243,7 @@ extension ProjectViewModel {
     }
     
     private func executeAddTodoProcess(with projectId: Int) async {
-        let result = await service.executor(
+        let result = service.executor(
             action: .setNewTodo(projectId: projectId)
         )
         if result {
@@ -260,7 +260,7 @@ extension ProjectViewModel {
     
     func updateTodoDescription(with projectId: Int, todoId: Int, newDesc: String) {
         Task {
-            let result = await service.executor(action: 
+            let result = service.executor(action:
                     .updateTodoDesc(projectId: projectId, todoId: todoId, newDesc: newDesc)
             )
             if result {
@@ -276,7 +276,7 @@ extension ProjectViewModel {
     
     func toggleToDoStatus(with projectId: Int, todoId: Int, newStatus: TodoStatus) {
         Task {
-            let result = await service.executor(action: 
+            let result = service.executor(action:
                     .updateTodoStatus(projectId: projectId, todoId: todoId, newStatus: newStatus)
             )
             if result {
