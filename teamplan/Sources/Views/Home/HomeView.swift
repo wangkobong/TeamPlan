@@ -68,7 +68,7 @@ struct HomeView: View {
             isExistProject = false
             Task {
                 isChallenging = !homeViewModel.userData.myChallenges.isEmpty
-                isExistProject = !homeViewModel.userData.projects.isEmpty
+                isExistProject = !homeViewModel.userData.projectsDTOs.isEmpty
             }
         }
         // MyChallege Array Check
@@ -87,7 +87,7 @@ struct HomeView: View {
     private func checkProperties() {
         Task {
             isChallenging = !homeViewModel.userData.myChallenges.isEmpty
-            isExistProject = !homeViewModel.userData.projectsDTO.isEmpty
+            isExistProject = !homeViewModel.userData.projectsDTOs.isEmpty
         }
     }
     

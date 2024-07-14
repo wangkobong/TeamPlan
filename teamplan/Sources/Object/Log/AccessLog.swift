@@ -17,6 +17,11 @@ struct AccessLog{
         self.userId = userId
         self.accessRecord = accessDate
     }
+    
+    init(tempDate:Date = Date()){
+        self.userId = "unknown"
+        self.accessRecord = tempDate
+    }
 }
 
 

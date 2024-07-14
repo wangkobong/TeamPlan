@@ -39,21 +39,22 @@ final class MypageViewModel: ObservableObject {
     
     //MARK: Method
     
+    @MainActor
     func loadData() {
-        Task {
-            do {
-                let dto = try service.getMypageDTO()
-                DispatchQueue.main.async {
-                    self.dto = dto
-                    self.accomplishes = [
-                        .init(accomplishTitle: AccomplishmentTitle.challenge.rawValue, accomplishCount: dto.completedChallenges),
-                        .init(accomplishTitle: AccomplishmentTitle.project.rawValue, accomplishCount: dto.completedProjects),
-                        .init(accomplishTitle: AccomplishmentTitle.todo.rawValue, accomplishCount: dto.completedTodos)
-                    ]
-                }
-            } catch {
-                print("Failed to load data: \(error)")
-            }
+        if !service.prepareService() {
+            print("[MypageViewModel] Failed to load data")
+        }
+        self.dto = service.mypageDTO
+        
+        DispatchQueue.main.async {
+            self.accomplishes = [
+                .init(accomplishTitle: AccomplishmentTitle.challenge.rawValue,
+                      accomplishCount: self.dto.completedChallenges),
+                .init(accomplishTitle: AccomplishmentTitle.project.rawValue,
+                      accomplishCount: self.dto.completedProjects),
+                .init(accomplishTitle: AccomplishmentTitle.todo.rawValue,
+                      accomplishCount: self.dto.completedTodos)
+            ]
         }
     }
     

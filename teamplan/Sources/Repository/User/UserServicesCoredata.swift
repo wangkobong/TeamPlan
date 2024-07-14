@@ -11,32 +11,31 @@ import CoreData
 
 //MARK: Main
 
-final class UserServicesCoredata: FullObjectManage {
+final class UserServicesCoredata {
     typealias Entity = UserEntity
     typealias Object = UserObject
     typealias DTO = UserUpdateDTO
     
-    var context: NSManagedObjectContext
-    init() {
-        self.context = LocalStorageManager.shared.context
+    var object = UserObject()
+    
+    func setObject(context: NSManagedObjectContext, object: UserObject) -> Bool {
+        let entity = UserEntity(context: context)
+        createEntity(with: object, at: entity)
+        return checkEntity(with: entity)
     }
     
-    func setObject(with object: UserObject) -> Bool {
-        return createEntity(with: object, and: object.createdAt)
+    func getObject(context: NSManagedObjectContext, userId: String) throws -> Bool {
+        let entity = try getEntity(context: context, userId: userId)
+        return convertToObject(with: entity)
     }
     
-    func getObject(with userId: String) throws -> UserObject {
-        let entity = try getEntity(with: userId)
-        return try convertToObject(with: entity)
-    }
-    
-    func updateObject(with dto: UserUpdateDTO) throws -> Bool {
-        let entity = try getEntity(with: dto.userId)
+    func updateObject(context: NSManagedObjectContext, dto: UserUpdateDTO) throws -> Bool {
+        let entity = try getEntity(context: context, userId: dto.userId)
         return checkUpdate(from: entity, to: dto)
     }
     
-    func deleteObject(with userId: String) throws {
-        let entity = try getEntity(with: userId)
+    func deleteObject(context: NSManagedObjectContext, userId: String) throws {
+        let entity = try getEntity(context: context, userId: userId)
         context.delete(entity)
     }
 }
@@ -45,8 +44,8 @@ final class UserServicesCoredata: FullObjectManage {
 
 extension UserServicesCoredata {
     
-    func isObjectExist(with userId: String) -> Bool {
-        let reqeust = getFetchRequest(with: userId)
+    func isObjectExist(context: NSManagedObjectContext, userId: String) -> Bool {
+        let reqeust = constructFetchRequest(with: userId)
         do {
             let count = try context.count(for: reqeust)
             return count > 0
@@ -60,9 +59,7 @@ extension UserServicesCoredata {
 
 extension UserServicesCoredata {
     
-    private func createEntity(with object: UserObject, and setDate: Date) -> Bool {
-        let entity = UserEntity(context: context)
-        
+    private func createEntity(with object: Object, at entity: Entity) {
         entity.user_id = object.userId
         entity.email = object.email
         entity.name = object.name
@@ -72,52 +69,54 @@ extension UserServicesCoredata {
         entity.created_at = object.createdAt
         entity.changed_at = object.changedAt
         entity.synced_at = object.syncedAt
-        
+    }
+    
+    private func checkEntity(with entity: Entity) -> Bool {
         if entity.user_id == nil {
-            print("[UserRepo] nil detected: 'user_id'")
+            print("[Coredata-User] nil detected: 'user_id'")
             return false
         }
         if entity.email == nil {
-            print("[Error] nil detected: 'email'")
+            print("[Coredata-User] nil detected: 'email'")
             return false
         }
         if entity.name == nil {
-            print("[Error] nil detected: 'name'")
+            print("[Coredata-User] nil detected: 'name'")
             return false
         }
         if entity.social_type == nil {
-            print("[Error] nil detected: 'social_type'")
+            print("[Coredata-User] nil detected: 'social_type'")
             return false
         }
         if entity.status == nil {
-            print("[Error] nil detected: 'status' ")
+            print("[Coredata-User] nil detected: 'status' ")
             return false
         }
         if entity.created_at == nil {
-            print("[Error] nil detected: 'created_at'")
+            print("[Coredata-User] nil detected: 'created_at'")
             return false
         }
         if entity.changed_at == nil {
-            print("[Error] nil detected: 'changed_at'")
+            print("[Coredata-User] nil detected: 'changed_at'")
             return false
         }
         if entity.synced_at == nil {
-            print("[Error] nil detected: 'synced_at'")
+            print("[Coredata-User] nil detected: 'synced_at'")
             return false
         }
         return true
     }
     
-    private func getFetchRequest(with userId: String) -> NSFetchRequest<Entity> {
+    private func constructFetchRequest(with userId: String) -> NSFetchRequest<Entity> {
         let fetchRequest: NSFetchRequest<Entity> = UserEntity.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: EntityPredicate.user.format, userId)
         
         return fetchRequest
     }
     
-    private func getEntity(with userId: String) throws -> Entity {
-        let request = getFetchRequest(with: userId)
-        guard let entity = try fetchEntity(with: request, and: self.context) else {
+    private func getEntity(context: NSManagedObjectContext, userId: String) throws -> Entity {
+        let request = constructFetchRequest(with: userId)
+        guard let entity = try context.fetch(request).first else {
             throw CoredataError.fetchFailure(serviceName: .cd, dataType: .user)
         }
         return entity
@@ -128,7 +127,7 @@ extension UserServicesCoredata {
 
 extension UserServicesCoredata{
     
-    private func convertToObject(with entity: UserEntity) throws -> UserObject {
+    private func convertToObject(with entity: UserEntity) -> Bool {
         guard let userId = entity.user_id,
               let email = entity.email,
               let name = entity.name,
@@ -140,9 +139,10 @@ extension UserServicesCoredata{
               let changedAt = entity.changed_at,
               let syncedAt = entity.synced_at
         else {
-            throw CoredataError.convertFailure(serviceName: .cd, dataType: .user)
+            print("[Coredata-User] Failed to convert entity to object")
+            return false
         }
-        return UserObject(
+        self.object = UserObject(
             userId: userId,
             email: email,
             name: name,
@@ -151,7 +151,9 @@ extension UserServicesCoredata{
             accessLogHead: Int(entity.access_log_head),
             createdAt: createdAt,
             changedAt: changedAt,
-            syncedAt: syncedAt)
+            syncedAt: syncedAt
+        )
+        return true
     }
     
     private func checkUpdate(from entity: UserEntity, to dto: UserUpdateDTO) -> Bool {

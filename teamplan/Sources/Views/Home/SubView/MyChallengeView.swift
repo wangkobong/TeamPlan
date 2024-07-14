@@ -33,7 +33,7 @@ struct MyChallengeView: View {
             Spacer()
             
             NavigationLink(
-                destination: ChallengesView(homeViewModel: homeVM),
+                destination: ChallengesView(),
                 isActive: $isChallengeViewActive)
             {
                 Text("전체보기")

@@ -6,6 +6,7 @@
 //  Copyright © 2024 team1os. All rights reserved.
 //
 
+import CoreData
 import Foundation
 
 final class LocalSynchronize{
@@ -25,6 +26,7 @@ final class LocalSynchronize{
     private let projectFS = ProjectServicesFirestore()
     
     private var userId: String
+    private let storageManager: LocalStorageManager
     
     // server properties
     private var coreValue: CoreValueObject
@@ -38,6 +40,7 @@ final class LocalSynchronize{
     
     init(with userId: String) {
         self.userId = userId
+        self.storageManager = LocalStorageManager.shared
         self.coreValue = CoreValueObject()
         self.serverUser = UserObject()
         self.serverStat = StatisticsObject()
@@ -55,7 +58,7 @@ extension LocalSynchronize{
     
     func syncExecutor() async -> Bool {
         if await serverFetchExecutor() {
-            if await localSetExecutor() {
+            if localSetExecutor() {
                 print("[LocalSync] Successfully set server data at local")
                 return true
             } else {
@@ -128,10 +131,12 @@ extension LocalSynchronize {
     
     // Challenge
     private func fetchChallengesFromServer() async -> Bool {
-        let isInfoFetch = await fetchChallengesInfos()
-        let isStatusFetch = await fetchChallengesStatus()
+        async let isInfoFetch = await fetchChallengesInfos()
+        async let isStatusFetch = await fetchChallengesStatus()
         
-        if isInfoFetch && isStatusFetch {
+        let results = await [isInfoFetch, isStatusFetch]
+        
+        if results.allSatisfy({$0}) {
             return await convertToObject()
         } else {
             print("[LocalSync] Failed to fetch ChallengeData from server")
@@ -167,6 +172,8 @@ extension LocalSynchronize {
     }
     
     private func convertToObject() async -> Bool {
+        print("[LocalSync] challengeInfo: \(serverChallengesInfo.count), challengeStatus: \(serverChallengesStatus.count)")
+        
         for challengeId in serverChallengesId {
             guard let challengeInfo = serverChallengesInfo[challengeId],
                   let challengeStatus = serverChallengesStatus[challengeId] else {
@@ -205,33 +212,41 @@ extension LocalSynchronize {
 
 extension LocalSynchronize{
     
-    private func localSetExecutor() async -> Bool {
-        async let isCoreValueSet = setCoreValueAtLocal()
-        async let isUserSet = setUserAtLocal()
-        async let isStatSet = setStatAtLocal()
-        async let isProjectsSet = setProjectsAtLocal()
-        async let isChallengesSet = setChallengesAtLocal()
+    private func localSetExecutor() -> Bool {
+        let context = storageManager.context
+        var results = [Bool]()
         
-        let results = await [isCoreValueSet, isUserSet, isStatSet, isProjectsSet, isChallengesSet]
-        if results.allSatisfy({$0}){
-            return await LocalStorageManager.shared.saveContext()
-        } else {
-            return false
+        return context.performAndWait{
+            results = [
+                setCoreValueAtLocal(context: context),
+                setUserAtLocal(context: context),
+                setStatAtLocal(context: context),
+                setProjectsAtLocal(context: context),
+                setChallengesAtLocal(context: context)
+            ]
+            if results.allSatisfy({$0}) {
+                if storageManager.saveContext() {
+                    return true
+                } else {
+                    return false
+                }
+            } else {
+                print("[LocalSync] Failed to set UserData at local")
+                return false
+            }
         }
     }
     
-    private func setCoreValueAtLocal() async -> Bool {
-        if coreValueCD.setObject(with: self.coreValue) {
-            print("[LocalSync] Successfully set CoreValue at Local")
+    private func setCoreValueAtLocal(context: NSManagedObjectContext) -> Bool {
+        if coreValueCD.setObject(context: context, object: self.coreValue) {
             return true
         } else {
-            print("[LocalSync] Failed to set CoreValue at Local")
             return false
         }
     }
     
-    private func setUserAtLocal() async -> Bool {
-        if userCD.setObject(with: self.serverUser) {
+    private func setUserAtLocal(context: NSManagedObjectContext) -> Bool {
+        if userCD.setObject(context: context, object: self.serverUser) {
             print("[LocalSync] Successfully set userData at Local")
             return true
         } else {
@@ -240,9 +255,9 @@ extension LocalSynchronize{
         }
     }
     
-    private func setStatAtLocal() async -> Bool {
+    private func setStatAtLocal(context: NSManagedObjectContext) -> Bool {
         do {
-            if try statCD.setObject(with: self.serverStat) {
+            if try statCD.setObject(context: context, object: self.serverStat) {
                 print("[LocalSync] Successfully set statData at Local")
                 return true
             } else {
@@ -255,24 +270,31 @@ extension LocalSynchronize{
         }
     }
     
-    private func setProjectsAtLocal() async -> Bool {
+    private func setProjectsAtLocal(context: NSManagedObjectContext) -> Bool {
+        
+        if self.serverProjects.isEmpty {
+            print("[LocalSync] There are no projectData to set at Local")
+            return true
+        }
         
         for project in self.serverProjects {
-            if !projectCD.setObject(with: project) {
+            if !projectCD.setObject(context: context, object: project) {
                 print("[LocalSync] Failed to set projectData at Local")
                 return false
             }
         }
+        print("[LocalSync] Successfully set project at Local")
         return true
     }
     
-    private func setChallengesAtLocal() async -> Bool {
+    private func setChallengesAtLocal(context: NSManagedObjectContext) -> Bool {
         for challenge in self.serverChallenges {
-            if !challengeCD.setObject(with: challenge) {
+            if !challengeCD.setObject(context: context, object: challenge) {
                 print("[LocalSync] Failed to set challengeData at Local")
                 return false
             }
         }
+        print("[LocalSync] Successfully set challenge at Local")
         return true
     }
 }

@@ -20,7 +20,7 @@ struct ChallengeDetailView: View {
                     .fill(Color.white)
                     .frame(width: 57, height: 57)
            
-                Image(ChallengeIconHelper.setIcon(type: challenge.type, isLock: challenge.isUnlock, isComplete: challenge.isFinished))
+                Image(ChallengeIconHelper.setIcon(type: challenge.type, isLock: challenge.islock, isComplete: challenge.isFinished))
                     .resizable()
                     .scaledToFit()
                     .frame(width: 57, height: 57)

@@ -50,33 +50,31 @@ final class HomeViewModel: ObservableObject {
 
     @MainActor
     private func prepareData() {
-        Task {
-            if self.identifier == "unknown" {
-                print("[HomeViewModel] Alert! Unknown Identifier detected!")
-                self.isLoginRedirectNeed = true
-            }
+        if self.identifier == "unknown" {
+            print("[HomeViewModel] Unknown UserId detected!")
+            self.isLoginRedirectNeed = true
+        }
+        
+        if self.service.prepareExecutor() {
+            self.userData = service.dto
+            self.isViewModelReady = true
+            print("[HomeViewModel] Successfully prepared viewModel")
             
-            if await self.service.prepareService() {
-                await updateUserData()
-                self.isViewModelReady = true
-                print("[HomeViewModel] Successfully prepare viewModel")
-                
-            } else {
-                print("[HomeViewModel] Failed to Initialize ViewModel process")
-                self.isLoginRedirectNeed = true
-            }
+        } else {
+            print("[HomeViewModel] Failed to Initialize ViewModel")
+            self.isLoginRedirectNeed = true
         }
     }
     
+    @MainActor
     func updateData() {
-        Task{
-            if await self.service.updateService() {
-                await updateUserData()
-                await updateUserDataChallenge()
-            } else {
-                print("[HomeViewModel] Failed to update ViewModel userData")
-                self.isViewModelReady = false
-            }
+        if self.service.updateExecutor() {
+            self.userData = service.dto
+            self.isViewModelReady = true
+            print("[HomeViewModel] Successfully update viewModel")
+        } else {
+            print("[HomeViewModel] Failed to update ViewModel userData")
+            self.isViewModelReady = false
         }
     }
     
@@ -101,57 +99,58 @@ final class HomeViewModel: ObservableObject {
 }
 
 // MARK: Data Change Detector
-// TODO: Need To Update with using 'userData' version
-extension HomeViewModel {
-    
-    func tryChallenge(with challengeId: Int) {
-        Task{
-            do {
-                try await service.challengeSC.setMyChallenges(with: challengeId)
-                await updateUserDataChallenge()
-                
-            } catch let error {
-                // Handle the error here
-                print("[HomeViewModel] Failed to Set Challenge: \(error.localizedDescription)")
-            }
-        }
-    }
-    
-    func quitChallenge(with challengeId: Int) {
-        Task {
-            do {
-                try await service.challengeSC.disableMyChallenge(with: challengeId)
-                await updateUserDataChallenge()
-                
-            } catch let error {
-                // Handle the error here
-                print("[HomeViewModel] Failed to Disable Challenge: \(error.localizedDescription)")
-            }
-        }
-    }
-
-    func completeChallenge(with challengeId: Int) {
-        Task {
-            do {
-                try await service.challengeSC.rewardMyChallenge(with: challengeId)
-                await updateUserDataChallenge()
-                
-            } catch let error {
-                // Handle the error here
-                print("[HomeViewModel] Failed to Disable Challenge: \(error.localizedDescription)")
-            }
-        }
-    }
-    
-    @MainActor
-    private func updateUserData() async {
-        self.userData = self.service.dto
-    }
-    
-    @MainActor
-    private func updateUserDataChallenge() async {
-        self.userData.myChallenges = service.challengeSC.myChallenges
-        self.userData.challenges = service.challengeSC.challengesDTO
-        self.userData.statData = service.challengeSC.statDTO
-    }
-}
+/* TODO: Need To Update with using 'userData' version
+ extension HomeViewModel {
+ 
+ func tryChallenge(with challengeId: Int) {
+ Task{
+ do {
+ try await service.challengeSC.setMyChallenges(with: challengeId)
+ await updateUserDataChallenge()
+ 
+ } catch let error {
+ // Handle the error here
+ print("[HomeViewModel] Failed to Set Challenge: \(error.localizedDescription)")
+ }
+ }
+ }
+ 
+ func quitChallenge(with challengeId: Int) {
+ Task {
+ do {
+ try await service.challengeSC.disableMyChallenge(with: challengeId)
+ await updateUserDataChallenge()
+ 
+ } catch let error {
+ // Handle the error here
+ print("[HomeViewModel] Failed to Disable Challenge: \(error.localizedDescription)")
+ }
+ }
+ }
+ 
+ func completeChallenge(with challengeId: Int) {
+ Task {
+ do {
+ try await service.challengeSC.rewardMyChallenge(with: challengeId)
+ await updateUserDataChallenge()
+ 
+ } catch let error {
+ // Handle the error here
+ print("[HomeViewModel] Failed to Disable Challenge: \(error.localizedDescription)")
+ }
+ }
+ }
+ 
+ @MainActor
+ private func updateUserData() async {
+ self.userData = self.service.dto
+ }
+ 
+ @MainActor
+ private func updateUserDataChallenge() async {
+ self.userData.myChallenges = service.challengeSC.myChallenges
+ self.userData.challenges = service.challengeSC.challengesDTO
+ self.userData.statData = service.challengeSC.statDTO
+ }
+ }
+ */

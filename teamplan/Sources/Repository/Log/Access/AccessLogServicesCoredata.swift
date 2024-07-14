@@ -11,47 +11,47 @@ import CoreData
 
 //MARK: Main
 
-final class AccessLogServicesCoredata: AccessLogObjectManage {
+final class AccessLogServicesCoredata {
     typealias Entity = AccessLogEntity
     typealias Object = AccessLog
     
-    var context: NSManagedObjectContext
-    init() {
-        self.context = LocalStorageManager.shared.context
-    }
+    var object = AccessLog()
+    var objects = [AccessLog]()
     
-    func setObject(with object: Object) -> Bool {
-        createEntity(with: object)
+    func setObject(context: NSManagedObjectContext, object: Object) -> Bool {
+        let entity = AccessLogEntity(context: context)
+        createEntity(with: object, at: entity)
+        return checkEntity(with: entity)
     }
     
     // Get: Single Log
-    func getLatestObject(with userId: String) throws -> Object {
-        let entity = try getLatestEntity(with: userId)
-        return try convertToObject(with: entity)
+    func getLatestObject(context: NSManagedObjectContext, userId: String) throws -> Bool {
+        let entity = try getLatestEntity(context: context, userId: userId)
+        return convertToObject(with: entity)
     }
     
     // Get: Full Log
-    func getFullObjects(with userId: String) throws -> [Object] {
-        let entities = try getFullEntity(with: userId)
+    func getFullObjects(context: NSManagedObjectContext, userId: String) throws -> Bool {
+        let entities = try getFullEntity(context: context, userId: userId)
         
         if entities.isEmpty {
-            print("[AccessLogRepo] There is no log to get")
-            return []
+            print("[Coredata-AccessLog] There is no log to get")
+            return false
         }
         
-        return try convertToObjects(with: entities)
+        return convertToObjects(with: entities)
     }
     
-    func deleteObject(with userId: String) throws {
-        let entities = try getFullEntity(with: userId)
+    func deleteObject(context: NSManagedObjectContext, userId: String) throws {
+        let entities = try getFullEntity(context: context, userId: userId)
         
         if entities.isEmpty {
-            print("[AccessLogRepo] There is no log to delete")
+            print("[Coredata-AccessLog] There is no log to delete")
             return
         }
         
         for entity in entities {
-            self.context.delete(entity)
+            context.delete(entity)
         }
     }
 }
@@ -60,8 +60,8 @@ final class AccessLogServicesCoredata: AccessLogObjectManage {
 
 extension AccessLogServicesCoredata {
     
-    func isObjectExist(with userId: String) -> Bool {
-        let request = getFullFetchRequest(with: userId, sortNeed: false)
+    func isObjectExist(context: NSManagedObjectContext, userId: String) -> Bool {
+        let request = constructFullFetchRequest(with: userId, sortNeed: false)
         do {
             let count = try context.count(for: request)
             return count > 0
@@ -75,26 +75,25 @@ extension AccessLogServicesCoredata {
 
 extension AccessLogServicesCoredata {
     
-    private func createEntity(with log: Object) -> Bool {
-        let entity = Entity(context: context)
-        
+    private func createEntity(with log: Object, at entity: AccessLogEntity) {
         entity.user_id = log.userId
         entity.access_record = log.accessRecord
-        
-        // Optional property nil checks
+    }
+    
+    private func checkEntity(with entity: AccessLogEntity) -> Bool {
         if entity.user_id == nil {
-            print("[AccessLogRepo] nil detected: 'user_id'")
+            print("[Coredata-AccessLog] nil detected: 'user_id'")
             return false
         }
         if entity.access_record == nil {
-            print("[AccessLogRepo] nil detected: 'access_record'")
+            print("[Coredata-AccessLog] nil detected: 'access_record'")
             return false
         }
         return true
     }
     
-    private func getFullFetchRequest(with userId: String, sortNeed: Bool) -> NSFetchRequest<Entity> {
-        let fetchRequest: NSFetchRequest<Entity> = Entity.fetchRequest()
+    private func constructFullFetchRequest(with userId: String, sortNeed: Bool) -> NSFetchRequest<AccessLogEntity> {
+        let fetchRequest: NSFetchRequest<AccessLogEntity> = AccessLogEntity.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: EntityPredicate.accessLog.format, userId)
         
         if sortNeed {
@@ -103,17 +102,17 @@ extension AccessLogServicesCoredata {
         return fetchRequest
     }
     
-    private func getFullEntity(with userId: String) throws -> [Entity] {
-        let request = getFullFetchRequest(with: userId, sortNeed: false)
-        return try self.context.fetch(request)
+    private func getFullEntity(context: NSManagedObjectContext, userId: String) throws -> [AccessLogEntity] {
+        let request = constructFullFetchRequest(with: userId, sortNeed: false)
+        return try context.fetch(request)
     }
     
-    private func getLatestEntity(with userId: String) throws -> Entity {
-        let request = getFullFetchRequest(with: userId, sortNeed: true)
+    private func getLatestEntity(context: NSManagedObjectContext, userId: String) throws -> AccessLogEntity {
+        let request = constructFullFetchRequest(with: userId, sortNeed: true)
         request.fetchLimit = 1
         
-        guard let entity = try self.context.fetch(request).first else {
-            throw CoredataError.fetchFailure(serviceName: .cd, dataType: .log)
+        guard let entity = try context.fetch(request).first else {
+            throw CoredataError.fetchFailure(serviceName: .cd, dataType: .aclog)
         }
         return entity
     }
@@ -123,21 +122,27 @@ extension AccessLogServicesCoredata {
 
 extension AccessLogServicesCoredata {
     
-    private func convertToObject(with entity: Entity) throws -> Object {
+    private func convertToObject(with entity: AccessLogEntity) -> Bool {
         guard let userId = entity.user_id,
               let accessRecord = entity.access_record
         else {
-            throw CoredataError.convertFailure(serviceName: .cd, dataType: .log)
+            print("[Coredata-AccessLog] Failed to fetch data from entity")
+            return false
         }
-        return AccessLog(userId: userId, accessDate: accessRecord)
+        self.object = AccessLog(userId: userId, accessDate: accessRecord)
+        return true
     }
     
-    private func convertToObjects(with entities: [Entity]) throws -> [Object] {
-        var logList: [Object] = []
-        for entity in entities {
-            let object = try convertToObject(with: entity)
-            logList.append(AccessLog(userId: object.userId, accessDate: object.accessRecord))
+    private func convertToObjects(with entities: [AccessLogEntity]) -> Bool {
+        self.objects = entities.compactMap { entity in
+            guard let userId = entity.user_id,
+                  let accessRecord = entity.access_record
+            else {
+                print("[Coredata-AccessLog] Failed to convert entity to object")
+                return nil
+            }
+            return AccessLog(userId: userId, accessDate: accessRecord)
         }
-        return logList
+        return !self.objects.isEmpty
     }
 }

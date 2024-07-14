@@ -40,7 +40,7 @@ final class ProjectExtendLogServicesFirestore: ExtendLogDocsManage {
             let snapshot = try await docsRef.getDocument()
             
             guard let data = snapshot.data() else {
-                throw FirestoreError.fetchFailure(serviceName: .fs, dataType: .log)
+                throw FirestoreError.fetchFailure(serviceName: .fs, dataType: .aclog)
             }
             objectList.append(try convertToObject(with: data, and: userId))
         }
@@ -94,7 +94,7 @@ extension ProjectExtendLogServicesFirestore {
               let totalRegistedTodo = data["total_registed_todo"] as? Int,
               let totalFinishedTodo = data["total_finished_todo"] as? Int 
         else {
-            throw FirestoreError.convertFailure(serviceName: .fs, dataType: .log)
+            throw FirestoreError.convertFailure(serviceName: .fs, dataType: .aclog)
         }
         
         return ProjectExtendLog(

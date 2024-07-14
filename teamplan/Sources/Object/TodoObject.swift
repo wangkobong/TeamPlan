@@ -25,6 +25,15 @@ struct TodoObject{
         self.pinned = pinned
         self.status = status
     }
+    
+    init(){
+        self.projectId = 0
+        self.todoId = 0
+        self.userId = "unknown"
+        self.desc = "unknown"
+        self.pinned = false
+        self.status = .finish
+    }
 }
 
 enum TodoStatus: Int {

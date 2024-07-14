@@ -6,11 +6,16 @@
 //  Copyright © 2024 team1os. All rights reserved.
 //
 
+import CoreData
 import Foundation
 import FirebaseAuth
 
 final class MypageService {
     
+    // shared
+    var mypageDTO: MypageDTO
+    
+    // private
     private let userCD = UserServicesCoredata()
     private let statCD = StatisticsServicesCoredata()
     private let challengeCD = ChallengeServicesCoredata()
@@ -20,29 +25,44 @@ final class MypageService {
     
     private var userId: String
     private var completedChallenges: Int
+    private let context: LocalStorageManager
     
     init(userId: String) {
         self.userId = userId
         self.completedChallenges = 0
         self.deleteSync = DeleteSynchronize(userId: userId)
+        self.context = LocalStorageManager.shared
+        self.mypageDTO = MypageDTO()
     }
     
-    func prepareService() async throws {
-        self.completedChallenges = try await challengeCD.countCompleteObjects(with: self.userId)
-    }
-    
-    func getMypageDTO() throws -> MypageDTO {
-        let user = try userCD.getObject(with: userId)
-        let stat = try statCD.getObject(with: userId)
-        return MypageDTO(
-            nickName: user.name,
-            protected: stat.totalFinishedProjects,
-            destroyed: stat.totalFailedProjects,
-            serviceTerm: stat.term,
-            completedProjects: stat.totalFinishedProjects,
-            completedChallenges: completedChallenges,
-            completedTodos: stat.totalFinishedTodos
-        )
+    func prepareService() -> Bool {
+        do {
+            let context = self.context.context
+            
+            try context.performAndWait{
+                self.completedChallenges = try challengeCD.countCompleteObjects(context: context, userId: userId)
+                let isUserDataFetched = try userCD.getObject(context: context, userId: userId)
+                let isStatDataFetched = try statCD.getObject(context: context, userId: userId)
+                
+                if isUserDataFetched && isStatDataFetched {
+                    let user = userCD.object
+                    let stat = statCD.object
+                    self.mypageDTO = MypageDTO(
+                        nickName: user.name,
+                        protected: stat.totalFinishedProjects,
+                        destroyed: stat.totalFailedProjects,
+                        serviceTerm: stat.term,
+                        completedProjects: stat.totalFinishedProjects,
+                        completedChallenges: completedChallenges,
+                        completedTodos: stat.totalFinishedTodos
+                    )
+                }
+            }
+            return true
+        } catch {
+            print("[MypageService] Failed to prepare service data")
+            return false
+        }
     }
     
     func logout() async -> Bool {

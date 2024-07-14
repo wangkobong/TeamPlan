@@ -65,7 +65,7 @@ struct MyProjectView: View {
     private var projectList: some View {
         VStack {
             TabView(selection: $currentPage) {
-                ForEach(Array(homeVM.userData.projectsDTO.enumerated()), id: \.element.id) { index, project in
+                ForEach(Array(homeVM.userData.projectsDTOs.enumerated()), id: \.element.id) { index, project in
                     MyProjectCardView(stat: homeVM.userData.statData, project: project)
                         .tag(index)
                 }
@@ -83,7 +83,7 @@ struct MyProjectView: View {
     //MARK: Page Control
     private var pageControl: some View {
         HStack(spacing: 4) {
-            ForEach(0..<homeVM.userData.projects.count, id: \.self) { index in
+            ForEach(0..<homeVM.userData.projectsDTOs.count, id: \.self) { index in
                 Circle()
                     .frame(width: 6, height: 6)
                     .foregroundColor(index == currentPage ? .theme.mainPurpleColor : .init(hex: "D9D9D9"))

@@ -30,7 +30,7 @@ final class AccessLogServicesFirestore: AccessLogDocsManage {
         let snapshot = try await docsRef.getDocument()
         
         guard let data = snapshot.data() else {
-            throw FirestoreError.fetchFailure(serviceName: .fs, dataType: .log)
+            throw FirestoreError.fetchFailure(serviceName: .fs, dataType: .aclog)
         }
         return try convertToObject(with: data)
     }
@@ -82,12 +82,12 @@ extension AccessLogServicesFirestore {
     private func convertToObject(with data: [String: Any]) throws -> [AccessLog] {
         guard let userId = data["user_id"] as? String,
               let stringAccessRecord = data["record"] as? [String] else {
-            throw FirestoreError.convertFailure(serviceName: .fs, dataType: .log)
+            throw FirestoreError.convertFailure(serviceName: .fs, dataType: .aclog)
         }
         
         let logList: [AccessLog] = try stringAccessRecord.map { stringRecord in
             guard let record = DateFormatter.standardFormatter.date(from: stringRecord) else {
-                throw FirestoreError.convertFailure(serviceName: .fs, dataType: .log)
+                throw FirestoreError.convertFailure(serviceName: .fs, dataType: .aclog)
             }
             return AccessLog(userId: userId, accessDate: record)
         }

@@ -29,11 +29,11 @@ extension BasicObjectManage {
 protocol FullObjectManage: BasicObjectManage {
     associatedtype DTO
     
-    func setObject(with object: Object) throws -> Bool
-    func getObject(with userId: String) throws -> Object
-    func updateObject(with dto: DTO) throws -> Bool
-    func deleteObject(with userId: String) throws
-    func isObjectExist(with userId: String) -> Bool
+    func setObject(context: NSManagedObjectContext, object: Object) throws -> Bool
+    func getObject(context: NSManagedObjectContext, userId: String) throws -> Bool
+    func updateObject(context: NSManagedObjectContext, dto: DTO) throws -> Bool
+    func deleteObject(context: NSManagedObjectContext, userId: String) throws -> Bool
+    func isObjectExist(context: NSManagedObjectContext, userId: String) -> Bool
 }
 
 
@@ -146,13 +146,15 @@ enum EntityPredicate {
     case project
     case projectTotalList
     case projectValidList
+    case projectAlertList
     case projectUploadList
     case projectTruncateList
     
-    case fullChallenge
     case singleChallenge
+    case fullChallenge
+    case myChallenge
     case completeChallenge
-    case targetChallenge
+    case changedChallenge
     
     var format: String {
         switch self {
@@ -169,13 +171,15 @@ enum EntityPredicate {
             return "user_id == %@ AND category == %d"
             
         // challenge
-        case .fullChallenge:
-            return "user_id == %@"
         case .singleChallenge:
             return "user_id == %@ AND challenge_id == %d"
+        case .fullChallenge:
+            return "user_id == %@"
+        case .myChallenge:
+            return "user_id == %@ AND select_status == %d"
         case .completeChallenge:
             return "user_id == %@ AND status == %@"
-        case .targetChallenge:
+        case .changedChallenge:
             return "user_id == %@ AND (selected_at > %@ OR unselected_at > %@ OR finished_at > %@)"
             
         // project
@@ -185,6 +189,8 @@ enum EntityPredicate {
             return "user_id == %@"
         case .projectValidList:
             return "user_id == %@ AND (status == %d OR status == %d)"
+        case .projectAlertList:
+            return "user_id == %@ AND deadline >= %@ AND (status == %d OR status == %d)"
         case .projectUploadList:
             return "user_id == %@ AND (status == %d OR status == %d OR status == %d)"
         case .projectTruncateList:

@@ -11,42 +11,51 @@ import CoreData
 
 //MARK: Main
 
-final class TodoServiceCoredata: TodoObjectManage {
+final class TodoServiceCoredata {
     typealias Entity = TodoEntity
     typealias Object = TodoObject
     typealias DTO = TodoUpdateDTO
 
-    var context: NSManagedObjectContext
-    init() {
-        self.context = LocalStorageManager.shared.context
-    }
+    // shared
+    var object = TodoObject()
+    var objectList = [TodoObject]()
     
-    func setObject(with object: TodoObject) throws -> Bool {
-        return try createEntity(with: object)
-    }
-    
-    func getObject(userId: String, projectId: Int, todoId: Int) throws -> Object {
-        let entity = try getEntity(userId: userId, projectId: projectId, todoId: todoId)
-        return try convertToObject(with: entity)
-    }
-    
-    func getObjects(userId: String, projectId: Int) throws -> [Object] {
-        let entities = try getEntities(userId: userId, projectId: projectId)
-        return try entities.map { try convertToObject(with: $0) }
-    }
-    
-    func updateObject(updated: DTO) throws -> Bool {
-        let entity = try getEntity(
-            userId: updated.userId, 
-            projectId: updated.projectId,
-            todoId: updated.todoId
+    func setObject(context: NSManagedObjectContext, with object: TodoObject) throws -> Bool {
+        let todoEntity = TodoEntity(context: context)
+        let projectEntity = try getProjectEntity(
+            context: context, userId: object.userId, projectId: object.projectId
         )
+        createEntity(with: todoEntity, and: projectEntity, object: object)
+        return checkEntity(with: todoEntity)
+    }
+    
+    func getObject(context: NSManagedObjectContext, userId: String, projectId: Int, todoId: Int) throws -> Bool {
+        let entity = try getEntity(context: context, userId: userId, projectId: projectId, todoId: todoId)
+        return convertToObject(with: entity)
+    }
+    
+    func getObjectList(context: NSManagedObjectContext, userId: String, projectId: Int) throws -> Bool {
+        let entities = try getEntities(context: context, userId: userId, projectId: projectId)
+        return convertToObjects(with: entities)
+    }
+    
+    func updateObject(context: NSManagedObjectContext, updated: DTO) throws -> Bool {
+        let entity = try getEntity(context: context, userId: updated.userId, projectId: updated.projectId, todoId: updated.todoId)
         return checkupdate(from: entity, to: updated)
     }
     
-    func deleteObject(userId: String, projectId: Int, todoId: Int) throws {
-        let entity = try getEntity(userId: userId, projectId: projectId, todoId: todoId)
-        self.context.delete(entity)
+    func deleteObjectList(context: NSManagedObjectContext, userId: String, projectId: Int) throws -> Bool {
+        let entities = try getEntities(context: context, userId: userId, projectId: projectId)
+        
+        if entities.isEmpty {
+            print("[Coredata-Todo] There is no todo to delete")
+            return true
+        }
+        
+        for entity in entities {
+            context.delete(entity)
+        }
+        return true
     }
 }
 
@@ -55,19 +64,18 @@ final class TodoServiceCoredata: TodoObjectManage {
 extension TodoServiceCoredata{
     
     // Set
-    private func createEntity(with object: TodoObject) throws -> Bool {
-        let projectEntity = try getProjectEntity(userId: object.userId, projectId: object.projectId)
-        let entity = Entity(context: context)
+    private func createEntity(with todoEntity: TodoEntity, and projectEntity: ProjectEntity, object: TodoObject) {
         
-        entity.project_relationship = projectEntity
-        entity.todo_id = Int32(object.todoId)
-        entity.project_id = Int32(object.projectId)
-        entity.user_id = object.userId
-        entity.desc = object.desc
-        entity.pinned = object.pinned
-        entity.status = Int32(object.status.rawValue)
-        
-        // Optional property nil checks
+        todoEntity.project_relationship = projectEntity
+        todoEntity.todo_id = Int32(object.todoId)
+        todoEntity.project_id = Int32(object.projectId)
+        todoEntity.user_id = object.userId
+        todoEntity.desc = object.desc
+        todoEntity.pinned = object.pinned
+        todoEntity.status = Int32(object.status.rawValue)
+    }
+    
+    private func checkEntity(with entity: TodoEntity) -> Bool {
         if entity.project_relationship == nil {
             print("[TodoRepo] nil detected: 'project_relationship'")
             return false
@@ -84,21 +92,24 @@ extension TodoServiceCoredata{
     }
     
     // Fetch: Project Entity
-    private func getProjectEntity(userId: String, projectId: Int) throws -> ProjectEntity {
+    private func getProjectEntity(context: NSManagedObjectContext, userId: String, projectId: Int) throws -> ProjectEntity {
         let fetchReq: NSFetchRequest<ProjectEntity> = ProjectEntity.fetchRequest()
         fetchReq.predicate = NSPredicate(format: EntityPredicate.project.format, userId, projectId)
         fetchReq.fetchLimit = 1
         
-        guard let entity = try self.context.fetch(fetchReq).first else {
+        guard let entity = try context.fetch(fetchReq).first else {
             throw CoredataError.fetchFailure(serviceName: .cd, dataType: .project)
         }
         return entity
     }
     
     // Fetch: Multi Todo
-    private func getEntities(userId: String, projectId: Int) throws -> [Entity] {
-        let projectEntity = try getProjectEntity(userId: userId, projectId: projectId)
-        
+    private func getEntities(context: NSManagedObjectContext, userId: String, projectId: Int) throws -> [Entity] {
+        let projectEntity = try getProjectEntity(
+            context: context,
+            userId: userId,
+            projectId: projectId
+        )
         guard let todoEntities = projectEntity.todo_relationship as? Set<Entity> else {
             throw CoredataError.fetchFailure(serviceName: .cd, dataType: .todo)
         }
@@ -106,8 +117,12 @@ extension TodoServiceCoredata{
     }
     
     // Fetch: Single Todo
-    private func getEntity(userId: String, projectId: Int, todoId: Int) throws -> TodoEntity {
-        guard let entity = try getEntities(userId: userId, projectId: projectId).first(where: { $0.todo_id == todoId }) else {
+    private func getEntity(context: NSManagedObjectContext, userId: String, projectId: Int, todoId: Int) throws -> TodoEntity {
+        guard let entity = try getEntities(
+            context: context,
+            userId: userId,
+            projectId: projectId
+        ).first(where: { $0.todo_id == todoId }) else {
             throw CoredataError.searchFailure(serviceName: .cd, dataType: .todo)
         }
         return entity
@@ -119,13 +134,15 @@ extension TodoServiceCoredata{
 extension TodoServiceCoredata{
     
     // Converter: to Object
-    private func convertToObject(with entity: TodoEntity) throws -> TodoObject {
+    private func convertToObject(with entity: TodoEntity) -> Bool {
         guard let userId = entity.user_id,
               let desc = entity.desc,
-              let status = TodoStatus(rawValue: Int(entity.status)) else {
-            throw CoredataError.convertFailure(serviceName: .cd, dataType: .todo)
+              let status = TodoStatus(rawValue: Int(entity.status)) 
+        else {
+            print("[Coredata-Todo] Failed to fetch entity data")
+            return false
         }
-        return TodoObject(
+        self.object = TodoObject(
             projectId: Int(entity.project_id),
             todoId: Int(entity.todo_id),
             userId: userId,
@@ -133,6 +150,20 @@ extension TodoServiceCoredata{
             pinned: entity.pinned,
             status: status
         )
+        return true
+    }
+    
+    private func convertToObjects(with entities: [Entity]) -> Bool {
+        self.objectList = []
+        for entity in entities {
+            if convertToObject(with: entity) {
+                self.objectList.append(self.object)
+            } else {
+                print("[Coredata-Todo] Failed to convert entity to object")
+                return false
+            }
+        }
+        return true
     }
     
     // Update Check

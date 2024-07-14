@@ -66,7 +66,7 @@ extension NotificationServicesCoredata {
             entity.notify_id = Int32(projectId)
         } else {
             print("[NotifyRepo] Failed to extract both 'projectId' and 'challengeId'")
-            throw CoredataError.fetchFailure(serviceName: .challenge, dataType: .log)
+            throw CoredataError.fetchFailure(serviceName: .challenge, dataType: .aclog)
         }
         
         entity.user_id = object.userId
@@ -84,7 +84,7 @@ extension NotificationServicesCoredata {
         fetchReq.fetchLimit = 1
         
         guard let entity = try fetchEntity(with: fetchReq, and: self.context) else {
-            throw CoredataError.fetchFailure(serviceName: .cd, dataType: .log)
+            throw CoredataError.fetchFailure(serviceName: .cd, dataType: .aclog)
         }
         return entity
     }
@@ -117,7 +117,7 @@ extension NotificationServicesCoredata {
               let date = entity.date,
               let type = NotificationCategory(rawValue: Int(entity.category))
         else {
-            throw CoredataError.convertFailure(serviceName: .cd, dataType: .log)
+            throw CoredataError.convertFailure(serviceName: .cd, dataType: .aclog)
         }
         let notifyId = Int(entity.notify_id)
         let isCheck = entity.is_check
@@ -144,7 +144,7 @@ extension NotificationServicesCoredata {
                 isCheck: isCheck
             )
         default:
-            throw CoredataError.convertFailure(serviceName: .cd, dataType: .log)
+            throw CoredataError.convertFailure(serviceName: .cd, dataType: .aclog)
         }
     }
 }
