@@ -194,9 +194,21 @@ extension ProjectService {
     private func prepareProjectData(with context: NSManagedObjectContext) -> Bool {
         do {
             if try projectCD.getValidObjects(context: context, with: userId) {
+                
+                // fetch data
                 for project in projectCD.objectList {
                     self.projectList.append(try convertExistObjectToDTO(with: project))
                 }
+                if self.projectList.isEmpty {
+                    return true
+                }
+                
+                // sort data
+                let arraySize = self.projectList.count - 1
+                for index in 0...arraySize {
+                    sortTodoArray(with: index)
+                }
+                
                 return true
             } else {
                 print("[ProjectService] Failed to fetch ProjectData")
@@ -771,6 +783,7 @@ extension ProjectService {
                 }
                 
                 // update stat
+                print(statDTO)
                 var updatedStat = StatUpdateDTO(
                     userId: userId,
                     newTotalRegistedTodos: statDTO.totalRegistedTodos + 1
@@ -797,10 +810,10 @@ extension ProjectService {
     // update DTO
     private func updateDTOAboutTodoCreation(with newTodo: TodoObject, and projectIndex: Int) {
         let todoDTO = TodoDTO(with: newTodo)
-        self.projectList[projectIndex].todoList.append(todoDTO)
+        self.statDTO.totalRegistedTodos += 1
+        self.projectList[projectIndex].todoList.insert(todoDTO, at: 0)
         self.projectList[projectIndex].todoCanRegist -= 1
         self.projectList[projectIndex].todoRemain += 1
-        
     }
 }
 
@@ -836,7 +849,8 @@ extension ProjectService {
                 let updatedTodo = TodoUpdateDTO(
                     projectId: projectId,
                     todoId: todoId,
-                    userId: userId
+                    userId: userId,
+                    newStatus: newStatus
                 )
                 guard try todoCD.updateObject(context: context, updated: updatedTodo) else {
                     print("[ProjectService] TodoObject change not detected: [\(todoId)] in project: [\(projectId)]")
@@ -851,6 +865,7 @@ extension ProjectService {
                 let projectData = projectCD.object
                 var updatedStat = StatUpdateDTO(userId: userId)
                 var updatedProject = ProjectUpdateDTO(projectId: projectId, userId: userId)
+                
                 switch newStatus {
                 case .finish:
                     updatedStat.newTotalFinishedTodos = statDTO.totalFinishedTodos + 1
@@ -893,6 +908,7 @@ extension ProjectService {
             self.projectList[projectIndex].todoRemain += 1
         }
         self.projectList[projectIndex].todoList[todoIndex].status = newStatus
+        sortTodoArray(with: projectIndex)
     }
 }
 
@@ -964,6 +980,19 @@ extension ProjectService {
             throw CoredataError.convertFailure(serviceName: .project, dataType: .project)
         }
         return todoIndex
+    }
+    
+    private func sortTodoArray(with projectIndex: Int) {
+        if  self.projectList[projectIndex].todoList.isEmpty {
+            return
+        }
+        let sortedList = self.projectList[projectIndex].todoList.sorted{ (leftValue, rightValue) -> Bool in
+            if leftValue.status == rightValue.status {
+                return leftValue.todoId > rightValue.todoId
+            }
+            return leftValue.status.rawValue < rightValue.status.rawValue
+        }
+        self.projectList[projectIndex].todoList  = sortedList
     }
 }
 
