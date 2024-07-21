@@ -141,7 +141,7 @@ extension AuthenticationViewModel {
     func requestNonceSignInApple() -> String {
         let candidateNonce = loginService.requestNonce()
         let encodedNonce = loginService.reqeustNonceEncode(nonce: candidateNonce)
-        self.nonce = encodedNonce
+        self.nonce = candidateNonce
         return encodedNonce
     }
     

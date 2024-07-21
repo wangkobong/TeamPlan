@@ -174,9 +174,6 @@ struct LoginView: View {
                 )
                 .blendMode(.overlay)
             }
-   
-            
-
         }
         .padding(.horizontal, 55)
     }
@@ -195,6 +192,7 @@ struct LoginView: View {
     // Apple login
     // TODO: Need Custom Exception
     private func appleLoginRequest(request: ASAuthorizationAppleIDRequest) {
+        self.isLoading = true
         request.requestedScopes = [.fullName, .email]
         request.nonce = self.authViewModel.requestNonceSignInApple()
     }
@@ -207,7 +205,9 @@ struct LoginView: View {
                 await socialLoginProcess(with: userInfo)
             }
         case .failure(let error):
-            print("Apple Social Login Falied: \(error.localizedDescription)")
+            print("[Login View] Apple Social Login Falied: \(error.localizedDescription)")
+            showLoginAlert = true
+            isLoading = false
         }
     }
     
@@ -220,7 +220,8 @@ struct LoginView: View {
                 let userInfo = try await authViewModel.signInGoogle()
                 await socialLoginProcess(with: userInfo)
             } catch {
-                print("Google login failed: \(error.localizedDescription)")
+                print("[Login View] Google login failed: \(error.localizedDescription)")
+                showLoginAlert = true
                 isLoading = false
             }
         }
