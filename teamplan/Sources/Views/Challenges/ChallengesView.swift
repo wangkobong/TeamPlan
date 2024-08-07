@@ -52,9 +52,9 @@ struct ChallengesView: View {
                 .toolbar {
                     toolbarContent
                 }
-                .challengeAlert(isPresented: $isPresented) {
-                    challengeAlertView
-                }
+//                .challengeAlert(isPresented: $isPresented) {
+//                    challengeAlertView
+//                }
                 .toastView(toast: $toast)
             }
         }
@@ -256,7 +256,8 @@ extension ChallengesView {
     private func gridPage(for pageIndex: Int) -> some View {
         let startIndex = pageIndex * 12
         let endIndex = min(startIndex + 12, viewModel.challengeList.count)
-        let pageItems = viewModel.challengeList[startIndex..<endIndex]
+        let sortedChallenges = viewModel.challengeList.sorted(by: { $0.challengeId < $1.challengeId })
+        let pageItems = sortedChallenges[startIndex..<endIndex]
         
         return LazyVGrid(columns: columns, spacing: 10) {
             ForEach(pageItems.indices, id: \.self) { index in
