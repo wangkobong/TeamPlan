@@ -262,19 +262,18 @@ extension ChallengesView {
     private func gridPage(for pageIndex: Int) -> some View {
         let startIndex = pageIndex * 12
         let endIndex = min(startIndex + 12, viewModel.challengeList.count)
-        let sortedChallenges = viewModel.challengeList.sorted(by: { $0.challengeId < $1.challengeId })
-        let pageItems = sortedChallenges[startIndex..<endIndex]
+        let pageItems = viewModel.challengeList[startIndex..<endIndex]
         
         return LazyVGrid(columns: columns, spacing: 10) {
             ForEach(pageItems.indices, id: \.self) { index in
-                let absoluteIndex = startIndex + index
+                let absoluteIndex = startIndex + (index - pageItems.startIndex)
                 let item = pageItems[index]
                 ChallengeDetailView(challenge: item)
                     .frame(width: 62, height: 120)
                     .onTapGesture {
                         indexForAlert = absoluteIndex
                         setChallengeAlert(with: item)
-                        print("클릭: \(item)")
+                        print("클릭: \(item), 인덱스: \(absoluteIndex)")
                     }
             }
         }

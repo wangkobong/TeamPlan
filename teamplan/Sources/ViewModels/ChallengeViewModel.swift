@@ -51,7 +51,7 @@ final class ChallengeViewModel: ObservableObject {
         service.$challengesDTO
             .receive(on: DispatchQueue.main)
             .sink { [weak self] challengeList in
-                self?.challengeList = challengeList
+                self?.challengeList = challengeList.sorted(by: { $0.challengeId < $1.challengeId })
             }
             .store(in: &cancellables)
     }
