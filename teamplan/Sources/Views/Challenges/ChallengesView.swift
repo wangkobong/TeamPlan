@@ -52,9 +52,9 @@ struct ChallengesView: View {
                 .toolbar {
                     toolbarContent
                 }
-//                .challengeAlert(isPresented: $isPresented) {
-//                    challengeAlertView
-//                }
+                .challengeAlert(isPresented: $isPresented) {
+                    challengeAlertView
+                }
                 .toastView(toast: $toast)
             }
         }
@@ -71,10 +71,16 @@ struct ChallengesView: View {
     }
     
     private var challengeAlertView: ChallengeAlertView {
-        ChallengeAlertView(
+        let challenge: Binding<ChallengeDTO>
+        if viewModel.challengeList.indices.contains(self.indexForAlert) {
+            challenge = $viewModel.challengeList[self.indexForAlert]
+        } else {
+            challenge = .constant(ChallengeDTO(challengeId: 0, title: "", desc: "", goal: 0, type: .onboarding, reward: 0, step: 0, isFinished: false, isSelected: false, isUnlock: false))
+        }
+        return ChallengeAlertView(
             isPresented: $isPresented,
             allChallenge: $viewModel.challengeList,
-            challenge: $viewModel.challengeList[self.indexForAlert],
+            challenge: challenge,
             type: self.type,
             index: self.indexForAlert
         ) {
