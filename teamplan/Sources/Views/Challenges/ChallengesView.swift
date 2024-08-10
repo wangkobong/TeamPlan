@@ -71,10 +71,16 @@ struct ChallengesView: View {
     }
     
     private var challengeAlertView: ChallengeAlertView {
-        ChallengeAlertView(
+        let challenge: Binding<ChallengeDTO>
+        if viewModel.challengeList.indices.contains(self.indexForAlert) {
+            challenge = $viewModel.challengeList[self.indexForAlert]
+        } else {
+            challenge = .constant(ChallengeDTO(challengeId: 0, title: "", desc: "", goal: 0, type: .onboarding, reward: 0, step: 0, isFinished: false, isSelected: false, isUnlock: false))
+        }
+        return ChallengeAlertView(
             isPresented: $isPresented,
             allChallenge: $viewModel.challengeList,
-            challenge: $viewModel.challengeList[self.indexForAlert],
+            challenge: challenge,
             type: self.type,
             index: self.indexForAlert
         ) {
@@ -260,14 +266,14 @@ extension ChallengesView {
         
         return LazyVGrid(columns: columns, spacing: 10) {
             ForEach(pageItems.indices, id: \.self) { index in
-                let absoluteIndex = startIndex + index
+                let absoluteIndex = startIndex + (index - pageItems.startIndex)
                 let item = pageItems[index]
                 ChallengeDetailView(challenge: item)
                     .frame(width: 62, height: 120)
                     .onTapGesture {
                         indexForAlert = absoluteIndex
                         setChallengeAlert(with: item)
-                        print("클릭: \(item)")
+                        print("클릭: \(item), 인덱스: \(absoluteIndex)")
                     }
             }
         }

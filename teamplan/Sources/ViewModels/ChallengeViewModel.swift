@@ -13,13 +13,14 @@ final class ChallengeViewModel: ObservableObject {
     
     //MARK: Properties
 
-    @Published var challengeList: [ChallengeDTO]
-    @Published var myChallenges: [MyChallengeDTO]
+    @Published var challengeList: [ChallengeDTO] = []
+    @Published var myChallenges: [MyChallengeDTO] = []
     @Published var isViewModelReady: Bool = false
     @Published var isRedirectNeed: Bool = false
     
     private let userId: String
     private let service: ChallengeService
+    private var cancellables = Set<AnyCancellable>()
     
     //MARK: Initialize
     
@@ -34,11 +35,25 @@ final class ChallengeViewModel: ObservableObject {
             print("[HomeViewModel] ViewModel Initialize Failed")
             self.userId = "unknown"
         }
-        
         self.service = ChallengeService(with: self.userId)
-        self.challengeList = []
-        self.myChallenges = []
+        addSubscribers()
         Task { await self.prepareData() }
+    }
+    
+    private func addSubscribers() {
+        service.$myChallenges
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] myChallenges in
+                self?.myChallenges = myChallenges
+            }
+            .store(in: &cancellables)
+        
+        service.$challengesDTO
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] challengeList in
+                self?.challengeList = challengeList.sorted(by: { $0.challengeId < $1.challengeId })
+            }
+            .store(in: &cancellables)
     }
     
     private func prepareData() async {
@@ -48,7 +63,7 @@ final class ChallengeViewModel: ObservableObject {
         }
         
         if self.service.prepareExecutor() {
-            await updateList()
+//            await updateList()
             self.isViewModelReady = true
             print("[ChallengeViewModel] Successfully prepared viewModel: \(self.myChallenges)")
             
@@ -65,7 +80,7 @@ extension ChallengeViewModel {
     
     func setMyChallenge(with challengeId: Int) async -> Bool {
         if service.setMyChallenges(with: challengeId) {
-            await updateList()
+//            await updateList()
             print("[ChallengeViewModel] Successfully set myChallenge")
             return true
             
@@ -77,7 +92,7 @@ extension ChallengeViewModel {
     
     func disableMtChallenge(with challengeId: Int) async -> Bool {
         if service.disableMyChallenge(with: challengeId) {
-            await updateList()
+//            await updateList()
             print("[ChallengeViewModel] Successfully disable myChallenge")
             return true
             
@@ -89,7 +104,7 @@ extension ChallengeViewModel {
     
     func rewardMyChallenge(with challengeId: Int) async -> Bool {
         if service.rewardMyChallenge(with: challengeId) {
-            await updateList()
+//            await updateList()
             print("[ChallengeViewModel] Successfully reward myChallenge")
             return true
             
@@ -99,9 +114,9 @@ extension ChallengeViewModel {
         }
     }
     
-    @MainActor
-    private func updateList() {
-        self.challengeList = service.challengesDTO
-        self.myChallenges = service.myChallenges
-    }
+//    @MainActor
+//    private func updateList() {
+//        self.challengeList = service.challengesDTO
+//        self.myChallenges = service.myChallenges
+//    }
 }

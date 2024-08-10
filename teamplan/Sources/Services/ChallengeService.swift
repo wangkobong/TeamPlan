@@ -13,8 +13,8 @@ final class ChallengeService {
     
     // shared
     var rewardDTO: ChallengeRewardDTO
-    var myChallenges: [MyChallengeDTO] = []
-    var challengesDTO: [ChallengeDTO] = []
+    @Published var myChallenges: [MyChallengeDTO] = []
+    @Published var challengesDTO: [ChallengeDTO] = []
     
     // private
     private let statCD = StatisticsServicesCoredata()
@@ -590,7 +590,7 @@ extension ChallengeService {
 
 // MARK: DTO
 
-public struct ChallengeDTO: Equatable {
+public struct ChallengeDTO: Equatable, Sendable {
 
     var challengeId: Int
     let title: String
