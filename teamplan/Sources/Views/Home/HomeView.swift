@@ -12,27 +12,30 @@ import KeychainSwift
 struct HomeView: View {
     
     //MARK: Properties
-    @StateObject var homeViewModel = HomeViewModel()
-    @EnvironmentObject var authViewModel: AuthenticationViewModel
+    @StateObject private var viewModel = HomeViewModel()
+    @EnvironmentObject private var authViewModel: AuthenticationViewModel
     @AppStorage("mainViewState") var mainViewState: MainViewState?
+    
+    @State private var percent: CGFloat = 0.65
+    @State private var showingTutorial = false
+    @State private var showAlert = false
     
     @State private var isChallenging: Bool = false
     @State private var isExistProject: Bool = false
-    @State private var percent: CGFloat = 0.65
     @State private var isNotificationViewActive = false
-    @State private var showingTutorial = false
     @State private var isGuideViewActive = false
     @State private var isChallengesViewActive = false
-    @State private var isLoading = false
+    @State private var isRedirecting: Bool = false
     
-    @State private var showLogoutAlert = false
-    
+    @State private var isLoading = true
+    @State private var showLoadAlert = false
+    @State private var showUpdateAlert = false
     //MARK: Main
 
     var body: some View {
         NavigationStack {
             ZStack {
-                if !homeViewModel.isViewModelReady {
+                if isLoading {
                     LoadingView()
                 } else {
                     VStack {
@@ -47,9 +50,9 @@ struct HomeView: View {
                             userNameArea
                                 .padding(.top, 26)
                             
-                            MyProjectView(isProjectExist: $isExistProject, homeVM: homeViewModel)
+                            MyProjectView(isProjectExist: $isExistProject, homeVM: viewModel)
 
-                            MyChallengeView(homeVM: homeViewModel, isChallengeViewActive: $isChallengesViewActive)
+                            MyChallengeView(homeVM: viewModel, isChallengeViewActive: $isChallengesViewActive)
 
                             Spacer()
                         }
@@ -58,51 +61,37 @@ struct HomeView: View {
                         TutorialView()
                     }
                     .onAppear {
-                        homeViewModel.updateData()
-                        checkProperties()
+                        let isProceed = viewModel.updateData()
+                        if isProceed {
+                            checkProperties()
+                        } else {
+                            showUpdateAlert = true
+                        }
+                    }
+                    .alert(isPresented: $showUpdateAlert) {
+                        Alert(title: Text("Error"), message: Text("Failed to update data"), dismissButton: .default(Text("OK")))
                     }
                 }
             }
         }
         .onAppear {
-            isExistProject = false
-            Task {
-                isChallenging = !homeViewModel.userData.myChallenges.isEmpty
-                isExistProject = !homeViewModel.userData.projectsDTOs.isEmpty
+            let isReady = viewModel.prepareData()
+            if isReady {
+                isLoading = false
+            } else {
+                showLoadAlert = true
+                isRedirecting = true
             }
         }
-        // MyChallege Array Check
-        .onChange(of: homeViewModel.userData.myChallenges) { newValue in
-            isChallenging = !homeViewModel.userData.myChallenges.isEmpty
-        }
-        
-        // HomeViewModel Exception Handling
-        .onChange(of: homeViewModel.isLoginRedirectNeed) { newValue in
-            if newValue {
-                logout()
-            }
+        .alert(isPresented: $showLoadAlert) {
+            Alert(title: Text("Error"), message: Text("Failed to load data"), dismissButton: .default(Text("OK")))
         }
     }
     
     private func checkProperties() {
         Task {
-            isChallenging = !homeViewModel.userData.myChallenges.isEmpty
-            isExistProject = !homeViewModel.userData.projectsDTOs.isEmpty
-        }
-    }
-    
-    //MARK: Function
-    
-    private func logout() {
-        Task {
-            if await LoginService().logoutUser() {
-                withAnimation(.easeIn(duration: 2)) {
-                    mainViewState = .login
-                }
-            } else {
-                print("[HomeView] Unfinished Logout process detected")
-                mainViewState = .login
-            }
+            isChallenging = !viewModel.userData.myChallenges.isEmpty
+            isExistProject = !viewModel.userData.projectsDTOs.isEmpty
         }
     }
 }
@@ -117,7 +106,7 @@ extension HomeView {
                 .padding(.leading, -10)
             Spacer()
             
-            NavigationLink(destination: NotificationView().environmentObject(homeViewModel), isActive: $isNotificationViewActive) {
+            NavigationLink(destination: NotificationView().environmentObject(viewModel), isActive: $isNotificationViewActive) {
                 Image(systemName: "bell")
                     .foregroundColor(.black)
             }
@@ -218,7 +207,7 @@ extension HomeView {
     //MARK: userName: Name
     private var userNameSection: some View {
         HStack {
-            Text("\(homeViewModel.userData.userName)" + "님,")
+            Text("\(viewModel.userData.userName)" + "님,")
                 .font(.appleSDGothicNeo(.bold, size: 20))
                 .foregroundColor(.theme.blackColor)
                 .background(
@@ -233,7 +222,7 @@ extension HomeView {
     //MARK: userName: pharse
     private var pharseSection: some View {
         HStack {
-            Text("\(homeViewModel.userData.phrase)")
+            Text("\(viewModel.userData.phrase)")
                 .font(.appleSDGothicNeo(.bold, size: 20))
                 .foregroundColor(.theme.blackColor)
             Spacer()

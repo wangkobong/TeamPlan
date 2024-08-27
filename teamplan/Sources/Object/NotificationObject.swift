@@ -12,22 +12,26 @@ import Foundation
 struct NotificationObject {
     let userId: String
     let projectId: Int?
+    var projectStatus: ProjectNotification?
     let challengeId: Int?
+    var challengeStatus: ChallengeNoitification?
     let category: NotificationCategory
-    let title: String
-    let desc: String
-    let date: Date
-    let isCheck: Bool
+    var title: String
+    var desc: String
+    var updateAt: Date
+    var isCheck: Bool
     
     // Default initializer for unknown type
     init() {
         self.userId = "unknown"
         self.projectId = nil
+        self.projectStatus = nil
         self.challengeId = nil
+        self.challengeStatus = nil
         self.category = .unknown
         self.title = "unknown"
         self.desc = "unknown"
-        self.date = Date()
+        self.updateAt = Date()
         self.isCheck = false
     }
     
@@ -35,21 +39,46 @@ struct NotificationObject {
     init(
          userId: String,
          projectId: Int? = nil,
+         projectStatus: ProjectNotification? = nil,
          challengeId: Int? = nil,
-         type: NotificationCategory,
+         challengeStatus: ChallengeNoitification? = nil,
+         category: NotificationCategory,
          title: String,
          desc: String,
-         date: Date,
+         updateAt: Date,
          isCheck: Bool)
     {
         self.userId = userId
         self.projectId = projectId
+        self.projectStatus = projectStatus
         self.challengeId = challengeId
-        self.category = type
+        self.challengeStatus = challengeStatus
+        self.category = category
         self.title = title
         self.desc = desc
-        self.date = date
+        self.updateAt = updateAt
         self.isCheck = isCheck
+    }
+    
+    mutating func update(with dto: NotifyUpdateDTO) {
+        if let newTitle = dto.newTitle {
+            self.title = newTitle
+        }
+        if let newDesc = dto.newDesc {
+            self.desc = newDesc
+        }
+        if let newUpdateAt = dto.newUpdateAt {
+            self.updateAt = newUpdateAt
+        }
+        if let isCheck = dto.isCheck {
+            self.isCheck = isCheck
+        }
+        if let newProjectStatus = dto.newProjectStatus {
+            self.projectStatus = newProjectStatus
+        }
+        if let newChallengeStatus = dto.newChallengeStatus {
+            self.challengeStatus = newChallengeStatus
+        }
     }
 }
 
@@ -61,7 +90,7 @@ enum NotificationCategory: Int {
     case challenge = 2
 }
 
-enum projectNotification: Int {
+enum ProjectNotification: Int {
     case unknown = 0
     case ongoing = 1
     case halfway = 2
@@ -71,7 +100,7 @@ enum projectNotification: Int {
     case explode = 6
 }
 
-enum challengeNoitification: Int {
+enum ChallengeNoitification: Int {
     case unknown = 0
     case canAchieve = 1
     case canChallenge = 2

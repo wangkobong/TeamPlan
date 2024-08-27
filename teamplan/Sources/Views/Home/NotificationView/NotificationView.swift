@@ -11,21 +11,24 @@ import WrappingHStack
 
 struct NotificationView: View {
     
+    @StateObject private var viewModel = NotificationViewModel()
     @EnvironmentObject private var homeViewModel: HomeViewModel
-    @EnvironmentObject private var notificationViewModel: NotificationViewModel
+    
+    @State private var isLoading = true
+    @State private var showAlert = false
     
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
         VStack {
-            if !notificationViewModel.isViewModelReady {
+            if isLoading {
                 LoadingView()
             } else {
                 section
                     .frame(height: 61)
                 
                 ScrollView {
-                    NotificationListView(notifications: $notificationViewModel.filteredNotiList)
+                    NotificationListView(notifications: $viewModel.filteredNotiList)
                 }
                 Spacer()
             }
@@ -42,14 +45,30 @@ struct NotificationView: View {
             }
         }
         .onAppear {
-            notificationViewModel.prepareViewModel(with: homeViewModel)
+            Task {
+                let isDataReady = await viewModel.prepareViewModel(with: homeViewModel)
+                if isDataReady {
+                    isLoading = false
+                } else {
+                    showAlert = true
+                }
+            }
+        }
+        .alert(isPresented: $showAlert) {
+            Alert(
+                title: Text("Error"),
+                message: Text("Failed to load notifications."),
+                dismissButton: .default(Text("OK")) {
+                    dismiss()
+                }
+            )
         }
     }
 }
 
 extension NotificationView {
     private var section: some View {
-        WrappingHStack(notificationViewModel.notiSections, id: \.self) { section in
+        WrappingHStack(viewModel.notiSections, id: \.self) { section in
             VStack {
                 Text(section.title)
                     .foregroundColor(section.isSelected ? .theme.whiteColor : Color(hex: "3B3B3B"))
@@ -78,7 +97,7 @@ extension NotificationView {
     }
     
     private func filterSection(title: String) {
-        notificationViewModel.notiSections = notificationViewModel.notiSections.map { section in
+        viewModel.notiSections = viewModel.notiSections.map { section in
             var updatedSection = section
             updatedSection.isSelected = section.title == title ? true : false
             return updatedSection
@@ -86,7 +105,7 @@ extension NotificationView {
     }
     
     private func filterNotification(type: NotificationType) {
-        notificationViewModel.filterNotifications(type: type)
+        viewModel.filterNotifications(type: type)
     }
 }
 

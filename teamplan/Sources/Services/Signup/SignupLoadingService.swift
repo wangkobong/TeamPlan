@@ -245,7 +245,6 @@ extension SignupLoadingService {
             message = "서버와의 연결이 불안정합니다. 회원가입을 재시도해 주세요"
         }
         await removeUserAtAuth()
-        localStorageManager.resetContext()
         await viewManager.redirectToLoginView(title: title, message: message)
     }
 }

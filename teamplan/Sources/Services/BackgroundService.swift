@@ -167,7 +167,7 @@ extension BackgroundService {
     
     private func fetchNotifyList(with context: NSManagedObjectContext) -> Bool {
         
-        if notifyCD.getFullObjectList(context: context, with: userId) {
+        if notifyCD.getTotalObjectList(context, with: userId) {
             self.previousNotifyList = notifyCD.objectList
             return true
         } else {
@@ -277,7 +277,7 @@ extension BackgroundService {
             
             // update: update previous notify
             if let previousNotify = projectNotifyList[project.projectId],
-               candidateNotifyType != previousNotify.projectNotiType {
+               candidateNotifyType != previousNotify.projectStatus {
                 self.newProjectNotifyCount += 1
             }
             
@@ -348,21 +348,6 @@ extension BackgroundService {
 //MARK: Util
 
 extension BackgroundService {
-    
-    private func getProjectNotifyDesc(with type: ProjectNotification) -> String {
-        switch type {
-        case .halfway:
-            return "마감일까지 절반 남았습니다!"
-        case .nearDeadline:
-            return "마감일까지 얼마남지 않았습니다!"
-        case .oneDayLeft:
-            return "마감일까지 하루 남았습니다!"
-        case .theDay:
-            return "목표 마감일입니다!"
-        default:
-            return "진행중인 목표입니다"
-        }
-    }
     
     func identifyProjectForNotify(with object: ProjectObject, on tomorrow: Date) -> ProjectNotification {
         do {
