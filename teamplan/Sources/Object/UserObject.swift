@@ -21,51 +21,60 @@ enum Providers: String{
     case unknown = "Unknown Providers"
 }
 
-
 // MARK: - Object
 struct UserObject{
     
     let userId: String
-    let email: String
     let name: String
-    let socialType: Providers
-    let status: UserStatus
+    let userStatus: UserStatus
     let accessLogHead: Int
     let createdAt: Date
+    
+    let onlineStatus: Bool
     let changedAt: Date
-    let syncedAt: Date
+    
+    let serverId: String?
+    let email: String?
+    let socialType: Providers?
+    let syncedAt: Date?
     
     init(
         userId: String,
-         email: String,
-         name: String,
-         socialType: Providers,
-         status: UserStatus,
-         accessLogHead: Int,
-         createdAt: Date,
-         changedAt: Date,
-         syncedAt: Date) 
-    {
+        name: String,
+        userStatus: UserStatus,
+        accessLogHead: Int,
+        createdAt: Date,
+        onlineStatus: Bool,
+        changedAt: Date,
+        serverId: String? = nil,
+        email: String? = nil,
+        socialType: Providers? = nil,
+        syncedAt: Date? = nil
+    ) {
         self.userId = userId
-        self.email = email
         self.name = name
-        self.socialType = socialType
-        self.status = status
+        self.userStatus = userStatus
         self.accessLogHead = accessLogHead
         self.createdAt = createdAt
+        self.onlineStatus = onlineStatus
         self.changedAt = changedAt
+        self.serverId = serverId
+        self.email = email
+        self.socialType = socialType
         self.syncedAt = syncedAt
     }
     
     init(temp: Date = Date()) {
         self.userId = "unknown"
-        self.email = "unknown"
         self.name = "unknown"
-        self.socialType = .unknown
-        self.status = .unknown
+        self.userStatus = .unknown
         self.accessLogHead = 0
         self.createdAt = temp
+        self.onlineStatus = false
         self.changedAt = temp
+        self.serverId = "unknown"
+        self.email = "unknown"
+        self.socialType = .unknown
         self.syncedAt = temp
     }
 }

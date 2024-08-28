@@ -28,11 +28,6 @@ struct SignupView: View {
         NavigationView {
             ZStack {
                 VStack {
-                    /*
-                    Spacer()
-                        .frame(height: 34)
-                    self.levelBar
-                     */
                     Spacer()
                         .frame(height: 42)
                     ZStack {
@@ -94,7 +89,6 @@ struct SignupView: View {
         .frame(height: 5)
     }
     
-    
     private var profileSection: some View {
         
         VStack {
@@ -122,22 +116,12 @@ struct SignupView: View {
                         }
                     }
                 Divider()
-                /*
-                HStack {
-                    Text("이미 사용중인 닉네임이에요🥲")
-                        .font(.appleSDGothicNeo(.regular, size: 16))
-                        .foregroundColor(.theme.warningRedColor)
-                        .opacity(0.0)
-                    Spacer()
-                }
-                 */
                 Spacer()
                     .frame(height: 20)
             }
             .padding(.horizontal, 16)
         }
     }
-    
     
     private var bottomButton: some View {
         
@@ -163,9 +147,9 @@ struct SignupView: View {
             }
     }
     
-    
     // MARK: - private method
     
+    @MainActor
     private func checkValidUserName() -> Bool {
         return self.userName.count >= 2 ? true : false
     }

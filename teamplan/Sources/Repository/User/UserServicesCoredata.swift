@@ -21,7 +21,7 @@ final class UserServicesCoredata {
     func setObject(context: NSManagedObjectContext, object: UserObject) -> Bool {
         let entity = UserEntity(context: context)
         createEntity(with: object, at: entity)
-        return checkEntity(with: entity)
+        return true
     }
     
     func getObject(context: NSManagedObjectContext, userId: String) throws -> Bool {
@@ -61,50 +61,18 @@ extension UserServicesCoredata {
     
     private func createEntity(with object: Object, at entity: Entity) {
         entity.user_id = object.userId
-        entity.email = object.email
         entity.name = object.name
-        entity.social_type = object.socialType.rawValue
-        entity.status = object.status.rawValue
+        entity.user_status = object.userStatus.rawValue
         entity.access_log_head = Int32(object.accessLogHead)
         entity.created_at = object.createdAt
+        
+        entity.online_status = object.onlineStatus
         entity.changed_at = object.changedAt
-        entity.synced_at = object.syncedAt
-    }
-    
-    private func checkEntity(with entity: Entity) -> Bool {
-        if entity.user_id == nil {
-            print("[Coredata-User] nil detected: 'user_id'")
-            return false
-        }
-        if entity.email == nil {
-            print("[Coredata-User] nil detected: 'email'")
-            return false
-        }
-        if entity.name == nil {
-            print("[Coredata-User] nil detected: 'name'")
-            return false
-        }
-        if entity.social_type == nil {
-            print("[Coredata-User] nil detected: 'social_type'")
-            return false
-        }
-        if entity.status == nil {
-            print("[Coredata-User] nil detected: 'status' ")
-            return false
-        }
-        if entity.created_at == nil {
-            print("[Coredata-User] nil detected: 'created_at'")
-            return false
-        }
-        if entity.changed_at == nil {
-            print("[Coredata-User] nil detected: 'changed_at'")
-            return false
-        }
-        if entity.synced_at == nil {
-            print("[Coredata-User] nil detected: 'synced_at'")
-            return false
-        }
-        return true
+        
+        entity.server_id = "unknown"
+        entity.email = "unknown"
+        entity.social_type = Providers.unknown.rawValue
+        entity.synced_at = Date()
     }
     
     private func constructFetchRequest(with userId: String) -> NSFetchRequest<Entity> {
@@ -129,14 +97,15 @@ extension UserServicesCoredata{
     
     private func convertToObject(with entity: UserEntity) -> Bool {
         guard let userId = entity.user_id,
-              let email = entity.email,
               let name = entity.name,
-              let stringSocialType = entity.social_type,
-              let socialType = Providers(rawValue: stringSocialType),
-              let stringStatus = entity.status,
-              let status = UserStatus(rawValue: stringStatus),
+              let stringUserStatus = entity.user_status,
+              let userStatus = UserStatus(rawValue: stringUserStatus),
               let createdAt = entity.created_at,
               let changedAt = entity.changed_at,
+              let serverId = entity.server_id,
+              let email = entity.email,
+              let stringSocialType = entity.social_type,
+              let socialType = Providers(rawValue: stringSocialType),
               let syncedAt = entity.synced_at
         else {
             print("[Coredata-User] Failed to convert entity to object")
@@ -144,13 +113,15 @@ extension UserServicesCoredata{
         }
         self.object = UserObject(
             userId: userId,
-            email: email,
             name: name,
-            socialType: socialType,
-            status: status,
+            userStatus: userStatus,
             accessLogHead: Int(entity.access_log_head),
             createdAt: createdAt,
+            onlineStatus: entity.online_status,
             changedAt: changedAt,
+            serverId: serverId,
+            email: email,
+            socialType: socialType,
             syncedAt: syncedAt
         )
         return true
@@ -160,20 +131,23 @@ extension UserServicesCoredata{
         let util = Utilities()
         var isUpdated = false
         
-        if let newEmail = dto.newEmail {
-            isUpdated = util.updateIfNeeded(&entity.email, newValue: newEmail) || isUpdated
-        }
         if let newName = dto.newName {
             isUpdated = util.updateIfNeeded(&entity.name, newValue: newName) || isUpdated
         }
-        if let newStatus = dto.newStatus?.rawValue {
-            isUpdated = util.updateIfNeeded(&entity.status, newValue: newStatus) || isUpdated
+        if let newUserStatus = dto.newUserStatus?.rawValue {
+            isUpdated = util.updateIfNeeded(&entity.user_status, newValue: newUserStatus) || isUpdated
         }
         if let newLogHead = dto.newLogHead {
             isUpdated = util.updateIfNeeded(&entity.access_log_head, newValue: Int32(newLogHead)) || isUpdated
         }
+        if let newOnlineStatus = dto.newOnlineStatus {
+            isUpdated = util.updateIfNeeded(&entity.online_status, newValue: newOnlineStatus) || isUpdated
+        }
         if let newChangedAt = dto.newChangedAt {
             isUpdated = util.updateIfNeeded(&entity.changed_at, newValue: newChangedAt) || isUpdated
+        }
+        if let newEmail = dto.newEmail {
+            isUpdated = util.updateIfNeeded(&entity.email, newValue: newEmail) || isUpdated
         }
         if let newSyncedAt = dto.newSyncedAt {
             isUpdated = util.updateIfNeeded(&entity.synced_at, newValue: newSyncedAt) || isUpdated
@@ -186,27 +160,30 @@ extension UserServicesCoredata{
 
 struct UserUpdateDTO{
     let userId: String
-    let newEmail: String?
     let newName: String?
-    let newStatus: UserStatus?
+    let newUserStatus: UserStatus?
     let newLogHead: Int?
+    let newOnlineStatus: Bool?
     let newChangedAt: Date?
+    let newEmail: String?
     let newSyncedAt: Date?
     
     init(userId: String,
-         newEmail: String? = nil,
          newName: String? = nil,
-         newStatus: UserStatus? = nil,
+         newUserStatus: UserStatus? = nil,
          newLogHead: Int? = nil,
+         newOnlineStatus: Bool? = nil,
          newChangedAt: Date? = nil,
-         newSyncedAt: Date? = nil)
-    {
+         newEmail: String? = nil,
+         newSyncedAt: Date? = nil
+    ){
         self.userId = userId
-        self.newEmail = newEmail
         self.newName = newName
-        self.newStatus = newStatus
+        self.newUserStatus = newUserStatus
         self.newLogHead = newLogHead
+        self.newOnlineStatus = newOnlineStatus
         self.newChangedAt = newChangedAt
+        self.newEmail = newEmail
         self.newSyncedAt = newSyncedAt
     }
 }

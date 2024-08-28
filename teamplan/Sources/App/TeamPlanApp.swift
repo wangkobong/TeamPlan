@@ -31,14 +31,10 @@
      
      var body: some Scene {
          WindowGroup {
-             if appState.isBackgroundTaskComplete {
-                 IntroView()
-                     .environmentObject(authViewModel)
-                     .environmentObject(termsViewModel)
-                     .onOpenURL(perform: handelOpenURL)
-             } else {
-                 LoadingView()
-             }
+             IntroView()
+                 .environmentObject(authViewModel)
+                 .environmentObject(termsViewModel)
+                 .onOpenURL(perform: handelOpenURL)
          }
      }
 

@@ -107,10 +107,12 @@
         <attribute name="created_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="email" optional="YES" attributeType="String"/>
         <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="online_status" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="server_id" optional="YES" attributeType="String"/>
         <attribute name="social_type" optional="YES" attributeType="String"/>
-        <attribute name="status" optional="YES" attributeType="String"/>
         <attribute name="synced_at" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="user_id" optional="YES" attributeType="String"/>
+        <attribute name="user_status" optional="YES" attributeType="String"/>
         <fetchedProperty name="fetchedProperty" optional="YES">
             <fetchRequest name="fetchedPropertyFetchRequest" entity="UserEntity"/>
         </fetchedProperty>

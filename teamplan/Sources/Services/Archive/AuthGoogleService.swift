@@ -4,7 +4,7 @@
 //
 //  Created by 주찬혁 on 2023/09/06.
 //  Copyright © 2023 team1os. All rights reserved.
-//
+/*
 import UIKit
 import Foundation
 import GoogleSignIn
@@ -93,3 +93,4 @@ final class AuthGoogleService {
         }
     }
 }
+*/

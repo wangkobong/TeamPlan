@@ -113,14 +113,14 @@ extension BackgroundService {
         BGTaskScheduler.shared.register(forTaskWithIdentifier: BackgroundTaskId.notifyTask.rawValue, using: nil) { task in
             self.handleBackgroundTask(task: task as! BGAppRefreshTask)
         }
-        scheduleTaskIfNeeded()
+        scheduleNextbackgroundTask()
     }
     
     private func handleBackgroundTask(task: BGAppRefreshTask) {
         Task {
             let result = await notifyExecutor()
             task.setTaskCompleted(success: result)
-            scheduleTaskIfNeeded()
+            scheduleNextbackgroundTask()
         }
     }
     

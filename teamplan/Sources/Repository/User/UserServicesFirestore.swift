@@ -10,81 +10,72 @@ import Foundation
 import FirebaseFirestore
 import FirebaseFirestoreSwift
 
-//MARK: Main
+// MARK: Main
 
-final class UserServicesFirestore: UserDocsManage {
+final class UserServicesFirestore {
     typealias Object = UserObject
     typealias DTO = UserUpdateDTO
 
-    func setDocs(with object: UserObject, and batch: WriteBatch) async {
-        let data = convertToData(with: object)
-        let docsRef = fetchSecondaryCollection(
-            with: object.userId,
+    private let manager = DocsManager.shared
+    private var object = UserObject()
+    private var data: [String: Any] = [:]
+    init() {}
+    
+    func setDocs(with object: UserObject, and batch: WriteBatch) -> Bool {
+        guard let serverId = object.serverId,
+              convertToData(with: object, and: serverId) else {
+            print("[UserServerRepo] Failed to convert object to data format")
+            return false
+        }
+        let docsRef = manager.fetchSecondaryCollection(
+            with: serverId,
             primary: .user,
             secondary: .info
         ).document(object.userId)
-        batch.setData(data, forDocument: docsRef)
+        
+        batch.setData(self.data, forDocument: docsRef)
+        return true
     }
     
-    func getDocs(with userId: String) async throws -> UserObject {
-        let data = try await getData(with: userId)
-        return try convertToObject(with: data)
+    func prepareDocs(with serverId: String, and userId: String) async -> Bool {
+        if await getData(with: serverId, and: userId) {
+            return convertToObject(with: self.data, and: serverId)
+        } else {
+            return false
+        }
     }
     
-    // delete
-    func deleteDocs(with userId: String, and batch: WriteBatch) async {
-        let docsRef = await getDocsRef(with: userId)
+    func getDocsData() -> Object {
+        return self.object
+    }
+    
+    func deleteDocs(with serverId: String, and userId: String, batch: WriteBatch) {
+        let docsRef = manager.fetchSecondaryCollection(
+            with: serverId,
+            primary: .user,
+            secondary: .info
+        ).document(userId)
+        
         batch.deleteDocument(docsRef)
     }
 }
 
-//MARK: Sub
+// MARK: Sub
 
 extension UserServicesFirestore {
     
-    func getDocsRef(with userId: String) async -> DocumentReference {
-        return fetchSecondaryCollection(
-            with: userId,
+    func getData(with serverId: String, and userId: String) async -> Bool {
+        guard let docs = await manager.fetchSecondaryDocs(
+            with: serverId,
+            secondaryId: userId,
             primary: .user,
-            secondary: .info
-        ).document(userId)
-    }
-    
-    func getData(with userId: String) async throws -> [String:Any] {
-        let docsRef = await getDocsRef(with: userId)
-        guard let data = try await docsRef.getDocument().data() else {
-            throw FirestoreError.fetchFailure(serviceName: .fs, dataType: .user)
+            secondary: .info),
+              let data = docs.data() else {
+            print("[UserServerRepo] Failed to get data from document")
+            return false
         }
-        return data
-    }
-    
-    func checkUpdate(from serverData: UserObject, to localData: UserObject, or newLogHead: Int? = nil, at syncedDate: Date) async throws -> [String:Any] {
-        var updatedData = [String: Any]()
-        
-        if let newLogHead = newLogHead {
-            updatedData["access_log_head"] = newLogHead
-            return updatedData
-        }
-        
-        if serverData.name != localData.name {
-            updatedData["name"] = localData.name
-        }
-        
-        if serverData.status != localData.status {
-            updatedData["status"] = localData.status.rawValue
-        }
-        
-        if serverData.changedAt != localData.changedAt {
-            let stringChangedAt = DateFormatter.standardFormatter.string(from: localData.changedAt)
-            updatedData["changed_at"] = stringChangedAt
-        }
-        
-        if serverData.accessLogHead != localData.accessLogHead {
-            updatedData["access_log_head"] = localData.accessLogHead
-        }
-        updatedData["synced_at"] = DateFormatter.standardFormatter.string(from: syncedDate)
-        
-        return updatedData
+        self.data = data
+        return true
     }
 }
 
@@ -92,52 +83,64 @@ extension UserServicesFirestore {
 
 extension UserServicesFirestore {
     
-    func convertToData(with object: Object) -> [String: Any] {
-        let stringCreatedAt = DateFormatter.standardFormatter.string(from: object.createdAt)
-        let stringChangedAt = DateFormatter.standardFormatter.string(from: object.changedAt)
-        let stringSyncedAt = DateFormatter.standardFormatter.string(from: object.syncedAt)
+    func convertToData(with object: Object, and serverId: String) -> Bool {
+        guard let email = object.email,
+              let socialType = object.socialType,
+              let syncedAt = object.syncedAt else {
+            print("[UserServerRepo] Failed to convert object to data format")
+            return false
+        }
         
-        return [
+        let formatter = DateFormatter.standardFormatter
+        self.data = [
             "user_id": object.userId,
-            "email": object.email,
             "name": object.name,
-            "social_type": object.socialType.rawValue,
-            "status": object.status.rawValue,
+            "user_status": object.userStatus.rawValue,
             "access_log_head": object.accessLogHead,
-            "created_at": stringCreatedAt,
-            "changed_at": stringChangedAt,
-            "synced_at": stringSyncedAt
+            "created_at": formatter.string(from: object.createdAt),
+            "online_status": object.onlineStatus,
+            "changed_at": formatter.string(from: object.changedAt),
+            "server_id": serverId,
+            "email": email,
+            "social_type": socialType.rawValue,
+            "synced_at": formatter.string(from: syncedAt)
         ]
+        return true
     }
     
-    private func convertToObject(with data: [String: Any]) throws -> UserObject {
+    private func convertToObject(with data: [String: Any], and docsId: String) -> Bool {
         guard let userId = data["user_id"] as? String,
-              let email = data["email"] as? String,
               let name = data["name"] as? String,
-              let stringSocialType = data["social_type"] as? String,
-              let socialType = Providers(rawValue: stringSocialType),
-              let stringStatus = data["status"] as? String,
-              let status = UserStatus(rawValue: stringStatus),
+              let stringUserStatus = data["user_status"] as? String,
+              let userStatus = UserStatus(rawValue: stringUserStatus),
               let accessLogHead = data["access_log_head"] as? Int,
               let stringCreatedAt = data["created_at"] as? String,
               let createdAt = DateFormatter.standardFormatter.date(from: stringCreatedAt),
+              let onlineStatus = data["online_status"] as? Bool,
               let stringChangedAt = data["changed_at"] as? String,
               let changedAt = DateFormatter.standardFormatter.date(from: stringChangedAt),
+              let email = data["email"] as? String,
+              let stringSocialType = data["social_type"] as? String,
+              let socialType = Providers(rawValue: stringSocialType),
               let stringSyncedAt = data["synced_at"] as? String,
-              let syncedAt = DateFormatter.standardFormatter.date(from: stringSyncedAt)
-        else {
-            throw FirestoreError.convertFailure(serviceName: .fs, dataType: .user)
+              let syncedAt = DateFormatter.standardFormatter.date(from: stringSyncedAt) else {
+            print("[UserServerRepo] Failed to convert data to object format")
+            return false
         }
-        return UserObject(
+        
+        self.object = UserObject(
             userId: userId,
-            email: email,
             name: name,
-            socialType: socialType,
-            status: status,
+            userStatus: userStatus,
             accessLogHead: accessLogHead,
             createdAt: createdAt,
+            onlineStatus: onlineStatus,
             changedAt: changedAt,
+            serverId: docsId,
+            email: email,
+            socialType: socialType,
             syncedAt: syncedAt
         )
+        return true
     }
 }

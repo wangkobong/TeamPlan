@@ -25,9 +25,8 @@ final class ChallengeViewModel: ObservableObject {
     //MARK: Initialize
     
     init() {
-        if let userDefault = UserDefaultManager.loadWith(),
-           let identifier = userDefault.identifier,
-           let userName = userDefault.userName {
+        let volt = VoltManager.shared
+        if let identifier = volt.getUserId() {
             self.userId = identifier
             
         // UserDefault: Exception Handling
@@ -44,14 +43,18 @@ final class ChallengeViewModel: ObservableObject {
         service.$myChallenges
             .receive(on: DispatchQueue.main)
             .sink { [weak self] myChallenges in
-                self?.myChallenges = myChallenges
+                DispatchQueue.main.async {
+                    self?.myChallenges = myChallenges
+                }
             }
             .store(in: &cancellables)
         
         service.$challengesDTO
             .receive(on: DispatchQueue.main)
             .sink { [weak self] challengeList in
-                self?.challengeList = challengeList.sorted(by: { $0.challengeId < $1.challengeId })
+                DispatchQueue.main.async {
+                    self?.challengeList = challengeList.sorted(by: { $0.challengeId < $1.challengeId })
+                }
             }
             .store(in: &cancellables)
     }
