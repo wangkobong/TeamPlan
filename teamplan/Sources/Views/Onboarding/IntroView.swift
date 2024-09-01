@@ -57,67 +57,24 @@ struct IntroView: View {
     }
 }
 
+//MARK: AutoLogin
+
 extension IntroView {
     
     // Main Executor
     private func autoLoginProcess() async {
         isLoading = true
         
-        guard let user = Auth.auth().currentUser else {
-            print("[AutoLogin] There is no currently logged in user")
-            setReloginStatus()
-            return
-        }
-        
-        if await isReLoginNeeded(with: user) {
-            prepareAuthDTO(with: user)
-            let loginSuccess = await authViewModel.tryLogin()
-            self.mainViewState = loginSuccess ? .main : .login
+        let volt = VoltManager.shared
+        if let userId = volt.getUserId(),
+           let userName = volt.getUserName() {
+            let loginResult = await authViewModel.tryLogin(userId: userId)
+            self.mainViewState = loginResult ? .main : .login
         } else {
-            setReloginStatus()
+            print("intro view")
+            self.mainViewState = .login
         }
         isLoading = false
-    }
-    
-    // check: FirebaseAuth refresh token
-    private func isReLoginNeeded(with user: User) async -> Bool {
-        do {
-            try await user.getIDTokenResult(forcingRefresh: true)
-            print("[AutoLogin] Successfully get refreshed token")
-            return true
-        } catch {
-            print("[AutoLogin] Failed to refresh token: \(error)")
-            await logoutAndRedirectToLogin()
-            return false
-        }
-    }
-    
-    // struct: AuthSocialLoginDTO for 'loginLoadingService'
-    private func prepareAuthDTO(with user: User) {
-        self.authViewModel.signupUser = AuthSocialLoginResDTO(
-            identifier: user.uid,
-            email: user.email ?? "UnknownEmail",
-            provider: .firebase,
-            idToken: "",
-            accessToken: "",
-            status: .exist
-        )
-    }
-    
-    // exception: logout at firebaseAuth
-    private func logoutAndRedirectToLogin() async {
-        do {
-            try Auth.auth().signOut()
-        } catch {
-            print("[AutoLogin] Failed to Logout at FirebaseAuth: \(error)")
-        }
-        setReloginStatus()
-    }
-    
-    // exception: change view state
-    private func setReloginStatus() {
-        self.mainViewState = .login
-        self.isLoading = false
     }
 }
 

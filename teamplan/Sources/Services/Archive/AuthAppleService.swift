@@ -4,7 +4,7 @@
 //
 //  Created by 주찬혁 on 2023/10/13.
 //  Copyright © 2023 team1os. All rights reserved.
-//
+/*
 
 import Foundation
 import CryptoKit
@@ -118,3 +118,4 @@ extension AuthAppleService {
         return hashString
     }
 }
+*/

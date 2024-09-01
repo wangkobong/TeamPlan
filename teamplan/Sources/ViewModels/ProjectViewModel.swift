@@ -39,9 +39,9 @@ final class ProjectViewModel: ObservableObject {
     
     @MainActor
     init() {
-        if let userDefault = UserDefaultManager.loadWith(),
-           let identifier = userDefault.identifier,
-           let userName = userDefault.userName {
+        let volt = VoltManager.shared
+        if let identifier = volt.getUserId(),
+           let userName = volt.getUserName() {
             self.identifier = identifier
             self.userName = userName
             

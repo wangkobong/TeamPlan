@@ -4,7 +4,7 @@
 //
 //  Created by 주찬혁 on 11/21/23.
 //  Copyright © 2023 team1os. All rights reserved.
-//
+/*
 
 import CoreData
 import Foundation
@@ -25,9 +25,6 @@ final class LoginLoadingService{
     private let coreValueCD = CoreValueServicesCoredata()
     private let projectCD = ProjectServicesCoredata()
     private let loginSC = LoginService()
-    
-    private var localSync: LocalSynchronize
-    private var serverSync: ServerSynchronize
     
     private var userId: String
     private var loginDate: Date
@@ -50,12 +47,10 @@ final class LoginLoadingService{
         self.userData = UserInfoDTO()
         
         self.updateType = .unknown
-        self.localSync = LocalSynchronize(with: userId)
-        self.serverSync = ServerSynchronize(with: userId)
         self.storageManager = LocalStorageManager.shared
     }
 
-    static func createInstance(with dto: AuthSocialLoginResDTO) async -> LoginLoadingService {
+    static func createInstance(with userId: AuthSocialLoginResDTO) async -> LoginLoadingService {
         return LoginLoadingService(userId: dto.identifier)
     }
 }
@@ -187,7 +182,7 @@ extension LoginLoadingService {
     // Update Sorter
     // : Based on ServiceTerm
     private func decideUpdateType() async {
-
+        
         if userTerm % 90 == 0 {
             updateType = .quarterly
         } else if userTerm % 30 == 0 {
@@ -238,8 +233,8 @@ extension LoginLoadingService {
             return false
         }
     }
-    
-    //MARK: Weekly Update
+}
+    /*MARK: Weekly Update
     
     private func weeklyUpdateProcess(context: NSManagedObjectContext) async -> Bool {
         let isDailyUpdateProcessed = dailyUpdateProcess(context: context)
@@ -309,7 +304,8 @@ extension LoginLoadingService {
         }
     }
 }
-
+*/
+    
 // MARK: - Util
 
 extension LoginLoadingService {
@@ -461,6 +457,65 @@ extension LoginLoadingService {
     
 // MARK: - Return DTO
 
+extension LoginLoadingService {
+    
+    private let google: AuthGoogleService
+    private let apple: AuthAppleService
+    private var keyChain = KeychainSwift()
+
+    // MARK: - life cycle
+    init() {
+        self.google = AuthGoogleService()
+        self.apple = AuthAppleService()
+    }
+    
+    // MARK: - Login
+    
+    // Google Login
+    func loginGoogle() async throws -> AuthSocialLoginResDTO {
+        return try await google.login()
+    }
+    
+    // Apple Login
+    func loginApple(appleAuthResult: ASAuthorization, nonce: String) async throws -> AuthSocialLoginResDTO {
+        return try await apple.login(loginResult: appleAuthResult, nonce: nonce)
+    }
+    
+    func requestNonce() -> String {
+        return self.apple.randomNonce()
+    }
+    
+    func reqeustNonceEncode(nonce: String) -> String {
+        return self.apple.sha256(nonce)
+    }
+}
+
+// MARK: - DTO
+
+enum UserType {
+    case new
+    case exist
+}
+
+struct AuthSocialLoginResDTO {
+    
+    let identifier: String
+    let email: String
+    let provider: Providers
+    let idToken: String
+    let accessToken: String
+    var status: UserType
+    
+    init(identifier: String, email: String, provider: Providers, idToken: String, accessToken: String, status: UserType) {
+        self.identifier = identifier
+        self.email = email
+        self.provider = provider
+        self.idToken = idToken
+        self.accessToken = accessToken
+        self.status = status
+    }
+}
+
 struct UserInfoDTO {
     
     let userId: String
@@ -487,3 +542,16 @@ struct UserInfoDTO {
         self.changedAt = object.changedAt
     }
 }
+
+struct FirebaseAuthRegistResultDTO {
+    let identifier: String
+    let email: String
+    let status: UserType
+    
+    init(identifier: String, email: String, status: UserType) {
+        self.identifier = identifier
+        self.email = email
+        self.status = status
+    }
+}
+*/

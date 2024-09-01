@@ -16,21 +16,21 @@ final class MypageService {
     var mypageDTO: MypageDTO
     
     // private
-    private let userCD = UserServicesCoredata()
-    private let statCD = StatisticsServicesCoredata()
-    private let challengeCD = ChallengeServicesCoredata()
-    
-    private let loginService = LoginService()
-    private let deleteSync: DeleteSynchronize
+    private let userCD: UserServicesCoredata
+    private let statCD: StatisticsServicesCoredata
+    private let challengeCD: ChallengeServicesCoredata
     
     private var userId: String
     private var completedChallenges: Int
     private let context: LocalStorageManager
     
     init(userId: String) {
+        self.userCD = UserServicesCoredata()
+        self.statCD = StatisticsServicesCoredata()
+        self.challengeCD = ChallengeServicesCoredata()
+        
         self.userId = userId
         self.completedChallenges = 0
-        self.deleteSync = DeleteSynchronize(userId: userId)
         self.context = LocalStorageManager.shared
         self.mypageDTO = MypageDTO()
     }
@@ -66,17 +66,20 @@ final class MypageService {
     }
     
     func logout() async -> Bool {
+        return true
+        /*
         if await loginService.logoutUser() {
             print("[MypageService] Successfully proceed logout")
             return true
         } else {
             return false
         }
+        */
     }
     
     func withdraw() async -> Bool {
-        
-        // Delete every user data at local & server
+        return true
+        /* Delete every user data at local & server
         if await deleteSync.deleteExecutor() {
             
             if await loginService.withdrawUser() {
@@ -88,6 +91,7 @@ final class MypageService {
         } else {
             return false
         }
+        */
     }
 }
 

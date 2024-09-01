@@ -16,7 +16,7 @@ final class HomeViewModel: ObservableObject {
     // Updated
     @Published var userData: HomeDataDTO
     @Published var isLoginRedirectNeed: Bool = false    // activated when data load fails: logout & redirect to loginView
-    @Published var isViewModelReady: Bool = false       // activated when data complete: progress to homeView
+    @Published var isViewModelProceed: Bool = false       // activated when data complete: progress to homeView
     
     private let identifier: String
     private let userName: String
@@ -28,9 +28,9 @@ final class HomeViewModel: ObservableObject {
     @MainActor
     init() {
         // UserDefault: Load Data
-        if let userDefault = UserDefaultManager.loadWith(),
-           let identifier = userDefault.identifier,
-           let userName = userDefault.userName {
+        let volt = VoltManager.shared
+        if let identifier = volt.getUserId(),
+           let userName = volt.getUserName() {
             self.identifier = identifier
             self.userName = userName
             
@@ -41,40 +41,29 @@ final class HomeViewModel: ObservableObject {
             self.userName = "unknown"
             self.isLoginRedirectNeed = true
         }
-        
         // Initialize Properties with Identifier
         self.service = HomeService(with: identifier, and: userName)
         self.userData = HomeDataDTO(with: userName)
-        self.prepareData()
     }
 
-    @MainActor
-    private func prepareData() {
-        if self.identifier == "unknown" {
-            print("[HomeViewModel] Unknown UserId detected!")
-            self.isLoginRedirectNeed = true
-        }
+    func prepareData() -> Bool {
         
         if self.service.prepareExecutor() {
             self.userData = service.dto
-            self.isViewModelReady = true
-            print("[HomeViewModel] Successfully prepared viewModel")
-            
+            return true
         } else {
             print("[HomeViewModel] Failed to Initialize ViewModel")
-            self.isLoginRedirectNeed = true
+            return false
         }
     }
-    
-    @MainActor
-    func updateData() {
+     
+    func updateData() -> Bool {
         if self.service.updateExecutor() {
             self.userData = service.dto
-            self.isViewModelReady = true
-            print("[HomeViewModel] Successfully update viewModel")
+            return true
         } else {
             print("[HomeViewModel] Failed to update ViewModel userData")
-            self.isViewModelReady = false
+            return false
         }
     }
     

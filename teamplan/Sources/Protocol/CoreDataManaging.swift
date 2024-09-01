@@ -164,7 +164,7 @@ enum EntityPredicate {
             
         // notification
         case .singleNotify:
-            return "user_id == %@ AND notify_id == %d"
+            return "user_id == %@ AND notify_id == %d AND category == %d"
         case .fullNotify:
             return "user_id == %@"
         case .categoryNotify:

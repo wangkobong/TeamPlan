@@ -4,7 +4,7 @@
 //
 //  Created by 크로스벨 on 1/10/24.
 //  Copyright © 2024 team1os. All rights reserved.
-//
+/*
 
 import CoreData
 import Foundation
@@ -299,4 +299,5 @@ extension LocalSynchronize{
     }
 }
 
+ */
 

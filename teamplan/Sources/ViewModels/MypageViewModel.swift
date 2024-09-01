@@ -22,9 +22,9 @@ final class MypageViewModel: ObservableObject {
     //MARK: Initializer
     // prepare prepertise : UserDefault (userName / Identifier)
     init() {
-        if let userDefault = UserDefaultManager.loadWith(),
-           let identifier = userDefault.identifier,
-           let userName = userDefault.userName {
+        let volt = VoltManager.shared
+        if let identifier = volt.getUserId(),
+           let userName = volt.getUserName() {
             self.identifier = identifier
             self.userName = userName
         } else {

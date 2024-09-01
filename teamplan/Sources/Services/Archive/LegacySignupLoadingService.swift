@@ -4,14 +4,14 @@
 //
 //  Created by 주찬혁 on 2023/10/20.
 //  Copyright © 2023 team1os. All rights reserved.
-//
+/*
 
 import CoreData
 import Foundation
 import FirebaseAuth
 import FirebaseFirestore
 
-final class SignupLoadingService {
+final class LegacySignupLoadingService {
     
     // shared
     var userData: UserInfoDTO
@@ -72,7 +72,7 @@ enum SignupLoadingServiceAction: String {
     case server = "ServerExecutor"
 }
 
-extension SignupLoadingService {
+extension LegacySignupLoadingService {
 
     // controller
     func executor() async -> Bool {
@@ -218,7 +218,7 @@ enum SignupFailedCase {
     case serverSet
 }
 
-extension SignupLoadingService {
+extension LegacySignupLoadingService {
     private func failedProcess(_ pos: SignupFailedCase) async {
         var title: String
         var message: String
@@ -245,13 +245,12 @@ extension SignupLoadingService {
             message = "서버와의 연결이 불안정합니다. 회원가입을 재시도해 주세요"
         }
         await removeUserAtAuth()
-        localStorageManager.resetContext()
         await viewManager.redirectToLoginView(title: title, message: message)
     }
 }
 
 // MARK: - User
-extension SignupLoadingService{
+extension LegacySignupLoadingService{
     
     // : Coredata
     private func setNewUserProfileAtLocal(with context: NSManagedObjectContext) -> Bool {
@@ -273,7 +272,7 @@ extension SignupLoadingService{
 
 
 // MARK: - Statisticcs
-extension SignupLoadingService{
+extension LegacySignupLoadingService{
     
     // : Coredata
     private func setNewStatAtLocal(with context: NSManagedObjectContext) -> Bool {
@@ -306,7 +305,7 @@ extension SignupLoadingService{
 
 
 // MARK: - AccessLog
-extension SignupLoadingService{
+extension LegacySignupLoadingService{
     
     // : CoreData
     private func setNewAccessLogAtLocal(with context: NSManagedObjectContext) -> Bool {
@@ -328,7 +327,7 @@ extension SignupLoadingService{
 }
 
 // MARK: - Challenge
-extension SignupLoadingService{
+extension LegacySignupLoadingService{
 
     // : Coredata
     private func setNewChallengeAtLocal(with context: NSManagedObjectContext) -> Bool {
@@ -370,7 +369,7 @@ extension SignupLoadingService{
 }
 
 // MARK: - CoreValue
-extension SignupLoadingService{
+extension LegacySignupLoadingService{
     
     // : Coredata
     private func setNewCoreValueAtLocal(with context: NSManagedObjectContext) -> Bool {
@@ -398,7 +397,7 @@ extension SignupLoadingService{
 
 
 // MARK: - Firebase
-extension SignupLoadingService{
+extension LegacySignupLoadingService{
     
     private func removeUserAtAuth() async {
         
@@ -473,7 +472,7 @@ extension AccessLog {
     }
 }
 
-extension SignupLoadingService {
+extension LegacySignupLoadingService {
     private func prepareNewChallengeStatus(with dto: ChallengeInfoDTO) -> ChallengeObject{
         return ChallengeObject(
             challengeId: dto.challengeId,
@@ -495,3 +494,179 @@ extension SignupLoadingService {
         )
     }
 }
+ 
+extension AuthenticationViewModel {
+     
+    @Published var nonce: String?
+    @Published var signupUser: AuthSocialLoginResDTO?
+    @Published var loginUser: UserInfoDTO?
+ 
+     // Apple
+     @MainActor
+     func requestNonceSignInApple() -> String {
+         let candidateNonce = loginService.requestNonce()
+         let encodedNonce = loginService.reqeustNonceEncode(nonce: candidateNonce)
+         self.nonce = candidateNonce
+         return encodedNonce
+     }
+     
+     @MainActor
+     func signInApple(with authResult: ASAuthorization) async throws -> AuthSocialLoginResDTO {
+         guard let nonce = self.nonce else { throw SignupError.signupFailed }
+         let userInfo = try await loginService.loginApple(appleAuthResult: authResult, nonce: nonce)
+         try registKeyChain(with: userInfo)
+         return userInfo
+     }
+     
+     // Google
+     func signInGoogle() async throws -> AuthSocialLoginResDTO {
+         let userInfo = try await loginService.loginGoogle()
+         try registKeyChain(with: userInfo)
+         return userInfo
+     }
+ }
+ 
+extension LoginView {
+
+    private var buttons: some View {
+        VStack(spacing: 12) {
+            
+            // ---------------------------
+            ZStack {
+                HStack {
+                    Spacer()
+                        .frame(width: 40)
+                    Image(uiImage: Gen.Images.googleLogoLoginView.image)
+                    Spacer()
+                }
+                Text("구글 로그인")
+                    .font(.appleSDGothicNeo(.bold, size: 17))
+                    .foregroundColor(.theme.blackColor)
+            }
+            .frame(height: 48)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Gen.Colors.whiteColor.swiftUIColor)
+            )
+            .overlay {
+                GoogleSignInButton(viewModel: self.signInViewModel) {
+                    googleLoginProcess()
+                }
+                .blendMode(.overlay)
+            }
+    
+            // ---------------------------
+            ZStack {
+                HStack {
+                    Spacer()
+                        .frame(width: 40)
+                    Image(uiImage: Gen.Images.appleLogoLoginView.image)
+                    Spacer()
+                }
+                Text("애플 로그인")
+                    .font(.appleSDGothicNeo(.bold, size: 17))
+                    .foregroundColor(.theme.whiteColor)
+            }
+            .frame(height: 48)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color(hex: "000000"))
+            )
+            .overlay {
+                SignInWithAppleButton(
+                    onRequest: appleLoginRequest,
+                    onCompletion: appleLoginProcess
+                )
+                .blendMode(.overlay)
+            }
+        }
+        .padding(.horizontal, 55)
+    }
+
+    // Apple login
+    // TODO: Need Custom Exception
+    private func appleLoginRequest(request: ASAuthorizationAppleIDRequest) {
+        self.isLoading = true
+        request.requestedScopes = [.fullName, .email]
+        request.nonce = self.authViewModel.requestNonceSignInApple()
+    }
+    
+    private func appleLoginProcess(result: Result<ASAuthorization, Error>) {
+        switch result {
+        case .success(let authResult):
+            Task{
+                let userInfo = try await self.authViewModel.signInApple(with: authResult)
+                await socialLoginProcess(with: userInfo)
+            }
+        case .failure(let error):
+            print("[Login View] Apple Social Login Falied: \(error.localizedDescription)")
+            showLoginAlert = true
+            isLoading = false
+        }
+    }
+    
+    // Google login
+    // TODO: Need Custom Exception
+    private func googleLoginProcess() {
+        Task {
+            self.isLoading = true
+            do {
+                let userInfo = try await authViewModel.signInGoogle()
+                await socialLoginProcess(with: userInfo)
+            } catch {
+                print("[Login View] Google login failed: \(error.localizedDescription)")
+                showLoginAlert = true
+                isLoading = false
+            }
+        }
+    }
+ // Login Process
+ private func socialLoginProcess(with userInfo: AuthSocialLoginResDTO) async {
+     isLoading = false
+     switch userInfo.status {
+     case .exist:
+         if await authViewModel.tryLogin() {
+             withAnimation(.spring()) {
+                 mainViewState = .main
+             }
+         } else {
+             if authViewModel.isReSignupNeeded {
+                 withAnimation(.spring()) {
+                     mainViewState = .signup
+                 }
+             } else {
+                 showLoginAlert = true
+             }
+         }
+     case .new:
+         withAnimation(.spring()) {
+             mainViewState = .signup
+         }
+     }
+ }
+}
+
+ struct UserSignupDTO{
+     
+     let userId: String
+     let email: String
+     let provider: Providers
+     let logHead : Int
+     var nickName: String
+     
+     init(with dto: AuthSocialLoginResDTO) {
+         self.userId = dto.identifier
+         self.email = dto.email
+         self.provider = dto.provider
+         self.logHead = 1
+         self.nickName = ""
+     }
+
+     mutating func updateNickName(with newVal: String){
+         self.nickName = newVal
+     }
+ }
+
+*/

@@ -30,7 +30,8 @@ final class LocalStorageManager {
         container.loadPersistentStores { storeDescription, error in
             if let error = error as NSError? {
                 Task {
-                    await self.handleLocalStorageError(error: error)
+                    print("[localStorage] Persistent store loading error: \(error), \(error.userInfo)")
+                    await self.handlePersistentStoreError(error: error)
                 }
             }
         }
@@ -51,34 +52,29 @@ final class LocalStorageManager {
         print("[localStorage] Context change not detected")
         return true
     }
-
-    func resetContext() {
-        context.reset()
+    
+    // MARK: Background
+    
+    func createBackgroundContext() -> NSManagedObjectContext {
+        let backgroundContext = container.newBackgroundContext()
+        backgroundContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+        return backgroundContext
     }
     
-    func rebuildContext() async {
-        let coordinator = container.persistentStoreCoordinator
-        for store in coordinator.persistentStores {
-            guard let storeURL = store.url else {
-                print("[localStorage] Failed to get Store URL")
-                await TopViewManager.shared.redirectToLoginView(
-                    title: "Warning!",
-                    message: "서비스의 동작이상이 감지되었습니다! 지속될 경우 재설치 해주세요"
-                )
-                return
-            }
+    func saveBackgroundContext(_ context: NSManagedObjectContext) -> Bool {
+        if context.hasChanges {
+            print("[localStorage] Background context change detected")
             do {
-                try coordinator.destroyPersistentStore(at: storeURL, ofType: store.type, options: nil)
+                try context.save()
+                return true
             } catch {
-                print("[localStorage] Failed to truncate persistent: \(error)")
-                await TopViewManager.shared.redirectToLoginView(
-                    title: "Warning!",
-                    message: "서비스의 동작이상이 감지되었습니다! 지속될 경우 재설치 해주세요"
-                )
-                return
+                print("[localStorage] Failed to save background context: \(error)")
+                context.rollback()
+                return false
             }
         }
-        await retryLoadingLocalStorage()
+        print("[localStorage] Background context change not detected")
+        return true
     }
 }
 
@@ -86,47 +82,22 @@ final class LocalStorageManager {
 
 extension LocalStorageManager {
     
-    private func retryLoadingLocalStorage() async {
-        container = NSPersistentContainer(name: CoredataConfig.defaultModel)
-        loadPersistentStore()
-    }
-    
     @MainActor
-    private func handleLocalStorageError(error: NSError) {
+    private func handlePersistentStoreError(error: NSError) {
+        print("[localStorage] Error while loading persistent store: \(error.localizedDescription)")
+        
         let alertController = UIAlertController(
             title: "Data Error",
-            message: "Unable to load data. Please try again later.",
+            message: "An error occurred while loading data. Please restart the app.",
             preferredStyle: .alert
         )
-        
-        let retryAction = UIAlertAction(title: "Retry", style: .default) { _ in
-            Task {
-                await self.retryLoadingLocalStorage()
-            }
+        let restartAction = UIAlertAction(title: "Restart", style: .default) { _ in
+            exit(0)
         }
-
-        alertController.addAction(retryAction)
+        alertController.addAction(restartAction)
         
         if let topVC = TopViewManager.shared.topViewController() {
             topVC.present(alertController, animated: true)
-        } else {
-            Task {
-                await TopViewManager.shared.redirectToLoginView(
-                    title: "Warning!",
-                    message: "서비스의 동작이상이 감지되었습니다! 지속될 경우 재설치 해주세요"
-                )
-            }
-        }
-    }
-}
-
-//MARK: Test
-
-extension LocalStorageManager {
-    func testHandleLocalStorageError() {
-        let error = NSError(domain: "TestErrorDomain", code: 9999, userInfo: [NSLocalizedDescriptionKey: "Test error description"])
-        Task {
-            await self.handleLocalStorageError(error: error)
         }
     }
 }
