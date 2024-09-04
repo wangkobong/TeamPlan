@@ -48,7 +48,6 @@ final class HomeService {
             results =  [isPharseReady, isStatDataReady, isMyChallengeReady, isProjectReady]
         }
         if results.allSatisfy({$0}) {
-            print("[HomeService] Successfully prepare HomeDataDTO")
             return true
         } else {
             print("[HomeService] Failed to prepare HomeDataDTO")
@@ -67,7 +66,6 @@ final class HomeService {
             results =  [isStatDataReady, isMyChallengeReady, isProjectReady]
         }
         if results.allSatisfy({$0}) {
-            print("[HomeService] Successfully update HomeDataDTO")
             return true
         } else {
             print("[HomeService] Failed to update HomeDataDTO")

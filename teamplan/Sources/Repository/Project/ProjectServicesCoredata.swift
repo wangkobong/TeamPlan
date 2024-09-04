@@ -207,8 +207,7 @@ extension ProjectServicesCoredata {
         fetchReq.predicate = NSPredicate(
             format: EntityPredicate.projectValidList.format,
             userId,
-            ProjectStatus.ongoing.rawValue,
-            ProjectStatus.completable.rawValue
+            ProjectStatus.ongoing.rawValue
         )
         return try context.fetch(fetchReq)
     }
@@ -222,8 +221,7 @@ extension ProjectServicesCoredata {
             format: EntityPredicate.projectAlertList.format,
             userId,
             today as NSDate,
-            ProjectStatus.ongoing.rawValue,
-            ProjectStatus.completable.rawValue
+            ProjectStatus.ongoing.rawValue
         )
         fetchRequest.sortDescriptors = [NSSortDescriptor(key: "deadline", ascending: true)]
         fetchRequest.fetchLimit = 3
@@ -238,20 +236,18 @@ extension ProjectServicesCoredata {
             format: EntityPredicate.projectUploadList.format,
             userId,
             ProjectStatus.ongoing.rawValue,
-            ProjectStatus.completable.rawValue,
             ProjectStatus.finished.rawValue
         )
         return try context.fetch(fetchReq)
     }
         
-    // target entities
+    // truncate entities
     private func getTruncateEntities(context: NSManagedObjectContext, with userId: String) throws -> [ProjectEntity] {
         let fetchReq: NSFetchRequest<Entity> = Entity.fetchRequest()
         fetchReq.predicate = NSPredicate(
             format: EntityPredicate.projectTruncateList.format,
             userId,
             ProjectStatus.unknown.rawValue,
-            ProjectStatus.deleted.rawValue,
             ProjectStatus.exploded.rawValue,
             ProjectStatus.finished.rawValue
         )

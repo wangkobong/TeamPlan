@@ -204,11 +204,11 @@ extension NotificationServicesCoredata {
         let util = Utilities()
         var isUpdated = false
         
-        if let projectId = dto.projectId,
+        if let _ = dto.projectId,
            let newProjectStatus = dto.newProjectStatus {
             isUpdated = util.updateIfNeeded(&entity.status, newValue: Int32(newProjectStatus.rawValue)) || isUpdated
         }
-        if let challengeId = dto.challengeId,
+        if let _ = dto.challengeId,
            let newChallengeStatus = dto.newChallengeStatus {
             isUpdated = util.updateIfNeeded(&entity.status, newValue: Int32(newChallengeStatus.rawValue)) || isUpdated
         }

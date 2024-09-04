@@ -66,9 +66,7 @@ final class ChallengeViewModel: ObservableObject {
         }
         
         if self.service.prepareExecutor() {
-//            await updateList()
             self.isViewModelReady = true
-            print("[ChallengeViewModel] Successfully prepared viewModel: \(self.myChallenges)")
             
         } else {
             print("[ChallengeViewModel] Failed to Initialize ViewModel")
@@ -83,8 +81,6 @@ extension ChallengeViewModel {
     
     func setMyChallenge(with challengeId: Int) async -> Bool {
         if service.setMyChallenges(with: challengeId) {
-//            await updateList()
-            print("[ChallengeViewModel] Successfully set myChallenge")
             return true
             
         } else {
@@ -95,8 +91,6 @@ extension ChallengeViewModel {
     
     func disableMtChallenge(with challengeId: Int) async -> Bool {
         if service.disableMyChallenge(with: challengeId) {
-//            await updateList()
-            print("[ChallengeViewModel] Successfully disable myChallenge")
             return true
             
         } else {
@@ -107,8 +101,6 @@ extension ChallengeViewModel {
     
     func rewardMyChallenge(with challengeId: Int) async -> Bool {
         if service.rewardMyChallenge(with: challengeId) {
-//            await updateList()
-            print("[ChallengeViewModel] Successfully reward myChallenge")
             return true
             
         } else {
@@ -116,10 +108,4 @@ extension ChallengeViewModel {
             return false
         }
     }
-    
-//    @MainActor
-//    private func updateList() {
-//        self.challengeList = service.challengesDTO
-//        self.myChallenges = service.myChallenges
-//    }
 }

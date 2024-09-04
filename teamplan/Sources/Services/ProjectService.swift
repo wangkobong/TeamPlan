@@ -22,6 +22,7 @@ final class ProjectService {
     private let util: Utilities
     private let userId: String
     private let storageManager: LocalStorageManager
+    private let challengeNotifyManager: ChallengeNotifyManager
 
     private let statCD: StatisticsServicesCoredata
     private let coreValueCD: CoreValueServicesCoredata
@@ -30,14 +31,15 @@ final class ProjectService {
     
     private var coreValue: CoreValueObject
     
-    init(userId: String, statData: StatDTO) {
-        self.statDTO = statData
+    init(userId: String) {
+        self.statDTO = StatDTO()
         self.projectList = []
         self.projectRegistLimit = 0
         
         self.util = Utilities()
         self.userId = userId
         self.storageManager = LocalStorageManager.shared
+        self.challengeNotifyManager = ChallengeNotifyManager(userId: userId)
         
         self.statCD = StatisticsServicesCoredata()
         self.coreValue = CoreValueObject()
@@ -104,7 +106,6 @@ extension ProjectService {
             print("[ProjectService] Failed to execute \(action.desc) action after \(max) retries")
             return false
         } else {
-            print("[ProjectService] Successfully executed \(action.desc) action in \(retryCount) tries")
             return true
         }
     }
@@ -252,9 +253,10 @@ extension ProjectService {
     
     // executor
     private func setNewProjectProcess(with newData: NewProjectDTO, on setDate: Date) -> Bool {
+        let context = storageManager.context
         let newProject = createNewProject(with: newData)
 
-        guard updateObjectAboutProjectCreation(with: newProject) else {
+        guard updateObjectAboutProjectCreation(context, with: newProject) else {
             print("[ProjectService] Error detectred while set new project at storage")
             return false
         }
@@ -263,7 +265,8 @@ extension ProjectService {
             print("[ProjectService] Error detectred while set new project at dto")
             return false
         }
-        return true
+        
+        return challengeNotifyManager.isNotifyNeed(context)
     }
     
     // creator
@@ -291,8 +294,7 @@ extension ProjectService {
     }
 
     // update: Object
-    private func updateObjectAboutProjectCreation(with object: ProjectObject) -> Bool {
-        let context = storageManager.context
+    private func updateObjectAboutProjectCreation(_ context: NSManagedObjectContext, with object: ProjectObject) -> Bool {
         
         return context.performAndWait {
             do {
@@ -301,7 +303,7 @@ extension ProjectService {
                     return false
                 }
                 
-                var updated = StatUpdateDTO(
+                let updated = StatUpdateDTO(
                     userId: userId,
                     newTotalRegistedProjects: self.statDTO.totalRegistedProjects + 1
                 )
@@ -580,14 +582,16 @@ extension ProjectService {
     // executor
     private func completeProjectProcess(with projectId: Int, at completeDate: Date) -> Bool {
         do {
+            let context = storageManager.context
             let index = try searchProjectIndex(with: projectId)
             
-            guard updateObjectAboutComplete(with: projectId, at: completeDate, index: index) else {
+            guard updateObjectAboutComplete(context, with: projectId, at: completeDate, index: index) else {
                 print("[ProjectService] Failed to apply complete object at storage")
                 return false
             }
+            
             updateDTOAboutComplete(with: index)
-            return true
+            return challengeNotifyManager.isNotifyNeed(context)
             
         } catch {
             print("[ProjectService] complete ProjectObject process failed: \(error.localizedDescription)")
@@ -596,9 +600,7 @@ extension ProjectService {
     }
     
     // update: Object
-    private func updateObjectAboutComplete(with projectId: Int, at completeDate: Date, index: Int) -> Bool {
-        let context = storageManager.context
-        
+    private func updateObjectAboutComplete(_ context: NSManagedObjectContext, with projectId: Int, at completeDate: Date, index: Int) -> Bool {
         return context.performAndWait {
             do {
                 // update project
@@ -652,9 +654,8 @@ extension ProjectService {
 // only update object
 extension ProjectService {
     
-    private func explodeProjectProcess(with projectId: Int, on explodeDate: Date) -> Bool {
-
-        if updateObjectAboutExplode(with: projectId, on: explodeDate) {
+    func processExplodedProject(_ context: NSManagedObjectContext, with projectId: Int, on explodeDate: Date) -> Bool {
+        if updateObjectAboutExplode(context, with: projectId, on: explodeDate) {
             return true
         } else {
             return false
@@ -662,8 +663,7 @@ extension ProjectService {
     }
     
     // update: projectObject
-    private func updateObjectAboutExplode(with projectId: Int, on explodeDate: Date) -> Bool {
-        let context = storageManager.context
+    private func updateObjectAboutExplode(_ context: NSManagedObjectContext, with projectId: Int, on explodeDate: Date) -> Bool {
         
         return context.performAndWait {
             do {
@@ -688,12 +688,6 @@ extension ProjectService {
                 
                 guard try statCD.updateObject(context: context, dto: statUpdated) else {
                     print("[ProjectService] StatObject change not detected")
-                    return false
-                }
-                
-                // apply storage
-                guard storageManager.saveContext() else {
-                    print("[ProjectService] Failed to apply explode ProjectObject at storage")
                     return false
                 }
                 return true
@@ -723,16 +717,17 @@ extension ProjectService {
     
     // executor
     private func setNewTodoProcess(with projectId: Int) -> Bool {
+        let context = storageManager.context
         do {
             let index = try searchProjectIndex(with: projectId)
             let newTodoId = projectList[index].todoList.count + 1
             let newTodo = createNewTodoObject(with: projectId, and: newTodoId, index: index)
             
-            guard updateObjectAboutTodoCreation(with: newTodo) else {
+            guard updateObjectAboutTodoCreation(context, with: newTodo) else {
                 return false
             }
             updateDTOAboutTodoCreation(with: newTodo, and: index)
-            return true
+            return challengeNotifyManager.isNotifyNeed(context)
             
         } catch {
             print("[ProjectService] Failed to add new todo process: \(error)")
@@ -754,8 +749,7 @@ extension ProjectService {
     }
 
     // update object
-    private func updateObjectAboutTodoCreation(with newTodo: TodoObject) -> Bool {
-        let context = storageManager.context
+    private func updateObjectAboutTodoCreation(_ context: NSManagedObjectContext, with newTodo: TodoObject) -> Bool {
         
         return context.performAndWait {
             do {
@@ -771,7 +765,7 @@ extension ProjectService {
                     return false
                 }
                 let projectData = projectCD.object
-                var updatedProject = ProjectUpdateDTO(
+                let updatedProject = ProjectUpdateDTO(
                     projectId: newTodo.projectId,
                     userId: userId,
                     newTotalRegistedTodo: projectData.totalRegistedTodo + 1,
@@ -784,7 +778,7 @@ extension ProjectService {
                 
                 // update stat
                 print(statDTO)
-                var updatedStat = StatUpdateDTO(
+                let updatedStat = StatUpdateDTO(
                     userId: userId,
                     newTotalRegistedTodos: statDTO.totalRegistedTodos + 1
                 )

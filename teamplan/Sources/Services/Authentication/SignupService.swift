@@ -206,5 +206,4 @@ final class SignupService {
         print("[SingupLoading] Successfully set Challenge at storage")
         return true
     }
-    
 }

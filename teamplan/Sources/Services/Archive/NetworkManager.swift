@@ -4,7 +4,7 @@
 //
 //  Created by 크로스벨 on 6/25/24.
 //  Copyright © 2024 team1os. All rights reserved.
-//
+/*
 
 import Network
 
@@ -63,3 +63,4 @@ final class NetworkManager {
         return connectedCount > checkCount / 2
     }
 }
+*/
