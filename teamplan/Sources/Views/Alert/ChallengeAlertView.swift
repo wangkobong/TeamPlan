@@ -69,10 +69,6 @@ public struct ChallengeAlertView: View {
             .cornerRadius(4)
             .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 0)
         }
-        .onAppear {
-            print("얼럿타입: \(self.type)")
-            print("인덱스: \(self.index)")
-        }
     }
 }
 

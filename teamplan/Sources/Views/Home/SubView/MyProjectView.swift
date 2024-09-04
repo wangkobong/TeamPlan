@@ -44,9 +44,6 @@ struct MyProjectView: View {
                 .frame(width: 111, height: 28)
                 .background(Color.theme.mainPurpleColor)
                 .cornerRadius(4)
-                .onTapGesture {
-                    print("프로젝트 생성하기 클릭")
-                }
         }
         .frame(height: 176)
         .frame(maxWidth: .infinity)

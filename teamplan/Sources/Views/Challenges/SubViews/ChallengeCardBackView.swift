@@ -24,9 +24,6 @@ struct ChallengeCardBackView: View {
             actionButton
         }
         .frame(width: setCardWidth(screenWidth: parentsWidth),height: 144)
-        .onAppear {
-            print("도전과제 정보: \(challenge)")
-        }
     }
     
     private var challengeInfo: some View {

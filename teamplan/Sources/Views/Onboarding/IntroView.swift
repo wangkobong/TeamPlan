@@ -71,7 +71,6 @@ extension IntroView {
             let loginResult = await authViewModel.tryLogin(userId: userId)
             self.mainViewState = loginResult ? .main : .login
         } else {
-            print("intro view")
             self.mainViewState = .login
         }
         isLoading = false
