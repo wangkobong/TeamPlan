@@ -13,8 +13,8 @@ final class ProjectService {
     
     // Published
     
-    var statDTO: StatDTO
-    var projectList: [ProjectDTO]
+    @Published var statDTO: StatDTO
+    @Published var projectList: [ProjectDTO] = []
     var projectRegistLimit: Int
     
     // Private
