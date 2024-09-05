@@ -644,9 +644,9 @@ extension ProjectService {
     
     // update: projectDTO
     private func updateDTOAboutComplete(with index: Int) {
-        self.projectList.remove(at: index)
         self.statDTO.totalFinishedProjects += 1
         self.statDTO.totalFinishedTodos += projectList[index].todoList.count
+        self.projectList.remove(at: index)
     }
 }
 
