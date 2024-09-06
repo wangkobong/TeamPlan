@@ -4,7 +4,7 @@
 //
 //  Created by sungyeon on 2023/11/17.
 //  Copyright © 2023 team1os. All rights reserved.
-//
+/*
 
 import Foundation
 
@@ -79,3 +79,4 @@ extension UserDefaultManager: Codable {
 enum UserDefaultKey: String {
     case user = "user"
 }
+*/

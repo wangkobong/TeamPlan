@@ -4,29 +4,28 @@
 //
 //  Created by 크로스벨 on 6/27/24.
 //  Copyright © 2024 team1os. All rights reserved.
-//
 /*
+
+import CoreData
 import Foundation
 
 final class MockGenerator {
-    
-    private var userId: String
-    private let userCD = UserServicesCoredata()
-    private let statCD = StatisticsServicesCoredata()
-    private let projectCD = ProjectLocalRepo()
-    private let challengeCD = ChallengeServicesCoredata()
-    private let accessLogCD = AccessLogServicesCoredata()
-    private let projectLogCD = ProjectExtendLogServicesCoredata()
     
     var localUser: UserObject
     var localStat : StatisticsObject
     var localChallenges : [ChallengeObject]
     
+    private let userCD: UserServicesCoredata
+    private let statCD: StatisticsServicesCoredata
+    private let projectCD: ProjectServicesCoredata
+    private let challengeCD: ChallengeServicesCoredata
+    
+    private var userId: String
+    
     // mock Properties
     var mockUser: UserObject
     var mockStat : StatisticsObject
     var mockChallenges : [ChallengeObject]
-    var mockAccessLogs : [AccessLog]
     var mockProjectId : Int
     var mockProjects : [ProjectObject]
     var mockProjectLog : [Int : [ProjectExtendLog]]
@@ -40,10 +39,14 @@ final class MockGenerator {
         self.mockUser = UserObject()
         self.mockStat = StatisticsObject()
         self.mockChallenges = []
-        self.mockAccessLogs = []
         self.mockProjectId = 0
         self.mockProjects = []
         self.mockProjectLog = [:]
+        
+        self.userCD = UserServicesCoredata()
+        self.statCD = StatisticsServicesCoredata()
+        self.projectCD = ProjectServicesCoredata()
+        self.challengeCD = ChallengeServicesCoredata()
     }
     
     //MARK: Executor
@@ -59,8 +62,11 @@ final class MockGenerator {
             return false
         }
     }
-    
-    //MARK: Local Fetch
+}
+
+//MARK: Local Fetch
+
+extension MockGenerator {
     
     private func prepareDataExecutor() async -> Bool {
         async let isLocalUserFetch = fetchUserFromLocal()
@@ -77,64 +83,74 @@ final class MockGenerator {
             return false
         }
     }
+    // previous notify
+    private func fetchNotifyList(with context: NSManagedObjectContext, isFullFetch: Bool) -> Bool {
+        
+        guard notifyCD.getTotalObjectList(context, with: userId) else {
+            print("[NotifySC] Failed to get notify list")
+            return false
+        }
+        let notifyList = notifyCD.objectList
+        
+        if isFullFetch {
+            for notify in notifyList {
+                if let challengeId = notify.challengeId {
+                    challengeNotifyList[challengeId] = notify
+                }
+                if let projectId = notify.projectId {
+                    projectNotifyList[projectId] = notify
+                }
+            }
+        } else {
+            previousNotifyList.append(contentsOf: notifyList)
+        }
+        return true
+    }
     
-    // User
-    // properties only can change at, 'name, changedAt'
-    private func fetchUserFromLocal() async -> Bool {
+    // statData
+    private func fetchStatData(with context: NSManagedObjectContext) -> Bool {
         do {
-            self.localUser = try userCD.getObject(with: userId)
+            guard try statCD.getObject(context: context, userId: userId) else {
+                print("[NotifySC] Error detected while converting StatEntity to object")
+                return false
+            }
+            self.statData = statCD.object
             return true
         } catch {
-            print("[mockGen] Failed to fetch UserData from storage")
+            print(error.localizedDescription)
             return false
         }
     }
     
-    // Stat
-    // properties can change except, 'userId, syncedAt'
-    private func fetchStatFromLocal() async -> Bool {
+    // project
+    private func fetchValidProject(with context: NSManagedObjectContext) -> Bool {
         do {
-            self.localStat = try statCD.getObject(with: userId)
+            guard try projectCD.getValidObjects(context: context, with: userId) else {
+                print("[NotifySC] Failed to get valid project")
+                return false
+            }
+            self.projectList = projectCD.objectList
             return true
         } catch {
-            print("[mockGen] Failed to fetch StatData from storage")
+            print(error.localizedDescription)
             return false
         }
     }
     
-    // AccessLog
-    // properties can change only at 'accessRecord'
-    // 1 object mean, 1 log
-    // LogList mean [AccessLog]
-    private func fetchAccessLogFromLocal() async -> Bool {
+    // myChallenge
+    private func fetchMyChallenges(with context: NSManagedObjectContext) -> Bool {
         do {
-            self.mockAccessLogs = try accessLogCD.getFullObjects(with: userId)
+            guard try challengeCD.getMyObjects(context: context, userId: userId) else {
+                print("[NotifySC] Failed to get myChallenges")
+                return false
+            }
+            self.challengeList = challengeCD.objects
             return true
         } catch {
-            print("[mockGen] Failed to fetch AccessLog from storage")
+            print(error.localizedDescription)
             return false
         }
-    }
-    
-    // Challenge
-    // properties can change only at 'status, lock, selectStatus, selectedAt, unselectedAt, finishedAt'
-    private func fetchChallengeFromLocal() async -> Bool {
-        do {
-            self.localChallenges = try challengeCD.getObjects(with: userId)
-            return true
-        } catch {
-            print("[mockGen] Failed to fetch Challenges from storage")
-            return false
-        }
-    }
-    
-    // Project
-    // need to generate mock data
-    
-    // ProjectExtendLog
-    // need to generate mock data
-    // must relate with mock porject & mock Project Extend Count
-}
+    }}
 
 //MARK: Generate Mock
 

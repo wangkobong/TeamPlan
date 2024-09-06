@@ -140,13 +140,9 @@ extension ProjectServicesFirestore {
             .whereField("user_id", isEqualTo: userId)
             .whereField("status", isEqualTo: ProjectStatus.ongoing.rawValue)
             .getDocuments()
-        async let completableSnapshot = collectionRef
-            .whereField("user_id", isEqualTo: userId)
-            .whereField("status", isEqualTo: ProjectStatus.completable.rawValue)
-            .getDocuments()
         
-        let (ongoingResults, completableResults) = try await (ongoingSnapshot, completableSnapshot)
-        return ongoingResults.documents + completableResults.documents
+        let ongoingResults = try await ongoingSnapshot
+        return ongoingResults.documents
     }
     
     func convertToData(with object: Object) -> [String:Any] {

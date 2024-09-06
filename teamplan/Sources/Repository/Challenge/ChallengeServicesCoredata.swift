@@ -59,7 +59,7 @@ final class ChallengeServicesCoredata {
         let entities = try getTotalEntity(context: context, owner: userId)
         
         if entities.isEmpty {
-            print("[Coredata-Challenge] There is no challenge to delete")
+            print("[ChallengeLocalRepo] There is no challenge to delete")
             return
         }
         
@@ -115,27 +115,27 @@ extension ChallengeServicesCoredata {
     
     private func checkEntity(with entity: ChallengeEntity) -> Bool {
         if entity.user_id == nil {
-            print("[Coredata-Challenge] nil detected: 'user_id'")
+            print("[ChallengeLocalRepo] nil detected: 'user_id'")
             return false
         }
         if entity.title == nil {
-            print("[Coredata-Challenge] nil detected: 'title'")
+            print("[ChallengeLocalRepo] nil detected: 'title'")
             return false
         }
         if entity.desc == nil {
-            print("[Coredata-Challenge] nil detected: 'desc'")
+            print("[ChallengeLocalRepo] nil detected: 'desc'")
             return false
         }
         if entity.selected_at == nil {
-            print("[Coredata-Challenge] nil detected: 'selected_at'")
+            print("[ChallengeLocalRepo] nil detected: 'selected_at'")
             return false
         }
         if entity.unselected_at == nil {
-            print("[Coredata-Challenge] nil detected: 'unselected_at'")
+            print("[ChallengeLocalRepo] nil detected: 'unselected_at'")
             return false
         }
         if entity.finished_at == nil {
-            print("[Coredata-Challenge] nil detected: 'finished_at'")
+            print("[ChallengeLocalRepo] nil detected: 'finished_at'")
             return false
         }
         return true
@@ -218,7 +218,7 @@ extension ChallengeServicesCoredata{
               let unselectedAt = entity.unselected_at,
               let finishedAt = entity.finished_at
         else {
-            print("[Coredata-Challenge] Failed to fetch data from entity")
+            print("[ChallengeLocalRepo] Failed to fetch data from entity")
             return false
         }
         self.object = ChallengeObject(
@@ -245,7 +245,6 @@ extension ChallengeServicesCoredata{
     private func convertToObjects(with entities: [ChallengeEntity]) -> Bool {
         self.objects = []
         if entities.isEmpty {
-            print("[Coredata-Challenge] There is no entity no convert")
             return true
         }
         for entity in entities {
@@ -257,7 +256,7 @@ extension ChallengeServicesCoredata{
                   let unselectedAt = entity.unselected_at,
                   let finishedAt = entity.finished_at
             else {
-                print("[Coredata-Challenge] Failed to fetch data from entity")
+                print("[ChallengeLocalRepo] Failed to fetch data from entity")
                 return false
             }
             let challengeObject = ChallengeObject(

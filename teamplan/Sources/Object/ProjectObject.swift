@@ -8,6 +8,13 @@
 
 import Foundation
 
+enum ProjectStatus: Int {
+    case ongoing = 1
+    case finished = 2
+    case exploded = 3
+    case unknown = 4
+}
+
 struct ProjectObject{
     let id = UUID().uuidString
     let projectId: Int
@@ -77,13 +84,4 @@ struct ProjectObject{
         self.syncedAt = tempDate
     }
     
-}
-
-enum ProjectStatus: Int {
-    case ongoing = 1
-    case completable = 2
-    case finished = 3
-    case exploded = 4
-    case deleted = 5
-    case unknown = 6
 }

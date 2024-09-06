@@ -17,6 +17,9 @@ final class LoginService{
     private let accessLogCD: AccessLogServicesCoredata
     private let coreValueCD: CoreValueServicesCoredata
     private let projectCD: ProjectServicesCoredata
+    private let projectSC: ProjectService
+    
+    private let notifySC: NotificationService
     
     private let util: Utilities
     private let voltManager: VoltManager
@@ -26,6 +29,8 @@ final class LoginService{
     private var loginDate: Date
     private var userTerm: Int
     private var registLimit: Int
+    private var projectList: [ProjectObject]
+    private var statData: StatisticsObject
     
     private init(userId: String){
         self.userCD = UserServicesCoredata()
@@ -34,6 +39,9 @@ final class LoginService{
         self.accessLogCD = AccessLogServicesCoredata()
         self.coreValueCD = CoreValueServicesCoredata()
         self.projectCD = ProjectServicesCoredata()
+        self.projectSC = ProjectService(userId: userId)
+        
+        self.notifySC = NotificationService(userId: userId)
         
         self.util = Utilities()
         self.voltManager = VoltManager.shared
@@ -43,13 +51,17 @@ final class LoginService{
         self.loginDate = Date()
         self.userTerm = 0
         self.registLimit = 0
+        self.projectList = []
+        self.statData = StatisticsObject()
     }
     
     static func initService(with userId: String) -> LoginService {
         return LoginService(userId: userId)
     }
     
-    func executor() -> Bool {
+    // MARK: Main
+    
+    func executor() async -> Bool {
         let context = storageManager.context
         
         guard checkData(context) else {
@@ -65,7 +77,17 @@ final class LoginService{
             print("[LoginLoading] Failed to fetch userData")
             return false
         }
-        return updateProcess(context)
+        
+        guard updateProcess(context) else {
+            print("[LoginLoading] Failed to update properties")
+            return false
+        }
+        
+        guard await notifySC.firstLoginExecutor() else {
+            print("[LoginLoading] Failed to prepare notifyData")
+            return false
+        }
+        return true
     }
 }
 
@@ -125,7 +147,7 @@ extension LoginService {
                 print("[LoginSC] Failed to fetch StatData from storage")
                 return false
             }
-            self.userTerm = statCD.object.term
+            self.statData = statCD.object
             return true
             
         } catch {
@@ -148,6 +170,22 @@ extension LoginService {
             return false
         }
     }
+    
+    private func fetchProjectData(_ context: NSManagedObjectContext) -> Bool {
+        do {
+            guard try projectCD.getTotalObjects(context: context, with: userId) else {
+                print("[LoginSC] Failed to fetch ProjectData from storage")
+                return false
+            }
+            self.projectList = projectCD.objectList
+            return true
+            
+        } catch {
+            print("[LoginSC] Failed to preprocessing project: \(error.localizedDescription)")
+            return false
+        }
+    }
+    
 }
 
 // MARK: Update Properties
@@ -157,21 +195,21 @@ extension LoginService {
     // main
     private func updateProcess(_ context: NSManagedObjectContext) -> Bool {
         var results = [Bool]()
+        var notifyResult = false
         
-        return context.performAndWait{
+        context.performAndWait {
             results = [
                 updateServiceTerm(context),
-                updateLoginAt(context, with: loginDate),
-                resetDailyRegistTodo(context)
+                updateLoginAt(context, with: loginDate)
             ]
-            if results.allSatisfy({$0}){
-                guard storageManager.saveContext() else {
-                    print("[LoginLoading] Failed to apply daily update at storage")
-                    return false
-                }
-                print("[LoginLoading] Successfully apply daily update at storage")
-                return true
+        }
+        if results.allSatisfy({$0}) && updateProjectStatus(context) {
+            guard storageManager.saveContext() else {
+                print("[LoginLoading] Failed to apply daily update at storage")
+                return false
             }
+            return true
+        } else {
             print("[LoginLoading] Daily update process failed")
             return false
         }
@@ -192,6 +230,7 @@ extension LoginService {
         }
     }
     
+    // accesslog
     private func updateLoginAt(_ context: NSManagedObjectContext, with loginDate: Date) -> Bool {
         let log = AccessLog(userId: userId, accessDate: loginDate)
         guard accessLogCD.setObject(context: context, object: log) else {
@@ -201,44 +240,104 @@ extension LoginService {
         return true
     }
     
-    private func resetDailyRegistTodo(_ context: NSManagedObjectContext) -> Bool {
-        var updatedProjectCount: Int = 0
-        let projectList: [ProjectObject]
+    // project
+    private func updateProjectStatus(_ context: NSManagedObjectContext) -> Bool {
+        
+        if projectList.isEmpty {
+            print("[LoginLoading] There is no project to update")
+            return true
+        }
+        
+        var explodeList: [Int] = []
+        var projectUpdateList: [ProjectUpdateDTO] = []
+        var totalAlertedProjects: Int = statData.totalAlertedProjects
+        
+        for project in projectList {
+            let projectStatus = identifyProject(with: project)
+            
+            switch projectStatus {
+                
+            // alert count
+            case .nearDeadline, .oneDayLeft:
+                projectUpdateList.append(
+                    ProjectUpdateDTO(projectId: project.projectId, userId: userId, newDailyRegistedTodo: registLimit)
+                )
+                totalAlertedProjects += 1
+                
+            // explode
+            case .explode:
+                explodeList.append(project.projectId)
+                
+            // ongoing
+            default:
+                projectUpdateList.append(
+                    ProjectUpdateDTO(projectId: project.projectId, userId: userId, newDailyRegistedTodo: registLimit)
+                )
+            }
+        }
         
         do {
-            // fetch projectData
-            guard try projectCD.getValidObjects(context: context, with: userId) else {
-                print("[LoginLoading] Failed to search projectList")
-                return false
+            if !projectUpdateList.isEmpty {
+                for updated in projectUpdateList {                
+                    guard try projectCD.updateObject(context: context, with: updated) else {
+                        print("[LoginLoading] Failed to update project \(updated.projectId)")
+                        return false
+                    }
+                }
             }
             
-            // projectList check
-            if projectCD.objectList.isEmpty {
-                print("[LoginLoading] There is no project to update")
-                return true
-            } else {
-                projectList = projectCD.objectList
-            }
-            
-            // update projectList
-            for project in projectList {
-                let updated = ProjectUpdateDTO(
-                    projectId: project.projectId,
-                    userId: userId,
-                    newDailyRegistedTodo: registLimit
-                )
-                guard try projectCD.updateObject(context: context, with: updated) else {
-                    print("[LoginLoading] Failed to update project \(project.projectId)")
+            if totalAlertedProjects != statData.totalAlertedProjects {
+                guard try statCD.updateObject(context: context, dto: StatUpdateDTO(userId: userId, newTotalAlertedProjects: totalAlertedProjects)) else {
+                    print("[LoginLoading] Failed to update statData")
                     return false
                 }
-                updatedProjectCount += 1
             }
-            print("[LoginLoading] Updated Project (DailyTodoRegistLimit) : \(updatedProjectCount)")
+            
+            if !explodeList.isEmpty {
+                for projectId in explodeList {
+                    guard projectSC.processExplodedProject(context, with: projectId, on: loginDate) else {
+                        print("[LoginLoading] Failed to process explode project")
+                        return false
+                    }
+                }
+            }
             return true
             
         } catch {
-            print("[LoginLoading] Failed to reset daily registred todo process: \(error.localizedDescription)")
+            print("[LoginLoading] Failed to process data: \(error.localizedDescription)")
             return false
+        }
+    }
+}
+
+extension LoginService {
+    
+    private func identifyProject(with object: ProjectObject) -> ProjectNotification {
+        do {
+            let totalPeriod = try util.calculateDatePeriod(with: object.startedAt, and: object.deadline)
+            let progressedPeriod = try util.calculateDatePeriod(with: object.startedAt, and: loginDate)
+            
+            if progressedPeriod == totalPeriod / 2 {
+                return .halfway
+                
+            } else if progressedPeriod == (totalPeriod * 3 / 4) {
+                return .nearDeadline
+                
+            } else if progressedPeriod == (totalPeriod - 1) {
+                return .oneDayLeft
+                
+            } else if progressedPeriod == totalPeriod {
+                return .theDay
+                
+            } else if progressedPeriod > totalPeriod {
+                return .explode
+                
+            } else {
+                return .ongoing
+            }
+        } catch {
+            print("[NotifyService] Failed to calculate project period")
+            return .unknown
         }
     }
 }

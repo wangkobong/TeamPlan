@@ -44,8 +44,8 @@ final class NotificationService {
     // shared
     let notifyDataManager: NotifyDataManager
     
-    private let userId: String
     private let today: Date
+    private let userId: String
     private let storageManager: LocalStorageManager
     
     private let util: Utilities
@@ -65,8 +65,8 @@ final class NotificationService {
     private var truncateNotifyList: [Int : NotificationCategory]
     
     init(userId: String) {
-        self.userId = userId
         self.today = Date()
+        self.userId = userId
         self.notifyDataManager = NotifyDataManager()
         self.storageManager = LocalStorageManager.shared
         
@@ -122,8 +122,6 @@ final class NotificationService {
         // update single notify (storage & local)
     }
 }
-
-
 
 //MARK:  ----- Fetch Data -----
 
@@ -259,7 +257,6 @@ extension NotificationService {
                     await notifyDataManager.addTruncateNotify(project.projectId, .project)
                     continue
                 }
-                
                 // check: update notify
                 if candidateNotifyType != previousNotify.projectStatus {
                     updateNeedNotifyList.append(
@@ -382,25 +379,38 @@ extension NotificationService {
     private func updateExecutor() async -> Bool {
         let context = storageManager.context
         
-        var truncateResult = false
         if await !notifyDataManager.getTruncateList().isEmpty {
-            truncateResult = await applyTruncateResult(context)
-        } else {
-            truncateResult = true
+            guard await applyTruncateResult(context) else {
+                print("[UpdateExecutor] Failed to apply truncate results.")
+                return false
+            }
         }
 
-        var updateResult = false
         if !updateNeedNotifyList.isEmpty {
-            updateResult = applyUpdateResult(context)
-        } else {
-            updateResult = true
+            guard applyUpdateResult(context) else {
+                print("[UpdateExecutor] Failed to apply update results.")
+                return false
+            }
         }
-        return truncateResult && updateResult
+
+        if await !notifyDataManager.getNewNotifyList().isEmpty {
+            guard await applyAddNewResult(context) else {
+                print("[UpdateExecutor] Failed to apply new additions.")
+                return false
+            }
+        }
+        return true
     }
     
     //MARK: add new
-    private func applyAddNewResult(_ context: NSManagedObjectContext) {
-        
+    private func applyAddNewResult(_ context: NSManagedObjectContext) async -> Bool {
+        let storageResult = await applyAddNewResultToStorage(context)
+        if storageResult {
+            await applyAddNewResultToLocal()
+            return true
+        } else {
+            return false
+        }
     }
     
     private func applyAddNewResultToStorage(_ context: NSManagedObjectContext) async -> Bool {

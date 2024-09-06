@@ -74,7 +74,7 @@ final class AuthenticationViewModel: ObservableObject {
         }
         let loginService = LoginService.initService(with: userId)
         
-        if loginService.executor() {
+        if await loginService.executor() {
             print("[AuthViewModel] Login Process Success")
             return true
         } else {

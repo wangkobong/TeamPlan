@@ -126,22 +126,31 @@ extension BackgroundService {
     
     private func scheduleNextbackgroundTask() {
         
-        // set request
-        guard let nextTiming = Calendar.current.nextDate(after: Date(), matching: DateComponents(hour: 6), matchingPolicy: .nextTime) else {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        var nextTiming = calendar.nextDate(after: now, matching: DateComponents(hour: 6), matchingPolicy: .nextTime)
+        
+        if let nextTimingUnwrapped = nextTiming, nextTimingUnwrapped <= now {
+            nextTiming = calendar.date(byAdding: .day, value: 1, to: nextTimingUnwrapped)
+        }
+
+        guard let validNextTiming = nextTiming else {
             print("[BackgroundSC] Failed to calculate backgroundTask regist timing")
             return
         }
+
         let request = BGAppRefreshTaskRequest(identifier: BackgroundTaskId.notifyTask.rawValue)
-        request.earliestBeginDate = nextTiming
+        request.earliestBeginDate = validNextTiming
         
         // regist request
         do {
             try BGTaskScheduler.shared.submit(request)
             _ = voltManager.registerBackgroundTaskScheduled(true)
-            print("[BackgroundSC] Background task scheduled at: \(nextTiming)")
+            print("[BackgroundSC] Background task scheduled at: \(validNextTiming)")
         } catch {
             _ = voltManager.registerBackgroundTaskScheduled(false)
-            print("[BackgroundSC] Failed to schedule background task")
+            print("[BackgroundSC] Failed to schedule background task: \(error.localizedDescription)")
         }
     }
 }

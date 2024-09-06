@@ -188,13 +188,13 @@ enum EntityPredicate {
         case .projectTotalList:
             return "user_id == %@"
         case .projectValidList:
-            return "user_id == %@ AND (status == %d OR status == %d)"
+            return "user_id == %@ AND status == %d"
         case .projectAlertList:
-            return "user_id == %@ AND deadline >= %@ AND (status == %d OR status == %d)"
+            return "user_id == %@ AND deadline >= %@ AND status == %d"
         case .projectUploadList:
-            return "user_id == %@ AND (status == %d OR status == %d OR status == %d)"
+            return "user_id == %@ AND (status == %d OR status == %d)"
         case .projectTruncateList:
-            return "user_id == %@ AND (status == %d OR status == %d OR status == %d OR status == %d)"
+            return "user_id == %@ AND (status == %d OR status == %d OR status == %d)"
             
         // accesslog
         case .accessLog:

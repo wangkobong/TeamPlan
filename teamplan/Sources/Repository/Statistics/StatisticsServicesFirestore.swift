@@ -50,7 +50,6 @@ extension StatisticsServicesFirestore {
     }
     
     func checkUpdate(from serverData: StatisticsObject, to localData: StatisticsObject, at syncDate: Date) async throws -> [String:Any] {
-        let util = Utilities()
         var updatedData = [String: Any]()
         
         if serverData.term != localData.term {

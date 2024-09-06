@@ -49,7 +49,7 @@ final class ProjectViewModel: ObservableObject {
             self.identifier = "unknown"
             self.userName = "unknown"
         }
-        self.service = ProjectService(userId: identifier, statData: StatDTO())
+        self.service = ProjectService(userId: identifier)
         self.projectRegistLimit = 0
         
         self.prepareData()
@@ -292,7 +292,6 @@ extension ProjectViewModel {
     // MARK: Util
     
     func createWaterDropArray(upTo number: Int) {
-        print("[ProjectViewModel] projectRegistLimit: \(projectRegistLimit)")
         guard number > 0 else { return }
         let waterDrops = Array(1...number)
         self.waterDrop = waterDrops.map { "\($0)일 연장하기" }
