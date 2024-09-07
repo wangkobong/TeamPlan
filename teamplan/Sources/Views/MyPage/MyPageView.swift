@@ -23,7 +23,7 @@ struct MyPageView: View {
     @AppStorage("mainViewState") var mainViewState: MainViewState?
     
     private var leftRightInset: CGFloat = 16
-    private var menuTitles: [MypageMenu] = [.logout, .withdraw, .version]
+    private var menuTitles: [MypageMenu] = [.version]
     
     @State private var showAlert = false
     @State private var myPageAlertState: MyPageAlertState = .none
@@ -44,10 +44,28 @@ struct MyPageView: View {
             vm.loadData()
         }
         .alert(isPresented: $showAlert) {
+//            Alert(
+//                title: Text(getAlertTitle()),
+//                message: Text(getAlertMessage()),
+//                primaryButton: .destructive(Text(getAlertTitle())){
+//                    switch myPageAlertState {
+//                    case .none:
+//                        break
+//                    case .logout:
+//                        tryLogout(for: .logout)
+//                    case .withdraw:
+//                        tryWithdraw(for: .withdraw)
+//                    case .version:
+//                        break
+//                    }
+//                },
+//                secondaryButton: .cancel(Text("확인"))
+//            )
+//            
             Alert(
                 title: Text(getAlertTitle()),
                 message: Text(getAlertMessage()),
-                primaryButton: .destructive(Text(getAlertTitle())){
+                dismissButton: .default(Text(getAlertTitle())) {
                     switch myPageAlertState {
                     case .none:
                         break
@@ -58,8 +76,7 @@ struct MyPageView: View {
                     case .version:
                         break
                     }
-                },
-                secondaryButton: .cancel(Text("취소"))
+                }
             )
         }
     }
@@ -193,7 +210,7 @@ extension MyPageView {
         case .withdraw:
             return "회원탈퇴"
         case .version:
-            return "버전확인"
+            return "확인"
         }
     }
     

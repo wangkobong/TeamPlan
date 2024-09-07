@@ -24,13 +24,15 @@ struct NotificationView: View {
             if isLoading {
                 LoadingView()
             } else {
-                section
-                    .frame(height: 61)
-                
-                ScrollView {
-                    NotificationListView(notifications: $viewModel.filteredNotiList)
+                if viewModel.allNotiList.isEmpty {
+                    NotificationEmptyView()
+                } else {
+                    section
+                        .frame(height: 61)
+                    
+
+                    Spacer()
                 }
-                Spacer()
             }
         }
         .navigationBarBackButtonHidden(true)

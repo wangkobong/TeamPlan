@@ -149,7 +149,7 @@ extension ChallengesView {
     private var topCardSection: some View {
         
         VStack {
-           let _ = Self._printChanges()
+//           let _ = Self._printChanges()
             HStack {
                 Text("나의 도전과제")
                     .font(.appleSDGothicNeo(.semiBold, size: 20))
@@ -227,7 +227,6 @@ extension ChallengesView {
             self.selectedCardIndex = (self.selectedCardIndex == index) ? nil : index
             if let challengeIndex = viewModel.challengeList.firstIndex(where: {$0.challengeId == self.viewModel.myChallenges[index].challengeID }) {
                 // index를 사용하여 작업 수행
-                print("해당 요소의 인덱스: \(challengeIndex)")
                 self.indexForAlert = challengeIndex
             } else {
                 // 배열에서 조건을 만족하는 요소를 찾지 못한 경우에 대한 처리
@@ -273,7 +272,6 @@ extension ChallengesView {
                     .onTapGesture {
                         indexForAlert = absoluteIndex
                         setChallengeAlert(with: item)
-                        print("클릭: \(item), 인덱스: \(absoluteIndex)")
                     }
             }
         }

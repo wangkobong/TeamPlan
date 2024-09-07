@@ -52,23 +52,44 @@ final class ProjectViewModel: ObservableObject {
         self.service = ProjectService(userId: identifier)
         self.projectRegistLimit = 0
         
+        self.addSubscribers()
         self.prepareData()
         self.createWaterDropArray(upTo: statData.drop)
     }
     
+    private func addSubscribers() {
+        service.$projectList
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] projectList in
+                DispatchQueue.main.async {
+                    self?.projectList = projectList
+                }
+            }
+            .store(in: &cancellables)
+        
+        service.$statDTO
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] statData in
+                DispatchQueue.main.async {
+                    self?.statData = statData
+                }
+            }
+            .store(in: &cancellables)
+    }
+    
     private func prepareData() {
         Task {
-            let result = service.executor(action: .prepareService)
-            
-            if result {
-                await updateProjectList()
-                await updateStatData()
-                self.projectRegistLimit = service.projectRegistLimit
-                self.isViewModelReady = true
-            } else {
-                print("[ProjectViewModel] Failed to prepare data")
-                self.isViewModelReady = false
-            }
+
+        }
+        
+        let result = service.executor(action: .prepareService)
+        
+        if result {
+            self.projectRegistLimit = service.projectRegistLimit
+            self.isViewModelReady = true
+        } else {
+            print("[ProjectViewModel] Failed to prepare data")
+            self.isViewModelReady = false
         }
     }
 }
