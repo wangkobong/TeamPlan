@@ -37,7 +37,7 @@ final class NotificationViewModel: ObservableObject {
         }
     }
     
-    func prepareViewModel(with homeVM: HomeViewModel) async -> Bool {
+    func prepareViewModel() async -> Bool {
         
         guard await service.fetchExecutor() else {
             return false
@@ -45,15 +45,13 @@ final class NotificationViewModel: ObservableObject {
         guard await prepareNotifyData() else {
             return false
         }
-        prepareNotiSection()
-        filterNotifications(type: .all)
-        addSubscribers()
-        
-        // true: show notification
-        // false: show alert
+        await prepareNotiSection()
+        await filterNotifications(type: .all)
+        await addSubscribers()
         return true
     }
     
+    @MainActor
     func filterNotifications(type: NotificationType) {
         switch type {
         case .all:
@@ -65,7 +63,7 @@ final class NotificationViewModel: ObservableObject {
         }
     }
     
-    
+    @MainActor
     private func prepareNotiSection() {
         self.notiSections = [
             NotificationSection(title: "전체", type: .all, isSelected: true),
@@ -113,6 +111,7 @@ final class NotificationViewModel: ObservableObject {
         )
     }
     
+    @MainActor
     private func addSubscribers() {
         Publishers.CombineLatest($projectNotiList, $challengeNotiList)
             .map { $0 + $1 }
