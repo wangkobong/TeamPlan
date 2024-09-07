@@ -106,7 +106,7 @@ extension HomeView {
                 .padding(.leading, -10)
             Spacer()
             
-            NavigationLink(destination: NotificationView().environmentObject(viewModel), isActive: $isNotificationViewActive) {
+            NavigationLink(destination: NotificationView(), isActive: $isNotificationViewActive) {
                 Image(systemName: "bell")
                     .foregroundColor(.black)
             }

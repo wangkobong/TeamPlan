@@ -11,11 +11,10 @@ import WrappingHStack
 
 struct NotificationView: View {
     
-    @StateObject private var viewModel = NotificationViewModel()
-    @EnvironmentObject private var homeViewModel: HomeViewModel
-    
     @State private var isLoading = true
     @State private var showAlert = false
+    
+    @StateObject private var viewModel = NotificationViewModel()
     
     @Environment(\.dismiss) var dismiss
     
@@ -48,7 +47,7 @@ struct NotificationView: View {
         }
         .onAppear {
             Task {
-                let isDataReady = await viewModel.prepareViewModel(with: homeViewModel)
+                let isDataReady = await viewModel.prepareViewModel()
                 if isDataReady {
                     isLoading = false
                 } else {
