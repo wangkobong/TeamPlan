@@ -61,11 +61,12 @@ struct HomeView: View {
                         TutorialView()
                     }
                     .onAppear {
-                        let isProceed = viewModel.updateData()
-                        if isProceed {
-                            checkProperties()
-                        } else {
-                            showUpdateAlert = true
+                        Task {
+                            if await viewModel.updateData() {
+                                checkProperties()
+                            } else {
+                                showUpdateAlert = true
+                            }
                         }
                     }
                     .alert(isPresented: $showUpdateAlert) {
@@ -75,12 +76,13 @@ struct HomeView: View {
             }
         }
         .onAppear {
-            let isReady = viewModel.prepareData()
-            if isReady {
-                isLoading = false
-            } else {
-                showLoadAlert = true
-                isRedirecting = true
+            Task {
+                if await viewModel.prepareData() {
+                    isLoading = false
+                } else {
+                    showLoadAlert = true
+                    isRedirecting = true
+                }
             }
         }
         .alert(isPresented: $showLoadAlert) {

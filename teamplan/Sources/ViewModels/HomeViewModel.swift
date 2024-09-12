@@ -46,10 +46,9 @@ final class HomeViewModel: ObservableObject {
         self.userData = HomeDataDTO(with: userName)
     }
 
-    func prepareData() -> Bool {
-        
+    func prepareData() async -> Bool {
         if self.service.prepareExecutor() {
-            self.userData = service.dto
+            await updateProperties()
             return true
         } else {
             print("[HomeViewModel] Failed to Initialize ViewModel")
@@ -57,9 +56,9 @@ final class HomeViewModel: ObservableObject {
         }
     }
      
-    func updateData() -> Bool {
+    func updateData() async -> Bool {
         if self.service.updateExecutor() {
-            self.userData = service.dto
+            await updateProperties()
             return true
         } else {
             print("[HomeViewModel] Failed to update ViewModel userData")
@@ -67,23 +66,9 @@ final class HomeViewModel: ObservableObject {
         }
     }
     
-    func getChallengeProgress(with type: ChallengeType) -> Int {
-        switch type {
-        case .onboarding:
-            return 0
-        case .serviceTerm:
-            return userData.statData.term
-        case .waterDrop:
-            return userData.statData.drop
-        case .projectAlert:
-            return userData.statData.totalAlertedProjects
-        case .projectFinish:
-            return userData.statData.totalFailedProjects
-        case .totalTodo:
-            return userData.statData.totalRegistedTodos
-        default:
-            return -1
-        }
+   @MainActor
+    private func updateProperties() {
+        self.userData = service.dto
     }
 }
 

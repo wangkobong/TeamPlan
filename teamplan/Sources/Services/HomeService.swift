@@ -114,7 +114,7 @@ final class HomeService {
                 if myChallenges.isEmpty {
                     dto.myChallenges = []
                 } else {
-                    dto.myChallenges = myChallenges.map{ MyChallengeDTO(with: $0) }
+                    dto.myChallenges = myChallenges.map{ MyChallengeDTO(object: $0, progress: 0) }
                 }
                 return true
                 

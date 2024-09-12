@@ -14,6 +14,9 @@ struct ChallengesView: View {
     @Environment(\.dismiss) var dismiss
     
     @State private var isPresented: Bool = false
+    @State private var isLoading: Bool = true
+    @State private var showInitAlert: Bool = false
+    
     @State private var type: ChallengeAlertType = .lock
     @State private var currentPage = 0
     @State private var indexForAlert = 0
@@ -36,10 +39,10 @@ struct ChallengesView: View {
     //MARK: Main Body
     
     var body: some View {
-        if !viewModel.isViewModelReady {
-            LoadingView()
-        } else {
-            ScrollView {
+        ScrollView {
+            if isLoading {
+                LoadingView()
+            } else {
                 VStack {
                     descriptionSection
                     topCardSection
@@ -57,6 +60,20 @@ struct ChallengesView: View {
                 }
                 .toastView(toast: $toast)
             }
+        }
+        .onAppear{
+            Task {
+                let isViewModelReady = await viewModel.prepareData()
+                
+                if isViewModelReady {
+                    isLoading = false
+                } else {
+                    showInitAlert = true
+                }
+            }
+        }
+        .alert(isPresented: $showInitAlert) {
+            Alert(title: Text("너무 빨랐습니다ㅠ"), message: Text("도전과제 기능을 준비중입니다! 잠시후 다시 시도해주세요"), dismissButton: .default(Text("OK")))
         }
     }
     
@@ -96,21 +113,25 @@ struct ChallengesView: View {
             break
         case .didChallenge:
             break
-        case .complete:
-            break
         case .lock:
             break
         case .willChallenge:
             self.type = .didChallenge
             self.isPresented = true
             Task {
-                await viewModel.setMyChallenge(
+                _ = await viewModel.setMyChallenge(
                     with: $viewModel.challengeList[self.indexForAlert].challengeId.wrappedValue
+                )
+            }
+        case .complete:
+            Task {
+                _ = await viewModel.rewardMyChallenge(
+                    with: $viewModel.myChallenges[selectedCardIndex ?? 0].challengeID.wrappedValue
                 )
             }
         case .quit:
             Task {
-                await viewModel.disableMtChallenge(
+                _ = await viewModel.disableMtChallenge(
                     with: $viewModel.myChallenges[selectedCardIndex ?? 0].challengeID.wrappedValue
                 )
             }
