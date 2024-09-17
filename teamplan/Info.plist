@@ -52,6 +52,8 @@
 	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
+    <key>UIUserInterfaceStyle</key>
+    <string>Light</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen.storyboard</string>
 	<key>UIRequiredDeviceCapabilities</key>

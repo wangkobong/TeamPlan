@@ -39,7 +39,6 @@ final class LocalStorageManager {
     
     func saveContext() -> Bool {
         if context.hasChanges {
-            print("[localStorage] Context change detected")
             do {
                 try self.context.save()
                 return true
@@ -49,7 +48,6 @@ final class LocalStorageManager {
                 return false
             }
         }
-        print("[localStorage] Context change not detected")
         return true
     }
     

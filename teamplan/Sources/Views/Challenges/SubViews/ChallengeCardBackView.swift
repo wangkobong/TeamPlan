@@ -52,7 +52,7 @@ struct ChallengeCardBackView: View {
     
     private var actionButton: some View {
         Button(action: handleButtonTap) {
-            Text(challenge.progress == challenge.goal ? "완료하기" : "포기하기")
+            Text(challenge.progress >= challenge.goal ? "완료하기" : "포기하기")
                 .frame(maxWidth: .infinity)
                 .frame(height: 25)
                 .background(Color.theme.mainPurpleColor)
@@ -63,7 +63,6 @@ struct ChallengeCardBackView: View {
         .padding(.horizontal, 10)
         .padding(.top, 12)
     }
-    
 }
 
 extension ChallengeCardBackView {
@@ -74,32 +73,22 @@ extension ChallengeCardBackView {
     
     private func calculateProgressBarWidth() -> CGFloat {
         guard challenge.goal != 0 else { return 0 }
-        let progressRatio = CGFloat(challenge.progress) / CGFloat(challenge.goal)
+        let progress = CGFloat(challenge.progress) / CGFloat(challenge.goal)
+        let progressRatio = min(progress, 1.0)
         return progressRatio * (setCardWidth(screenWidth: parentsWidth) - 34)
     }
     
     private func handleButtonTap() {
         Task {
-            if challenge.progress == challenge.goal {
-                await completeChallenge()
+            if challenge.progress >= challenge.goal {
+                // reward challenge
+                self.type = .complete
+                self.isPresented.toggle()
             } else {
-                quitChallenge()
+                // disable challenge
+                self.type = .quit
+                self.isPresented.toggle()
             }
         }
-    }
-    
-    private func completeChallenge() async {
-        if await viewModel.rewardMyChallenge(with: challenge.challengeID) {
-            self.type = .complete
-            self.isPresented.toggle()
-        } else {
-            // 실패 케이스 처리
-            // 예: 에러 메시지 표시
-        }
-    }
-    
-    private func quitChallenge() {
-        self.type = .quit
-        self.isPresented.toggle()
     }
 }

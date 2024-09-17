@@ -98,7 +98,7 @@ extension ChallengeAlertView {
                 .foregroundColor(.theme.mainPurpleColor)
     
             
-            Text("\(getChallenge(index: self.index).title)\n이 배찌를 획득하였어요.")
+            Text("\(getChallenge(index: self.index).title) 를 완료하여 \n \(getChallenge(index: self.index).reward) 개의 물방울을 획득했었어요.")
                 .font(.appleSDGothicNeo(.regular, size: 17))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
@@ -106,7 +106,7 @@ extension ChallengeAlertView {
                 .padding(.top, 12)
                 .padding(.horizontal, 40)
             
-            Text("닫기")
+            Text("보상받기")
                 .frame(maxWidth: .infinity)
                 .frame(height: 44)
                 .font(.appleSDGothicNeo(.bold, size: 14))
@@ -408,7 +408,7 @@ extension ChallengeAlertView {
                 .foregroundColor(.theme.mainPurpleColor)
     
             
-            Text("\(getChallenge(index: self.index).title)\n이 배찌를 획득하였어요.")
+            Text("\(getChallenge(index: self.index).title) 를 완료해서\n\(getChallenge(index: self.index).reward) 개의 물방울을 획득했어요.")
                 .font(.appleSDGothicNeo(.regular, size: 17))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
@@ -428,6 +428,7 @@ extension ChallengeAlertView {
                 .padding(.vertical, 16)
                 .onTapGesture {
                     self.isPresented = false
+                    action()
                 }
         }
     }
