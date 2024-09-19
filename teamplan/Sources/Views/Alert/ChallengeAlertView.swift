@@ -261,18 +261,20 @@ extension ChallengeAlertView {
         VStack {
 
             Spacer()
+                .frame(height: 50)
             
-            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].islock, isComplete: self.allChallenge[index].isFinished))
-                .frame(width: 82, height: 82)
+            Image("project_bomb_quit")
+                .frame(width: 82, height: 112)
+                .padding(.bottom, 14)
             
-            Text("\(getChallenge(index: self.index).title)")
-                .font(.appleSDGothicNeo(.bold, size: 24))
+            Text("도전과제를 그만두시겠습니까?")
+                .font(.appleSDGothicNeo(.bold, size: 17))
                 .multilineTextAlignment(.center)
                 .foregroundColor(.theme.mainPurpleColor)
     
             
-            Text("\(getChallenge(index: self.index).title) 프로젝트")
-                .font(.appleSDGothicNeo(.regular, size: 17))
+            Text("도전과제 진행도는 사라지지 않습니다.")
+                .font(.appleSDGothicNeo(.regular, size: 13))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .foregroundColor(.theme.darkGreyColor)
@@ -296,7 +298,7 @@ extension ChallengeAlertView {
                 Spacer()
                     .frame(width: 16)
                 
-                Text("포기하기")
+                Text("그만하기")
                     .frame(maxWidth: .infinity)
                     .frame(height: 44)
                     .font(.appleSDGothicNeo(.bold, size: 14))
@@ -390,46 +392,76 @@ extension ChallengeAlertView {
     }
     
     private var completeAlert: some View {
-        VStack {
-            Text(formattedDate(from: allChallenge[self.index].finishedAt ?? Date()))
-                .font(.appleSDGothicNeo(.regular, size: 12))
-                .multilineTextAlignment(.center)
-                .foregroundColor(.theme.greyColor)
-                .padding(.top, 16)
+        ZStack {
             
-            Spacer()
-            
-            Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].islock, isComplete: self.allChallenge[index].isFinished))
-                .frame(width: 82, height: 82)
-            
-            Text("\(allChallenge[self.index].desc)")
-                .font(.appleSDGothicNeo(.bold, size: 24))
-                .multilineTextAlignment(.center)
-                .foregroundColor(.theme.mainPurpleColor)
-    
-            
-            Text("\(getChallenge(index: self.index).title) 를 완료해서\n\(getChallenge(index: self.index).reward) 개의 물방울을 획득했어요.")
-                .font(.appleSDGothicNeo(.regular, size: 17))
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .foregroundColor(.theme.darkGreyColor)
-                .padding(.top, 12)
-                .padding(.horizontal, 40)
-            
-            Text("닫기")
-                .frame(maxWidth: .infinity)
-                .frame(height: 44)
-                .font(.appleSDGothicNeo(.bold, size: 14))
-                .multilineTextAlignment(.center)
-                .foregroundColor(.theme.mainPurpleColor)
-                .background(Color.theme.mainPurpleColor.opacity(0.2))
-                .cornerRadius(8)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 16)
-                .onTapGesture {
-                    self.isPresented = false
-                    action()
+            VStack {
+                Spacer()
+                    .frame(height: 30)
+                HStack {
+                    Image("alert_didChallenge_red")
+                        .offset(y: -10)
+                        .offset(x: -40)
+                    Image("alert_didChallenge_x")
+                        .offset(y: 5)
+                    Image("alert_didChallenge_yellow1")
+                        .offset(y: 35)
+                        .offset(x: -80)
+                    Image("alert_didChallenge_rectangle_blue")
+                        .offset(y: -5)
+                        .offset(x: 110)
+                    Image("alert_didChallenge_yellow2")
+                        .offset(y: 5)
+                        .offset(x: 35)
+                    Image("alert_didChallenge_rectangle_grey")
+                        .offset(y: 65)
+                        .offset(x: -120)
+                    Image("alert_didChallenge_rectangle_plus")
+                        .offset(y: 35)
+                        .offset(x: 40)
                 }
+                Spacer()
+            }
+            
+            VStack {
+
+                Spacer()
+                    .frame(height: 20)
+                
+                Image("project_bomb_quit")
+                    .frame(width: 82, height: 116)
+                
+                Spacer()
+                    .frame(height: 9)
+                
+                Text("도전과제를 완료하였습니다!")
+                    .font(.appleSDGothicNeo(.semiBold, size: 17))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .foregroundColor(.theme.mainPurpleColor)
+                    .padding(.top, 12)
+                    .padding(.horizontal, 40)
+                
+                Text("\(getChallenge(index: self.index).title) 완료하여 \n\(getChallenge(index: self.index).reward) 개의 물방울을 획득했습니다!")
+                    .font(.appleSDGothicNeo(.regular, size: 13))
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.theme.darkGreyColor)
+                    .padding(.top, 6)
+                
+                Text("보상받기")
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .font(.appleSDGothicNeo(.bold, size: 14))
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.theme.mainPurpleColor)
+                    .background(Color.theme.mainPurpleColor.opacity(0.2))
+                    .cornerRadius(8)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 16)
+                    .onTapGesture {
+                        self.isPresented = false
+                        action()
+                    }
+            }
         }
     }
 
