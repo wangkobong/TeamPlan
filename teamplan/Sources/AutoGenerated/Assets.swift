@@ -109,6 +109,8 @@ internal enum Gen {
     internal static let bombCompleteAlert = ImageAsset(name: "bomb_complete_alert")
     internal static let checkBoxDone = ImageAsset(name: "checkBox_done")
     internal static let checkBoxNone = ImageAsset(name: "checkBox_none")
+    internal static let projectBombComplete = ImageAsset(name: "project_bomb_complete")
+    internal static let projectBombQuit = ImageAsset(name: "project_bomb_quit")
     internal static let projectBombSmile = ImageAsset(name: "project_bomb_smile")
     internal static let projectEmpty = ImageAsset(name: "project_empty")
     internal static let projectExchange = ImageAsset(name: "project_exchange")
