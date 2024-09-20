@@ -15,8 +15,6 @@ final class HomeViewModel: ObservableObject {
     
     // Updated
     @Published var userData: HomeDataDTO
-    @Published var isLoginRedirectNeed: Bool = false    // activated when data load fails: logout & redirect to loginView
-    @Published var isViewModelProceed: Bool = false       // activated when data complete: progress to homeView
     
     private let identifier: String
     private let userName: String
@@ -27,19 +25,15 @@ final class HomeViewModel: ObservableObject {
 
     @MainActor
     init() {
-        // UserDefault: Load Data
         let volt = VoltManager.shared
         if let identifier = volt.getUserId(),
            let userName = volt.getUserName() {
             self.identifier = identifier
             self.userName = userName
-            
-        // UserDefault: Exception Handling
         } else {
             print("[HomeViewModel] ViewModel Initialize Failed")
             self.identifier = "unknown"
             self.userName = "unknown"
-            self.isLoginRedirectNeed = true
         }
         // Initialize Properties with Identifier
         self.service = HomeService(with: identifier, and: userName)
@@ -71,60 +65,3 @@ final class HomeViewModel: ObservableObject {
         self.userData = service.dto
     }
 }
-
-// MARK: Data Change Detector
-/* TODO: Need To Update with using 'userData' version
- extension HomeViewModel {
- 
- func tryChallenge(with challengeId: Int) {
- Task{
- do {
- try await service.challengeSC.setMyChallenges(with: challengeId)
- await updateUserDataChallenge()
- 
- } catch let error {
- // Handle the error here
- print("[HomeViewModel] Failed to Set Challenge: \(error.localizedDescription)")
- }
- }
- }
- 
- func quitChallenge(with challengeId: Int) {
- Task {
- do {
- try await service.challengeSC.disableMyChallenge(with: challengeId)
- await updateUserDataChallenge()
- 
- } catch let error {
- // Handle the error here
- print("[HomeViewModel] Failed to Disable Challenge: \(error.localizedDescription)")
- }
- }
- }
- 
- func completeChallenge(with challengeId: Int) {
- Task {
- do {
- try await service.challengeSC.rewardMyChallenge(with: challengeId)
- await updateUserDataChallenge()
- 
- } catch let error {
- // Handle the error here
- print("[HomeViewModel] Failed to Disable Challenge: \(error.localizedDescription)")
- }
- }
- }
- 
- @MainActor
- private func updateUserData() async {
- self.userData = self.service.dto
- }
- 
- @MainActor
- private func updateUserDataChallenge() async {
- self.userData.myChallenges = service.challengeSC.myChallenges
- self.userData.challenges = service.challengeSC.challengesDTO
- self.userData.statData = service.challengeSC.statDTO
- }
- }
- */

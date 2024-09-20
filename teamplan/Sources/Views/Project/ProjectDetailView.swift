@@ -20,6 +20,9 @@ struct ProjectDetailView: View {
     @State private var isAdding: Bool = false
     @State private var isPresented: Bool = false
     
+    @State private var showTodoAddAlert: Bool = false
+    @State private var showCompleteAlert: Bool = false
+    
     var body: some View {
         VStack {
             header
@@ -44,14 +47,28 @@ struct ProjectDetailView: View {
         }
         .navigationTitle("\(project.title)")
         .navigationBarBackButtonHidden(true)
-        .onAppear {
-
+        
+        // alert: add new todo
+        .alert(isPresented: $showTodoAddAlert) {
+            Alert(
+                title: Text("할 일 등록실패"),
+                message: Text("새로운 할 일을 등록하는데 실패하였습니다. 다시 시도해주세요."),
+                dismissButton: .default(Text("확인"))
+            )
         }
+        // alert: compelte
+        .alert(isPresented: $showCompleteAlert) {
+            Alert(
+                title: Text("목표 완료하기 실패"),
+                message: Text("목표를 완료하는데 실패하였습니다. 다시 시도해주세요."),
+                dismissButton: .default(Text("확인"))
+            )
+        }
+        
+        // complete flow
         .projectCompleteAlert(isPresented: $isPresented) {
             ProjectCompleteAlertView(isPresented: $isPresented) {
-                Task {
-                    await self.completeProject()
-                }
+                Task { await self.completeProject() }
             }
         }
     }
@@ -67,7 +84,7 @@ extension ProjectDetailView {
     private var header: some View {
         ZStack{
             VStack(alignment: .leading) {
-                Text(project.deadline.days(from: Date()) < 0 ? "기간만료" : "D-\(project.deadline.days(from: Date()))")
+                Text(project.deadline.days(from: Date()) < 0 ? "기간만료" : "D-\(project.remainDays)")
                     .foregroundColor(Color.theme.mainPurpleColor)
                     .font(.appleSDGothicNeo(.bold, size: 24))
                     .padding(.bottom, 5)
@@ -216,8 +233,11 @@ extension ProjectDetailView {
 extension ProjectDetailView {
     private func addTodo() {
         withAnimation(.spring()) {
-            self.projectViewModel.addNewTodo(projectId: self.project.projectId)
-            self.isShowEmptyView = false
+            if self.projectViewModel.addNewTodo(projectId: self.project.projectId) {
+                self.isShowEmptyView = false
+            } else {
+                self.showTodoAddAlert = true
+            }
         }
     }
     
@@ -226,8 +246,11 @@ extension ProjectDetailView {
     }
     
     private func completeProject() async {
-        await projectViewModel.completeProject(with: project.projectId)
-        dismiss.callAsFunction()
+        if await projectViewModel.completeProject(with: project.projectId) {
+            dismiss.callAsFunction()
+        } else {
+            self.showCompleteAlert = true
+        }
     }
     
     private func isAvailableAddingToDo() -> Bool {

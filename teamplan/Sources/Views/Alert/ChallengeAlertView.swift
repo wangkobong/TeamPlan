@@ -98,7 +98,7 @@ extension ChallengeAlertView {
                 .foregroundColor(.theme.mainPurpleColor)
     
             
-            Text("\(getChallenge(index: self.index).title) 를 완료하여 \n \(getChallenge(index: self.index).reward) 개의 물방울을 획득했었어요.")
+            Text("'\(getChallenge(index: self.index).desc)' 하여\n\(getChallenge(index: self.index).reward)개의 물방울을 획득했습니다.")
                 .font(.appleSDGothicNeo(.regular, size: 17))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)

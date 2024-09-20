@@ -28,8 +28,10 @@ struct NotificationView: View {
                 } else {
                     section
                         .frame(height: 61)
-                    
-
+                    ScrollView {
+                        NotificationListView(notifications: $viewModel.filteredNotiList)
+                            .environmentObject(viewModel)
+                    }
                     Spacer()
                 }
             }
@@ -47,8 +49,7 @@ struct NotificationView: View {
         }
         .onAppear {
             Task {
-                let isDataReady = await viewModel.prepareViewModel()
-                if isDataReady {
+                if await viewModel.prepareViewModel() {
                     isLoading = false
                 } else {
                     showAlert = true

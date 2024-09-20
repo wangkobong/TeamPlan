@@ -6,23 +6,10 @@
 //
 
 import SwiftUI
-import FirebaseAuth
-import GoogleSignInSwift
-import AuthenticationServices
-
-enum LoginViewState {
-    case login
-    case toHome
-    case toSignup
-}
 
 struct LoginView: View {
     
     @AppStorage("mainViewState") var mainViewState: MainViewState?
-    @EnvironmentObject var authViewModel: AuthenticationViewModel
-    
-    @State private var isLoading: Bool = false
-    @State private var showLoginAlert: Bool = false
 
     let transition: AnyTransition = .asymmetric(
         insertion: .move(edge: .trailing),
@@ -35,13 +22,6 @@ struct LoginView: View {
         NavigationView {
             ZStack {
                 loginView
-            }
-            .alert(isPresented: $showLoginAlert) {
-                Alert(
-                    title: Text("로그인 실패"),
-                    message: Text("로그인을 실패했습니다."),
-                    dismissButton: .default(Text("확인"))
-                )
             }
         }
     }

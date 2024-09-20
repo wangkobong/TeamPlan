@@ -12,9 +12,10 @@ import SwiftUI
 
 enum MyPageAlertState {
     case none
-    case logout
-    case withdraw
-    case version
+    case mockInjection
+    case alreaadyInjected
+    case eraseData
+    case versionCheck
 }
 
 struct MyPageView: View {
@@ -23,9 +24,11 @@ struct MyPageView: View {
     @AppStorage("mainViewState") var mainViewState: MainViewState?
     
     private var leftRightInset: CGFloat = 16
-    private var menuTitles: [MypageMenu] = [.version]
+    private var menuTitles: [MypageMenu] = [.mock, .erase, .version]
     
     @State private var showAlert = false
+    @State private var isLoading = false
+    @State private var mockInjected = false
     @State private var myPageAlertState: MyPageAlertState = .none
 
     // MARK: - body
@@ -38,46 +41,33 @@ struct MyPageView: View {
                 accomplishmentsSection
             }
             .padding(.init(top: 0, leading: self.leftRightInset, bottom: 0, trailing: self.leftRightInset))
+            
             menuList
         }
         .onAppear {
             vm.loadData()
         }
         .alert(isPresented: $showAlert) {
-//            Alert(
-//                title: Text(getAlertTitle()),
-//                message: Text(getAlertMessage()),
-//                primaryButton: .destructive(Text(getAlertTitle())){
-//                    switch myPageAlertState {
-//                    case .none:
-//                        break
-//                    case .logout:
-//                        tryLogout(for: .logout)
-//                    case .withdraw:
-//                        tryWithdraw(for: .withdraw)
-//                    case .version:
-//                        break
-//                    }
-//                },
-//                secondaryButton: .cancel(Text("확인"))
-//            )
-//            
             Alert(
                 title: Text(getAlertTitle()),
                 message: Text(getAlertMessage()),
-                dismissButton: .default(Text(getAlertTitle())) {
+                primaryButton: .destructive(Text(getAlertTitle())) {
                     switch myPageAlertState {
-                    case .none:
-                        break
-                    case .logout:
-                        tryLogout(for: .logout)
-                    case .withdraw:
-                        tryWithdraw(for: .withdraw)
-                    case .version:
+                    case .mockInjection:
+                        tryMockInjection(for: .mock)
+                    case .eraseData:
+                        tryEraseData(for: .erase)
+                    default:
                         break
                     }
-                }
+                },
+                secondaryButton: .cancel(Text("뒤로가기"))
             )
+        }
+        .onChange(of: vm.injectResult) { newValue in
+            if newValue {
+                vm.loadData()
+            }
         }
     }
     
@@ -92,8 +82,9 @@ struct MyPageView: View {
                 Spacer()
             }
             .padding(.top, 8)
+            .padding(.bottom, 10)
             
-            HStack(spacing: 20) {
+            HStack(alignment: .center, spacing: 50) {
                 Image(uiImage: Gen.Images.projectEmpty.image)
                 
                 VStack(alignment: .leading, spacing: 10) {
@@ -104,10 +95,13 @@ struct MyPageView: View {
                     HStack {
                         Text(AttributedString("지켜낸 폭탄맨 ") + attributedString(for: vm.dto.protected))
                             .foregroundStyle(.purple)
-                        Text("사라진 폭탄맨 " + attributedString(for: vm.dto.destroyed))
+                    }
+                    HStack {
+                        Text(AttributedString("사라진 폭탄맨 ") + attributedString(for: vm.dto.destroyed))
                             .foregroundStyle(.purple)
                     }
                 }
+                Spacer()
             }
             Divider()
                 .background(.black.opacity(0.6))
@@ -159,45 +153,52 @@ struct MyPageView: View {
 //MARK: Support
 
 extension MyPageView {
+    
     private func attributedString(for count: Int) -> AttributedString {
         var attributed = AttributedString("\(count)개")
         attributed.foregroundColor = .black
         return attributed
     }
-    
+
     private func handleMenuTap(for menu: MypageMenu) {
         switch menu {
-        case .logout:
-            myPageAlertState = .logout
+        case .mock:
+            if self.mockInjected {
+                myPageAlertState = .alreaadyInjected
+            } else {
+                myPageAlertState = .mockInjection
+            }
             showAlert = true
-        case .withdraw:
-            myPageAlertState = .withdraw
+        case .erase:
+            myPageAlertState = .eraseData
             showAlert = true
         case .version:
-            myPageAlertState = .version
+            myPageAlertState = .versionCheck
             showAlert = true
         }
     }
     
-    private func tryLogout(for menu: MypageMenu) {
-        do {
-            try vm.performAction(menu: menu)
-            withAnimation(.easeIn(duration: 1.2)) {
-                mainViewState = .login
+    private func tryMockInjection(for menu: MypageMenu) {
+        self.isLoading = true
+        Task {
+            await vm.performAction(menu: menu)
+            self.isLoading = false
+            if vm.injectResult {
+                self.mockInjected = true
             }
-        } catch {
-            print("로그아웃 에러: \(error)")
         }
     }
     
-    private func tryWithdraw(for menu: MypageMenu) {
-        do {
-            try vm.performAction(menu: menu)
-            withAnimation(.easeIn(duration: 1.2)) {
-                mainViewState = .login
+    private func tryEraseData(for menu: MypageMenu) {
+        self.isLoading = true
+        Task {
+            await vm.performAction(menu: menu)
+            self.isLoading = false
+            if vm.eraseResult {
+                withAnimation(.easeIn(duration: 1.2)) {
+                    mainViewState = .login
+                }
             }
-        } catch {
-            print("회원탈퇴 에러: \(error)")
         }
     }
     
@@ -205,11 +206,13 @@ extension MyPageView {
         switch myPageAlertState {
         case .none:
             return ""
-        case .logout:
-            return "로그아웃"
-        case .withdraw:
-            return "회원탈퇴"
-        case .version:
+        case .mockInjection:
+            return "추가하기"
+        case .eraseData:
+            return "삭제하기"
+        case .versionCheck:
+            return "버젼확인"
+        case .alreaadyInjected:
             return "확인"
         }
     }
@@ -218,12 +221,14 @@ extension MyPageView {
         switch myPageAlertState {
         case .none:
             return ""
-        case .logout:
-            return "정말 로그아웃 하시겠습니까?"
-        case .withdraw:
-            return "정말 탈퇴 하시겠습니까?"
-        case .version:
-            return "v1.0.0"
+        case .mockInjection:
+            return "주의!\n사용자의 통계정보가 변경될 것이며, 임시목표들이 생성될 것입니다! "
+        case .eraseData:
+            return "주의!\n 지금까지의 모든 데이터가 삭제될 것입니다!"
+        case .versionCheck:
+            return "0.0.85_test"
+        case .alreaadyInjected:
+            return "이미 데이터를 추가하였습니다."
         }
     }
 }

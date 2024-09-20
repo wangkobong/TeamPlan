@@ -377,7 +377,8 @@ extension ProjectServicesCoredata {
             isUpdated = util.updateIfNeeded(&entity.total_registed_todo, newValue: Int32(newTotalRegistedTodo)) || isUpdated
         }
         if let newDailyRegistedTodo = dto.newDailyRegistedTodo {
-            isUpdated = util.updateIfNeeded(&entity.daily_registed_todo, newValue: Int32(newDailyRegistedTodo)) || isUpdated
+            entity.daily_registed_todo = Int32(newDailyRegistedTodo)
+            isUpdated = true
         }
         if let newFinishedTodo = dto.newFinishedTodo {
             isUpdated = util.updateIfNeeded(&entity.finished_todo, newValue: Int32(newFinishedTodo)) || isUpdated

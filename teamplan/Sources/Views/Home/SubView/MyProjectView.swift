@@ -10,22 +10,45 @@ import SwiftUI
 
 struct MyProjectView: View {
     
-    //MARK: Properties & Body
+    @ObservedObject var homeVM: HomeViewModel
+    @ObservedObject var projectVM: ProjectViewModel
+    
     @Binding var isProjectExist: Bool
+    
+    @State private var showAlert = false
     @State private var percent: CGFloat = 0.65
     @State private var currentPage = 0
-
-    @ObservedObject var homeVM: HomeViewModel
+    @State private var isProjectCardPush = false
+    @State private var isNoProjectCardPush = false
+    @State private var projectCardIndex = 0
     
     var body: some View {
         VStack{
             if isProjectExist {
                 projectList
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, 16)                    
+                    .navigationDestination(isPresented: $isProjectCardPush) {
+                        if projectVM.projectList.indices.contains(projectCardIndex) {
+                            ProjectDetailView(
+                                projectViewModel: projectVM,
+                                project: $projectVM.projectList[projectCardIndex]
+                            )
+                        }
+                    }
             } else {
                 noProject
                     .padding(.horizontal, 16)
+                    .navigationDestination(isPresented: $isNoProjectCardPush) {
+                        AddProjectView(projectViewModel: projectVM)
+                    }
             }
+        }
+        .alert(isPresented: $showAlert) {
+            Alert(
+                title: Text("오류"),
+                message: Text("목표상세 페이지로의 진입을 실패하였습니다.\n잠시 후 다시 시도해 주세요."),
+                dismissButton: .default(Text("확인"))
+            )
         }
     }
     
@@ -35,15 +58,18 @@ struct MyProjectView: View {
             Image("warning_circle")
                 .frame(width: 32, height: 32)
                 .padding(.bottom, 5)
-            Text("프로젝트를 먼저 생성해주세요")
+            Text("목표를 먼저 정해주세요")
                 .font(.appleSDGothicNeo(.regular, size: 16))
                 .padding(.bottom, 22)
-            Text("프로젝트 생성하기")
+            Text("목표 만들기")
                 .font(.appleSDGothicNeo(.semiBold, size: 12))
                 .foregroundColor(.theme.whiteColor)
                 .frame(width: 111, height: 28)
                 .background(Color.theme.mainPurpleColor)
                 .cornerRadius(4)
+                .onTapGesture {
+                    self.isNoProjectCardPush = true
+                }
         }
         .frame(height: 176)
         .frame(maxWidth: .infinity)
@@ -65,6 +91,13 @@ struct MyProjectView: View {
                 ForEach(Array(homeVM.userData.projectsDTOs.enumerated()), id: \.element.id) { index, project in
                     MyProjectCardView(stat: homeVM.userData.statData, project: project)
                         .tag(index)
+                        .onTapGesture {
+                            if self.searchProjectIndex(with: project.projectId) {
+                                self.isProjectCardPush = true
+                            } else {
+                                self.showAlert = true
+                            }
+                        }
                 }
             }
             .frame(height: 194)
@@ -74,7 +107,6 @@ struct MyProjectView: View {
                 .padding(.top, 12)
 
         }
-
     }
     
     //MARK: Page Control
@@ -91,10 +123,20 @@ struct MyProjectView: View {
     }
 }
 
+extension MyProjectView {
+    
+    private func searchProjectIndex(with projectId: Int) -> Bool {
+        guard let index = projectVM.projectList.firstIndex(where: { $0.projectId ==  projectId }) else {
+            print("[MyProjectView] Failed to search project index at list")
+            return false
+        }
+        self.projectCardIndex = index
+        return true
+    }
+}
+
 // MARK: Progress Bar Style
-/// ProgressView의 스타일을 커스터마이징하는 구조체입니다.
-/// 기존 코드를 활용하여 배경과 진행바의 색깔과 크기 위치를 설정하였습니다.
-/// 기존의 폭탄 아이콘도 상태진행에 따라 끝부분에서 움직이도록 설정하였습니다.
+
 struct CustomProgressViewStyle: ProgressViewStyle {
     func makeBody(configuration: Configuration) -> some View {
         GeometryReader { geometry in

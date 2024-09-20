@@ -10,24 +10,35 @@ import SwiftUI
 
 struct ProjectView: View {
     
-    @ObservedObject var projectViewModel = ProjectViewModel()
+    @ObservedObject var viewModel = ProjectViewModel()
+    
+    @State private var isLoading = true
+    @State private var showAlert = false
     @State private var isNotificationViewActive = false
-    private var isEmpty = false
     
     var body: some View {
-        if !projectViewModel.isViewModelReady {
-            LoadingView()
-        } else {
-            NavigationStack {
+        NavigationStack {
+            if isLoading {
+                LoadingView()
+            } else {
                 navigationArea
                     .padding(.bottom, 20)
                 Spacer()
                 ZStack {
-                    if projectViewModel.projectList.count == 0 {
-                        ProjectEmptyView(projectViewModel: projectViewModel)
+                    if viewModel.projectList.count == 0 {
+                        ProjectEmptyView(projectViewModel: viewModel)
                     } else {
-                        ProjectMainView(projectViewModel: projectViewModel)
+                        ProjectMainView(projectViewModel: viewModel)
                     }
+                }
+            }
+        }
+        .onAppear {
+            Task {
+                if await viewModel.prepareData() {
+                    isLoading = false
+                } else {
+                    showAlert = true
                 }
             }
         }
@@ -47,9 +58,15 @@ extension ProjectView {
                 .font(.archivoBlack(.regular, size: 20))
                 .foregroundColor(.theme.mainPurpleColor)
             Spacer()
-            NavigationLink(destination: NotificationView(), isActive: $isNotificationViewActive) {
+            
+            Button(action: {
+                isNotificationViewActive = true
+            }) {
                 Image(systemName: "bell")
                     .foregroundColor(.black)
+            }
+            .navigationDestination(isPresented: $isNotificationViewActive) {
+                NotificationView()
             }
         }
         .padding(.horizontal, 16)

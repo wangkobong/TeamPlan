@@ -14,11 +14,15 @@ struct ProjectExtendView: View {
     @ObservedObject var projectViewModel: ProjectViewModel
     @Binding var project: ProjectDTO
     
-    @State var isValidate: Bool = false
-
     // 픽커
     @State var day1: String? = nil
     @State var selectionIndex = 0
+    
+    // Trigger
+    @State var isValidate: Bool = false
+    @State var showExtendAlert: Bool = false
+    
+    @State private var displayDate: Date = Date()
     
     var body: some View {
         VStack {
@@ -37,6 +41,16 @@ struct ProjectExtendView: View {
             
         }
         .padding(.horizontal, 16)
+        .onAppear {
+            self.displayDate = project.deadline
+        }
+        .alert(isPresented: $showExtendAlert) {
+            Alert(
+                title: Text("목표수정 실패"),
+                message: Text("목표를 수정하는 데 실패했습니다. 다시 시도해주세요."),
+                dismissButton: .default(Text("확인"))
+            )
+        }
     }
 }
 
@@ -128,15 +142,24 @@ extension ProjectExtendView {
                     .frame(height: 16)
                 
                 ZStack {
-                    TextFieldWithInputView(data: projectViewModel.waterDrop, placeholder: "일 연장", textColor: .gray, placeholderColor: .gray, selectionIndex: self.$selectionIndex, selectedText: self.$day1)
-                        .padding(.horizontal, 16)
-                        .frame(height: 38)
-                        .frame(maxWidth: .infinity)
-                        .onChange(of: selectionIndex) { _ in
-                            self.isValidate = true
+                    TextFieldWithInputView(
+                        data: projectViewModel.waterDrop,
+                        placeholder: "일 연장",
+                        textColor: .gray,
+                        placeholderColor: .gray,
+                        selectionIndex: self.$selectionIndex,
+                        selectedText: self.$day1
+                    )
+                    .padding(.horizontal, 16)
+                    .frame(height: 38)
+                    .frame(maxWidth: .infinity)
+                    .onChange(of: selectionIndex) { newIndex in
+                        self.isValidate = true
+                        let usedDrop = newIndex + 1
+                        if let newDeadLine = getNewDeadLine(currentDeadLine: project.deadline, addDay: usedDrop) {
+                            self.displayDate = newDeadLine
                         }
-                    
-                    
+                    }
                     RoundedRectangle(cornerRadius: 24)
                         .stroke(Gen.Colors.whiteGreyColor.swiftUIColor, lineWidth: 1)
                     
@@ -164,12 +187,18 @@ extension ProjectExtendView {
                         if usedDrop == 0 {
                             return
                         }
-                        guard let newDeadLine = self.getNewDeadLine(addDay: usedDrop) else { return }
-                        projectViewModel.extendProjectDay(projectId: project.projectId,
-                                                          usedDrop: selectionIndex,
-                                                          newDeadline: newDeadLine,
-                                                          newTitle: project.title)
-                        dismiss.callAsFunction()
+                        guard let newDeadLine = self.getNewDeadLine(currentDeadLine: project.deadline, addDay: usedDrop) else {
+                            self.showExtendAlert = true
+                            return
+                        }
+                        
+                        if projectViewModel.extendProjectDay(projectId: project.projectId,
+                                                          usedDrop: usedDrop,
+                                                          newDeadline: newDeadLine) {
+                            dismiss.callAsFunction()
+                        } else {
+                            self.showExtendAlert = true
+                        }
                 }
             }
         }
@@ -185,13 +214,10 @@ extension ProjectExtendView {
     }
     
     private func showDurationInfo() -> String {
-        let deadlineDate = projectViewModel.duration.futureDate(from: Date())
-        return "📍목표 마감일이 \(deadlineDate.monthDayNoLeadingZeros)이 맞나요?"
+        return "📍변경된 목표 마감일은 \(displayDate.monthDayNoLeadingZeros) 입니다."
     }
     
-    private func getNewDeadLine(addDay: Int) -> Date? {
-        let currentDate = Date()
-        let addedDaysDate = Calendar.current.date(byAdding: .day, value: addDay, to: currentDate)
-        return addedDaysDate
+    private func getNewDeadLine(currentDeadLine: Date, addDay: Int) -> Date? {
+        return Calendar.current.date(byAdding: .day, value: addDay, to: currentDeadLine)
     }
 }

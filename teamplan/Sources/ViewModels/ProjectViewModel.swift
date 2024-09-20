@@ -10,32 +10,25 @@ import Foundation
 import Combine
 
 final class ProjectViewModel: ObservableObject {
+
     
     @Published var userName: String = ""
-    let identifier: String
-    
-    private var cancellables = Set<AnyCancellable>()
-    private var isSubscribersAdded = false
-    
-    var service: ProjectService
-    var projectRegistLimit: Int
-    
     @Published var statData: StatDTO = StatDTO()
     @Published var projectList: [ProjectDTO] = []
-    
-    @Published var isViewModelReady: Bool = false
-    @Published var isReInitiNeed: Bool = false     // need to re-initilize viewModel
-    @Published var isProejctCanAdd: Bool = false
-    @Published var isProejctCanComplete: Bool = false
-    @Published var isProjectRemoved: Bool = false
-    @Published var isTodoCanAdd: Bool = false
     
     // AddProjectView에 필요한 프로퍼티
     @Published var projectName: String = ""
     @Published var startDate: StartDateSelection = .none
     @Published var duration: DurationSelection = .none
+    
     // ExtendProjectView에 필요한 프로퍼티
     @Published var waterDrop: [String] = []
+    
+    var projectRegistLimit: Int
+    
+    private let identifier: String
+    private var isViewModelReady: Bool
+    private var service: ProjectService
     
     @MainActor
     init() {
@@ -46,50 +39,29 @@ final class ProjectViewModel: ObservableObject {
             self.userName = userName
             
         } else {
+            print("[ProjectViewModel] ViewModel Initialize Failed")
             self.identifier = "unknown"
             self.userName = "unknown"
         }
         self.service = ProjectService(userId: identifier)
         self.projectRegistLimit = 0
-        
-        self.addSubscribers()
-        self.prepareData()
-        self.createWaterDropArray(upTo: statData.drop)
+        self.isViewModelReady = false
     }
     
-    private func addSubscribers() {
-        service.$projectList
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] projectList in
-                DispatchQueue.main.async {
-                    self?.projectList = projectList
-                }
-            }
-            .store(in: &cancellables)
-        
-        service.$statDTO
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] statData in
-                DispatchQueue.main.async {
-                    self?.statData = statData
-                }
-            }
-            .store(in: &cancellables)
-    }
-    
-    private func prepareData() {
-        Task {
-
-        }
-        
-        let result = service.executor(action: .prepareService)
-        
-        if result {
+    func prepareData() async -> Bool {
+        if service.executor(action: .prepareService) {
+            await Task {
+                await updateStatData()
+                await updateProjectList()
+            }.value
+            
             self.projectRegistLimit = service.projectRegistLimit
+            self.createWaterDropArray(upTo: statData.drop)
             self.isViewModelReady = true
+            return true
         } else {
             print("[ProjectViewModel] Failed to prepare data")
-            self.isViewModelReady = false
+            return false
         }
     }
 }
@@ -98,15 +70,13 @@ extension ProjectViewModel {
     
     // MARK: Project - Add
     
-    func addNewProject() {
+    func addNewProject() -> Bool {
         guard service.canRegistNewProject() else {
-            self.isProejctCanAdd = false
-            return
+            return false
         }
-        
         let addDate = Date()
         let dto = prepareNewDTO(at: addDate)
-        executeAddProcess(with: dto, at: addDate)
+        return executeAddProcess(with: dto, at: addDate)
     }
     
     private func prepareNewDTO(at addDate: Date) -> NewProjectDTO {
@@ -119,194 +89,195 @@ extension ProjectViewModel {
         )
     }
     
-    private func executeAddProcess(with newDTO: NewProjectDTO, at addDate: Date) {
-        Task {
-            let result = service.executor(action:
-                    .setNewProject(newData: newDTO, setDate: addDate)
-            )
-            if result {
+    private func executeAddProcess(with newDTO: NewProjectDTO, at addDate: Date) -> Bool {
+        let result = service.executor(action:
+                .setNewProject(newData: newDTO, setDate: addDate)
+        )
+        if result {
+            Task {
                 await updateStatData()
                 await updateProjectList()
                 await initAddingProjectProperty()
-                print("[ProjectViewModel] Successfully execute add project")
-            } else {
-                print("[ProjectViewModel] Failed to execute add project")
-                self.isReInitiNeed = true
             }
+            print("[ProjectViewModel] Successfully execute add project")
+            return true
+        } else {
+            print("[ProjectViewModel] Failed to execute add project")
+            return false
         }
     }
     
     // MARK: Project - Delete
     
-    func deleteProject(projectId: Int) {
-        Task {
-            let result = service.executor(action:
-                    .deleteProject(projectId: projectId)
-            )
-            if result {
-                await updateArrayRemovedStatus()
-            } else {
-                print("[ProjectViewModel] Failed to execute delete project")
-                self.isReInitiNeed = true
-            }
+    func deleteProject(projectId: Int) -> Bool {
+        let result = service.executor(action:
+                .deleteProject(projectId: projectId)
+        )
+        if result {
+            Task { await updateProjectList() }
+            return true
+        } else {
+            print("[ProjectViewModel] Failed to execute delete project")
+            return false
         }
     }
     
     // MARK: Project - Extend
     
-    func extendProjectDay(projectId: Int, usedDrop: Int? = nil, newDeadline: Date? = nil, newTitle: String? = nil) {
+    func extendProjectDay(projectId: Int, usedDrop: Int? = nil, newDeadline: Date? = nil, newTitle: String? = nil) -> Bool {
+        
+        var actionResult: Bool = false
         
         if let newTitle = newTitle, usedDrop == nil, newDeadline == nil {
-            executeRenameProcess(with: projectId, and: newTitle)
+            actionResult = executeRenameProcess(with: projectId, and: newTitle)
             
         } else if newTitle == nil, let usedDrop = usedDrop, let newDeadline = newDeadline {
-            executeExtendProcess(with: projectId, newDeadline: newDeadline, usedDrop: usedDrop)
+            actionResult = executeExtendProcess(with: projectId, newDeadline: newDeadline, usedDrop: usedDrop)
             
         } else if let newTitle = newTitle, let usedDrop = usedDrop, let newDeadline = newDeadline {
-            executeRenameAndExtendProcess(with: projectId, newDeadline: newDeadline, usedDrop: usedDrop, newTitle: newTitle)
+            actionResult = executeRenameAndExtendProcess(with: projectId, newDeadline: newDeadline, usedDrop: usedDrop, newTitle: newTitle)
             
         } else {
             print("[ProjectViewModel] Alert! Unknown extend type detected!")
-            self.isReInitiNeed = true
-            return
+            return false
         }
+        return actionResult
     }
     
-    private func executeRenameProcess(with projectId: Int, and newTitle: String) {
-        Task {
-            let result = service.executor(action:
-                    .renameProject(projectId: projectId, newTitle: newTitle)
-            )
-            if result {
-                await updateProjectDTO(with: projectId)
-            } else {
-                print("[ProjectViewModel] Failed to execute rename project")
-                self.isReInitiNeed = true
-            }
-        }
-    }
-    
-    private func executeExtendProcess(with projectId: Int, newDeadline: Date, usedDrop: Int) {
-        let dto = ExtendProjectDTO(projectId: projectId, usedDrop: usedDrop, newDeadline: newDeadline)
-        
-        Task {
-            let result = service.executor(action:
-                    .extendProject(dto: dto)
-            )
-            if result {
-                await updateStatData()
-                await updateProjectDTO(with: projectId)
-            } else {
-                print("[ProjectViewModel] Failed to execute extend project")
-                self.isReInitiNeed = true
-            }
-        }
-    }
-    
-    private func executeRenameAndExtendProcess(with projectId: Int, newDeadline: Date, usedDrop: Int, newTitle: String) {
-        let dto = ExtendProjectDTO(projectId: projectId, usedDrop: usedDrop, newDeadline: newDeadline)
-        
-        Task {
-            async let isRenamed = service.executor(action:
-                    .renameProject(projectId: projectId, newTitle: newTitle)
-            )
-            async let isExtended = service.executor(action:
-                    .extendProject(dto: dto)
-            )
-            let results = await [isRenamed, isExtended]
+    private func executeRenameProcess(with projectId: Int, and newTitle: String) -> Bool {
+        let result = service.executor(action:
+                .renameProject(projectId: projectId, newTitle: newTitle)
+        )
+        if result {
+            Task { await updateProjectList() }
+            return true
             
-            if results.allSatisfy({ $0 }){
+        } else {
+            print("[ProjectViewModel] Failed to execute rename project")
+            return false
+        }
+    }
+    
+    private func executeExtendProcess(with projectId: Int, newDeadline: Date, usedDrop: Int) -> Bool {
+        
+        let dto = ExtendProjectDTO(projectId: projectId, usedDrop: usedDrop, newDeadline: newDeadline)
+        let result = service.executor(action: .extendProject(dto: dto))
+        
+        if result {
+            Task {
                 await updateStatData()
-                await updateProjectDTO(with: projectId)
-            } else {
-                print("[ProjectViewModel] Failed to execute rename and extend project")
-                self.isReInitiNeed = true
+                await updateProjectList()
             }
+            return true
+            
+        } else {
+            print("[ProjectViewModel] Failed to execute extend project")
+            return false
+        }
+    }
+    
+    private func executeRenameAndExtendProcess(with projectId: Int, newDeadline: Date, usedDrop: Int, newTitle: String) -> Bool {
+        
+        let dto = ExtendProjectDTO(projectId: projectId, usedDrop: usedDrop, newDeadline: newDeadline)
+        let isRenamed = service.executor(action: .renameProject(projectId: projectId, newTitle: newTitle))
+        let isExtended = service.executor(action: .extendProject(dto: dto))
+        
+        if isRenamed && isExtended {
+            Task {
+                await updateStatData()
+                await updateProjectList()
+            }
+            return true
+            
+        } else {
+            print("[ProjectViewModel] Failed to execute rename and extend project")
+            return false
         }
     }
     
     // MARK: Project - Complete
     
-    func completeProject(with projectId: Int) async {
+    func completeProject(with projectId: Int) async -> Bool {
+        
+        // inspection
         guard service.canCompleteProject(with: projectId) else {
-            self.isProejctCanComplete = false
-            return
+            return false
         }
-        await executeCompleteProcess(with: projectId)
-        print("[ProjectViewModel] Successfully execute compelete project")
-    }
-    
-    private func executeCompleteProcess(with projectId: Int) async {
+        
+        // process
         let completeDate = Date()
-        let result = service.executor(action:
-                .completeProject(projectId: projectId, completeDate: completeDate)
-        )
-        if result {
-            await updateStatData()
-            await updateArrayRemovedStatus()
+        if service.executor(action: .completeProject(projectId: projectId, completeDate: completeDate)) {
+            Task {
+                await updateStatData()
+                await updateProjectList()
+            }
+            return true
+            
         } else {
             print("[ProjectViewModel] Failed to execute compelete project")
-            self.isReInitiNeed = true
+            return false
         }
     }
     
     // MARK: Todo - Add
     
-    func addNewTodo(projectId: Int) {
-        Task {
-            guard service.canRegistNewTodo(with: projectId) else {
-                print("[ProjectViewModel] Todo regist limit detected")
-                self.isTodoCanAdd = false
-                return
+    func addNewTodo(projectId: Int) -> Bool {
+        
+        // process
+        if service.executor(action: .setNewTodo(projectId: projectId)) {
+            
+            guard let indexList = searchProjectIndex(with: projectId) else {
+                return false
             }
-            await executeAddTodoProcess(with: projectId)
-        }
-    }
-    
-    private func executeAddTodoProcess(with projectId: Int) async {
-        let result = service.executor(
-            action: .setNewTodo(projectId: projectId)
-        )
-        if result {
-            await updateStatData()
-            await updateProjectDTO(with: projectId)
-            await updateTodoList(with: projectId)
+            Task {
+                await updateStatData()
+                await updateProject(viewModelIndex: indexList.viewModelIndex, serviceIndex: indexList.serviceIndex)
+            }
+            return true
+            
         } else {
             print("[ProjectViewModel] Failed to execute add todo")
-            self.isReInitiNeed = true
+            return false
         }
     }
     
     // MARK: Todo - Update Desc
     
-    func updateTodoDescription(with projectId: Int, todoId: Int, newDesc: String) {
-        Task {
-            let result = service.executor(action:
-                    .updateTodoDesc(projectId: projectId, todoId: todoId, newDesc: newDesc)
-            )
-            if result {
-                await updateTodoDTO(with: projectId, and: todoId)
-            } else {
-                print("[ProjectViewModel] Failed to execute update todo desc")
-                self.isReInitiNeed = true
+    func updateTodoDescription(with projectId: Int, todoId: Int, newDesc: String) -> Bool {
+        
+        if service.executor(action: .updateTodoDesc(projectId: projectId, todoId: todoId, newDesc: newDesc)) {
+            
+            guard let indexList = searchProjectIndex(with: projectId) else {
+                return false
             }
+            Task {
+                await updateProject(viewModelIndex: indexList.viewModelIndex, serviceIndex: indexList.serviceIndex)
+            }
+            return true
+            
+        } else {
+            print("[ProjectViewModel] Failed to execute update todo desc")
+            return false
         }
     }
     
     // MARK: Todo - Update Status
     
-    func toggleToDoStatus(with projectId: Int, todoId: Int, newStatus: TodoStatus) {
-        Task {
-            let result = service.executor(action:
-                    .updateTodoStatus(projectId: projectId, todoId: todoId, newStatus: newStatus)
-            )
-            if result {
-                await updateProjectDTO(with: projectId)
-                await updateTodoDTO(with: projectId, and: todoId)
-            } else {
-                print("[ProjectViewModel] Failed to execute update todo status")
-                self.isReInitiNeed = true
+    func toggleToDoStatus(with projectId: Int, todoId: Int, newStatus: TodoStatus) -> Bool {
+        
+        if service.executor(action: .updateTodoStatus(projectId: projectId, todoId: todoId, newStatus: newStatus)) {
+            
+            guard let indexList = searchProjectIndex(with: projectId) else {
+                return false
             }
+            Task {
+                await updateProject(viewModelIndex: indexList.viewModelIndex, serviceIndex: indexList.serviceIndex)
+            }
+            return true
+            
+        } else {
+            print("[ProjectViewModel] Failed to execute update todo status")
+            return false
         }
     }
     
@@ -317,9 +288,19 @@ extension ProjectViewModel {
         let waterDrops = Array(1...number)
         self.waterDrop = waterDrops.map { "\($0)일 연장하기" }
     }
+    
+    private func searchProjectIndex(with projectId: Int) -> (serviceIndex: Int, viewModelIndex: Int)? {
+        if let serviceIndex = service.projectList.firstIndex(where: { $0.projectId == projectId }),
+           let viewModelIndex = self.projectList.firstIndex(where: { $0.projectId == projectId }) {
+            return (serviceIndex, viewModelIndex)
+        } else {
+            print("[ProjectViewModel] Failed to search project index")
+            return nil
+        }
+    }
 }
 
-// MARK: Main Actor
+// MARK: Properties Update
 
 extension ProjectViewModel {
     
@@ -341,64 +322,7 @@ extension ProjectViewModel {
     }
     
     @MainActor
-    private func updateArrayRemovedStatus() {
-        self.isProjectRemoved = true
-    }
-    
-    @MainActor
-    private func updateTodoList(with projectId: Int) {
-        if let serviceIndex = service.projectList.firstIndex(where: { $0.projectId == projectId }),
-           let index = projectList.firstIndex(where: { $0.projectId == projectId }) {
-            projectList[index].todoList = service.projectList[serviceIndex].todoList
-        } else {
-            print("[ProjectViewModel] Failed to search project index")
-            self.isReInitiNeed = true
-        }
-    }
-    
-    @MainActor
-    private func updateProjectDTO(with projectId: Int) {
-        if let serviceIndex = service.projectList.firstIndex(where: { $0.projectId == projectId }),
-           let index = projectList.firstIndex(where: { $0.projectId == projectId }) {
-            projectList[index] = service.projectList[serviceIndex]
-            print("[ProjectViewModel] Successfully update projectDTO")
-        } else {
-            print("[ProjectViewModel] Failed to search project index")
-            self.isReInitiNeed = true
-        }
-    }
-    
-    @MainActor
-    private func updateTodoDTO(with projectId: Int, and todoId: Int) {
-        guard
-            let projectIndex = projectList.firstIndex(where: { $0.projectId == projectId }),
-            let serviceProjectIndex = service.projectList.firstIndex(where: { $0.projectId == projectId }),
-            let todoIndex = projectList[projectIndex].todoList.firstIndex(where: { $0.todoId == todoId }),
-            let serviceTodoIndex = service.projectList[serviceProjectIndex].todoList.firstIndex(where: { $0.todoId == todoId })
-        else {
-            print("[ProjectViewModel] Failed to search project todo index")
-            self.isReInitiNeed = true
-            return
-        }
-        projectList[projectIndex].todoList[todoIndex] = service.projectList[serviceProjectIndex].todoList[serviceTodoIndex]
-        print("[ProjectViewModel] Successfully update todoDTO")
+    private func updateProject(viewModelIndex: Int, serviceIndex: Int) {
+        self.projectList[viewModelIndex] = self.service.projectList[serviceIndex]
     }
 }
-
-/*
-private func addSubscribers() {
-    service.$projectList
-        .receive(on: DispatchQueue.main)
-        .sink { [weak self] projects in
-            self?.projectList = projects
-        }
-        .store(in: &cancellables)
-
-    service.$statDTO
-        .receive(on: DispatchQueue.main)
-        .sink { [weak self] statData in
-            self?.statData = statData
-        }
-        .store(in: &cancellables)
-}
- */
