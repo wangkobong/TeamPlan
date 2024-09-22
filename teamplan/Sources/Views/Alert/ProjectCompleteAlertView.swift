@@ -33,13 +33,13 @@ public struct ProjectCompleteAlertView: View {
                 
                 Spacer()
                 
-                Text("프로젝트 완료를 축하해!")
+                Text("목표를 완료하였습니다!")
                     .font(.appleSDGothicNeo(.bold, size: 17))
                     .multilineTextAlignment(.center)
                     .foregroundColor(.theme.mainPurpleColor)
                 
                 
-                Text("나를 지켜줘서 고마워\n다른 프로젝트에서 또 만나자!")
+                Text("목표가 완료되어 폭탄맨은 터지지 않았습니다!\n또다른 목표를 등록하여 갓생을 이어가세요!")
                     .font(.appleSDGothicNeo(.regular, size: 12))
                     .multilineTextAlignment(.center)
                     .lineLimit(2)

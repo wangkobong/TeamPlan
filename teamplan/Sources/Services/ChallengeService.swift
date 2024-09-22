@@ -571,12 +571,10 @@ extension ChallengeService {
     // Update local: next
     private func updateNextDTOAboutReward(with currentIndex: Int, and nextIndex: Int, step: Int) {
         
-        let currentType = self.challengesDTO[currentIndex].type.rawValue
-        
         if let currentValue = statDTO.challengeStepStatus[step] {
             statDTO.challengeStepStatus[step] = currentValue + 1
         }
-        self.challengesDTO[nextIndex].islock = true
+        self.challengesDTO[nextIndex].islock = false
     }
     
     // Util: check next challenge
@@ -646,19 +644,21 @@ extension ChallengeService {
     }
     
     private func getChallengeStepLimit(with type: ChallengeType) -> Int {
+        let list = ChallengeList()
+        
         switch type {
         case .onboarding:
             return 0
         case .serviceTerm:
-            return 7
+            return list.getServiceTermSize()
         case .totalTodo:
-            return 7
+            return list.getTotalTodoListSize()
         case .projectAlert:
-            return 5
+            return list.getProjectAlertListSize()
         case .projectFinish:
-            return 6
+            return list.getProjectFinishListSize()
         case .waterDrop:
-            return 11
+            return list.getWaterDropListSize()
         case .unknownType:
             return 0
         }

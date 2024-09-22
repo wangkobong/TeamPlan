@@ -14,6 +14,26 @@ final class ChallengeList {
         return serviceTermList + totalTodoList + projectAlertList + projectFinishList + waterDropList
     }
     
+    func getServiceTermSize() -> Int {
+        return serviceTermList.count
+    }
+    
+    func getTotalTodoListSize() -> Int {
+        return totalTodoList.count
+    }
+    
+    func getProjectAlertListSize() -> Int {
+        return projectAlertList.count
+    }
+    
+    func getProjectFinishListSize() -> Int {
+        return projectFinishList.count
+    }
+    
+    func getWaterDropListSize() -> Int {
+        return waterDropList.count
+    }
+    
     private let serviceTermList: [ChallengeInfoDTO] = [
         ChallengeInfoDTO(challengeId: 100, title: "첫걸음 지킴이", desc: "최초 투두팡 사용", goal: 1, type: .serviceTerm, reward: 5, step: 1, version: 1),
         ChallengeInfoDTO(challengeId: 101, title: "꾸준함 지킴이", desc: "투두팡 사용 7일", goal: 7, type: .serviceTerm, reward: 5, step: 2, version: 1),
@@ -25,7 +45,7 @@ final class ChallengeList {
     ]
     
     private let totalTodoList: [ChallengeInfoDTO] = [
-        ChallengeInfoDTO(challengeId: 200, title: "신기한 지킴이", desc: "최초 할 일 사용", goal: 1, type: .totalTodo, reward: 5, step: 1, version: 1),
+        ChallengeInfoDTO(challengeId: 200, title: "신기한 지킴이", desc: "최초 할 일 등록", goal: 1, type: .totalTodo, reward: 5, step: 1, version: 1),
         ChallengeInfoDTO(challengeId: 201, title: "흥미로운 지킴이", desc: "할 일 등록 20개", goal: 20, type: .totalTodo, reward: 5, step: 2, version: 1),
         ChallengeInfoDTO(challengeId: 202, title: "감잡은 지킴이", desc: "할 일 등록 60개", goal: 60, type: .totalTodo, reward: 5, step: 3, version: 1),
         ChallengeInfoDTO(challengeId: 203, title: "적응한 지킴이", desc: "할 일 등록 140개", goal: 140, type: .totalTodo, reward: 5, step: 4, version: 1),
@@ -55,7 +75,7 @@ final class ChallengeList {
     ]
     
     private let waterDropList: [ChallengeInfoDTO] = [
-        ChallengeInfoDTO(challengeId: 500, title: "이슬", desc: "최초 물방울", goal: 1, type: .waterDrop, reward: 10, step: 1, version: 1),
+        ChallengeInfoDTO(challengeId: 500, title: "이슬", desc: "최초 물방울 보유", goal: 1, type: .waterDrop, reward: 10, step: 1, version: 1),
         ChallengeInfoDTO(challengeId: 501, title: "접시물", desc: "물방울 5개 보유", goal: 5, type: .waterDrop, reward: 10, step: 2, version: 1),
         ChallengeInfoDTO(challengeId: 502, title: "텀블러", desc: "물방울 10개 보유", goal: 10, type: .waterDrop, reward: 10, step: 3, version: 1),
         ChallengeInfoDTO(challengeId: 503, title: "정수기", desc: "물방울 30개 보유", goal: 30, type: .waterDrop, reward: 10, step: 4, version: 1),
@@ -67,4 +87,34 @@ final class ChallengeList {
         ChallengeInfoDTO(challengeId: 509, title: "한강", desc: "물방울 250개 보유", goal: 250, type: .waterDrop, reward: 10, step: 10, version: 1),
         ChallengeInfoDTO(challengeId: 510, title: "앞바다", desc: "물방울 300개 보유", goal: 300, type: .waterDrop, reward: 10, step: 11, version: 1)
     ]
+}
+
+struct ChallengeInfoDTO {
+    let challengeId: Int
+    let title: String
+    let desc: String
+    let goal: Int
+    let type: ChallengeType
+    let reward: Int
+    let step: Int
+    let version: Int
+    
+    init(challengeId: Int,
+         title: String,
+         desc: String,
+         goal: Int,
+         type: ChallengeType,
+         reward: Int,
+         step: Int,
+         version: Int
+    ){
+        self.challengeId = challengeId
+        self.title = title
+        self.desc = desc
+        self.goal = goal
+        self.type = type
+        self.reward = reward
+        self.step = step
+        self.version = version
+    }
 }

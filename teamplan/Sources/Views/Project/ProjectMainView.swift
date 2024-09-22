@@ -26,80 +26,79 @@ struct ProjectMainView: View {
     
     var body: some View {
         Group {
-            if isProjectListEmpty {
-                ProjectEmptyView(projectViewModel: projectViewModel)
-            } else {
-                ScrollView {
-                    VStack {
-                        NavigationLink(
-                            destination: ProjectDetailView(
-                                projectViewModel: projectViewModel,
-                                project: $projectViewModel.projectList[projectDetailViewIndex]),
-                            isActive: $isPushProjectDetailView) {
-                        }
-                        .opacity(0)
-                        
-                        userNameArea
-                        
-                        Spacer()
-                            .frame(height: 15)
-                        
-                        informationArea
-                        
-                        Spacer()
-                            .frame(height: 15)
-                        
-                        projectsArea
+            ScrollView {
+                VStack {
 
+                    userNameArea
+                    
+                    Spacer()
+                        .frame(height: 15)
+                    
+                    informationArea
+                    
+                    Spacer()
+                        .frame(height: 15)
+                    
+                    if isProjectListEmpty {
+                        ProjectEmptyView(projectViewModel: projectViewModel)
+                        
+                    } else {
+                        projectsArea
+                            .onChange(of: projectViewModel.projectList.count) { _ in
+                                checkIndex()
+                            }
+                            .navigationDestination(isPresented: $isPushProjectDetailView) {
+                                if projectViewModel.projectList.indices.contains(projectDetailViewIndex) {
+                                    ProjectDetailView(
+                                        projectViewModel: projectViewModel,
+                                        project: $projectViewModel.projectList[projectDetailViewIndex]
+                                    )
+                                } else {
+                                    ProjectEmptyView(projectViewModel: projectViewModel)
+                                }
+                            }
                         Spacer()
                     }
-                    .padding(.horizontal, 16)
-                    .sheet(isPresented: $isAddProjectViewActive) {
-                        AddProjectView(projectViewModel: projectViewModel)
-                    }
                 }
-                .onAppear {
-                    checkIndex()
-                    checkArray()
+                .padding(.horizontal, 16)
+                .sheet(isPresented: $isAddProjectViewActive) {
+                    AddProjectView(projectViewModel: projectViewModel)
                 }
-                .onChange(of: projectViewModel.isProjectRemoved) { newValue in
-                    if newValue {
-                        adjustArray()
-                        checkIndex()
-                        checkArray()
-                    }
-                }
-                .alert(isPresented: $showAlert) {
-                    Alert(
-                        title: Text("목표등록 수 초과"),
-                        message: Text("최대 등록가능한 목표는 \(projectViewModel.projectRegistLimit)개 입니다."),
-                        dismissButton: .default(Text("확인"))
-                    )
-                }
+            }
+            
+            // alert: project add
+            .alert(isPresented: $showAlert) {
+                Alert(
+                    title: Text("목표등록 수 초과"),
+                    message: Text("최대 등록가능한 목표는 \(projectViewModel.projectRegistLimit)개 입니다."),
+                    dismissButton: .default(Text("확인"))
+                )
+            }
+            
+            // onAppear: Index control
+            .onAppear() {
+                checkIndex()
             }
         }
     }
 }
 
 extension ProjectMainView {
- 
-    func checkIndex() {
-        if projectDetailViewIndex >= projectViewModel.projectList.count {
-            projectDetailViewIndex = max(0, projectViewModel.projectList.count - 1)
+    
+    private func checkIndex() {
+        if projectViewModel.projectList.isEmpty {
+            isProjectListEmpty = true
+        } else {
+            isProjectListEmpty = false
+            if projectDetailViewIndex >= projectViewModel.projectList.count {
+                projectDetailViewIndex = max(0, projectViewModel.projectList.count - 1)
+            }
         }
-    }
-    
-    func checkArray() {
-        isProjectListEmpty = projectViewModel.projectList.isEmpty
-    }
-    
-    func adjustArray() {
-        projectViewModel.updateProjectList()
-        projectViewModel.isProjectRemoved = false
     }
 }
 
 extension ProjectMainView {
+    
     private var userNameArea: some View {
         HStack {
             VStack(alignment: .leading) {
@@ -139,7 +138,7 @@ extension ProjectMainView {
             )
             .offset(x: 0)
             .onTapGesture {
-                if projectViewModel.projectList.count < 5 {
+                if projectViewModel.projectList.count < projectViewModel.projectRegistLimit {
                     isAddProjectViewActive.toggle()
                 } else {
                     self.showAlert = true

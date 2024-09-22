@@ -6,8 +6,6 @@
 //
 
  import SwiftUI
- import GoogleSignIn
- import FirebaseCore
  import BackgroundTasks
  import UserNotifications
 
@@ -16,14 +14,12 @@
      
      // MARK: Properties
      
-     @StateObject var authViewModel = AuthenticationViewModel()
-     @StateObject var termsViewModel = TermsViewModel()
      @StateObject var appState = AppState()
+     @StateObject var authViewModel = AuthenticationViewModel()
      
      @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
    
      init(){
-         FirebaseApp.configure()
          appDelegate.setAppState(appState)
      }
      
@@ -33,13 +29,7 @@
          WindowGroup {
              IntroView()
                  .environmentObject(authViewModel)
-                 .environmentObject(termsViewModel)
-                 .onOpenURL(perform: handelOpenURL)
          }
-     }
-
-     private func handelOpenURL(_ url: URL){
-         GIDSignIn.sharedInstance.handle(url)
      }
  }
 
@@ -57,11 +47,6 @@
      
      func setAppState(_ appState: AppState) {
          self.appState = appState
-     }
-     
-     // Google Social Login
-     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-         return GIDSignIn.sharedInstance.handle(url)
      }
      
      // Background Task & Local Push

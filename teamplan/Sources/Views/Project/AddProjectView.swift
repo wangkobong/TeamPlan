@@ -61,7 +61,8 @@ struct AddProjectView: View {
     @Environment(\.dismiss) var dismiss
     
     @State var isValidate: Bool = false
-    @State private var showAlert: Bool = false
+    @State private var showTitleLengthAlert: Bool = false
+    @State private var showProcessAlert: Bool = false
     
     var body: some View {
         VStack {
@@ -98,10 +99,17 @@ struct AddProjectView: View {
         .onDisappear {
             projectViewModel.initAddingProjectProperty()
         }
-        .alert(isPresented: $showAlert) {
+        .alert(isPresented: $showTitleLengthAlert) {
             Alert(
                 title: Text("글자 수 초과"),
                 message: Text("공백을 포함한 글자 수는 최대 20자입니다."),
+                dismissButton: .default(Text("확인"))
+            )
+        }
+        .alert(isPresented: $showProcessAlert) {
+            Alert(
+                title: Text("목표생성 실패"),
+                message: Text("목표를 생성하는 데 실패했습니다. 다시 시도해주세요."),
                 dismissButton: .default(Text("확인"))
             )
         }
@@ -159,7 +167,7 @@ extension AddProjectView {
                     .padding(.leading, 20)
                     .onChange(of: projectViewModel.projectName) { newValue in
                         if newValue.count > 20 {
-                            showAlert = true
+                            showTitleLengthAlert = true
                             projectViewModel.projectName = String(newValue.prefix(20))
                         }
                     }
@@ -314,10 +322,14 @@ extension AddProjectView {
             .background(isValidate ? Color.theme.mainPurpleColor : Color.theme.greyColor)
             .cornerRadius(8)
             .padding(.horizontal, 16)
+        
             .onTapGesture {
                 if self.isValidate {
-                    projectViewModel.addNewProject()
-                    dismiss()
+                    if projectViewModel.addNewProject() {
+                        dismiss()
+                    } else {
+                        self.showProcessAlert = true
+                    }
                 }
             }
     }

@@ -22,20 +22,20 @@ struct ProjectEmptyView: View {
                 .padding(.bottom, 10)
             
             HStack {
-                Text("프로젝트가")
+                Text("목표가")
                     .font(.appleSDGothicNeo(.regular, size: 16))
                     .foregroundColor(.theme.blackColor)
                 Text("텅!")
                     .font(.appleSDGothicNeo(.semiBold, size: 18))
                     .foregroundColor(.theme.mainPurpleColor)
-                Text("비었어요")
+                Text("비어있어요!")
                     .font(.appleSDGothicNeo(.regular, size: 16))
                     .foregroundColor(.theme.blackColor)
             }
             .multilineTextAlignment(.center)
             
             
-            Text("얼른 프로젝트를 추가해보세요")
+            Text("얼른 목표를 추가해보세요")
                 .font(.appleSDGothicNeo(.regular, size: 16))
                 .foregroundColor(.theme.blackColor)
 
@@ -43,7 +43,7 @@ struct ProjectEmptyView: View {
                 Image(systemName: "plus")
                     .foregroundColor(.theme.mainPurpleColor)
                     .imageScale(.small)
-                Text("프로젝트 추가하기")
+                Text("목표 추가하기")
                     .font(.appleSDGothicNeo(.semiBold, size: 14))
                     .foregroundColor(.theme.mainPurpleColor)
                     .offset(x: -3)

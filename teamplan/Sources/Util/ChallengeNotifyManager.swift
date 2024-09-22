@@ -113,7 +113,7 @@ final class ChallengeNotifyManager {
         case .totalTodo:
             return statData.totalRegistedTodos
         case .projectAlert:
-            return statData.totalAlertedProjects
+            return statData.totalFailedProjects
         case .projectFinish:
             return statData.totalFinishedProjects
         case .waterDrop:

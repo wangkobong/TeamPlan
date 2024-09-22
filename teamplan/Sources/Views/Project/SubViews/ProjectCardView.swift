@@ -12,8 +12,10 @@ struct ProjectCardView: View {
     
     @Environment(\.dismiss) var dismiss
     @Binding var project: ProjectDTO
-    @State private var isExtendProjectViewActive = false
     @ObservedObject var projectViewModel: ProjectViewModel
+
+    @State private var isExtendProjectViewActive = false
+    @State private var showDeleteAlert: Bool = false
     
     //MARK: MainBody
     
@@ -32,8 +34,17 @@ struct ProjectCardView: View {
                 .fill(Color.white)
                 .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
         )
+        // To Extend
         .sheet(isPresented: $isExtendProjectViewActive) {
             ProjectExtendView(projectViewModel: projectViewModel, project: $project)
+        }
+        // Delete Alert
+        .alert(isPresented: $showDeleteAlert) {
+            Alert(
+                title: Text("목표삭제 실패"),
+                message: Text("목표를 삭제하는 데 실패했습니다. 다시 시도해주세요."),
+                dismissButton: .default(Text("확인"))
+            )
         }
     }
 }
@@ -62,8 +73,11 @@ extension ProjectCardView {
             Spacer()
             Menu {
                 Button("삭제", action: {
-                    projectViewModel.deleteProject(projectId: project.projectId)
-                    dismiss.callAsFunction()
+                    if projectViewModel.deleteProject(projectId: project.projectId) {
+                        dismiss.callAsFunction()
+                    } else {
+                        self.showDeleteAlert = true
+                    }
                 })
                 Button("수정 및 기한연장", action: {
                     isExtendProjectViewActive.toggle()

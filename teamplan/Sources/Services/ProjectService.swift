@@ -10,14 +10,10 @@ import CoreData
 import Foundation
 
 final class ProjectService {
-    
-    // Published
-    
-    @Published var statDTO: StatDTO
-    @Published var projectList: [ProjectDTO] = []
+
+    var statDTO: StatDTO
+    var projectList: [ProjectDTO] = []
     var projectRegistLimit: Int
-    
-    // Private
     
     private let util: Utilities
     private let userId: String
@@ -194,6 +190,7 @@ extension ProjectService {
     // fetch project
     private func prepareProjectData(with context: NSManagedObjectContext) -> Bool {
         do {
+            self.projectList = []
             if try projectCD.getValidObjects(context: context, with: userId) {
                 
                 // fetch data
@@ -476,7 +473,8 @@ extension ProjectService {
             let index = try searchProjectIndex(with: dto.projectId)
             
             // update object, then update dto
-            guard updateObjectAboutExtend(with: dto.projectId, and: dto.newDeadline, index: index) else {
+            
+            guard updateObjectAboutExtend(with: dto.projectId, newDeadline: dto.newDeadline, usedDrop: dto.usedDrop, index: index) else {
                 return false
             }
             
@@ -492,7 +490,7 @@ extension ProjectService {
     }
     
     // update: object
-    private func updateObjectAboutExtend(with projectId: Int, and newDeadline: Date, index: Int) -> Bool {
+    private func updateObjectAboutExtend(with projectId: Int, newDeadline: Date, usedDrop: Int, index: Int) -> Bool {
         let context = storageManager.context
         
         return context.performAndWait{
@@ -522,6 +520,7 @@ extension ProjectService {
                 // update stat object
                 let statUpdated = StatUpdateDTO(
                     userId: userId,
+                    newDrop: self.statDTO.drop - usedDrop,
                     newTotalExtendedProjects: self.statDTO.totalExtendedProjects + 1
                 )
 
@@ -556,6 +555,7 @@ extension ProjectService {
             projectList[index].remainDays = newRemainDays
             
             self.statDTO.totalExtendedProjects += 1
+            self.statDTO.drop -= dto.usedDrop
             return true
         } catch {
             print("[ProjectService] Failed to calculate new project period")
@@ -619,8 +619,7 @@ extension ProjectService {
                 // update stat
                 let statUpdated = StatUpdateDTO(
                     userId: userId,
-                    newTotalFinishedProjects: statDTO.totalFinishedProjects + 1,
-                    newTotalFinishedTodos: projectList[index].todoList.count
+                    newTotalFinishedProjects: statDTO.totalFinishedProjects + 1
                 )
                 
                 guard try statCD.updateObject(context: context, dto: statUpdated) else {
@@ -654,16 +653,7 @@ extension ProjectService {
 // only update object
 extension ProjectService {
     
-    func processExplodedProject(_ context: NSManagedObjectContext, with projectId: Int, on explodeDate: Date) -> Bool {
-        if updateObjectAboutExplode(context, with: projectId, on: explodeDate) {
-            return true
-        } else {
-            return false
-        }
-    }
-    
-    // update: projectObject
-    private func updateObjectAboutExplode(_ context: NSManagedObjectContext, with projectId: Int, on explodeDate: Date) -> Bool {
+    func processExplodedProject(_ context: NSManagedObjectContext, with projectId: Int, and userId: String, on explodeDate: Date, also failedcount: Int) -> Bool {
         
         return context.performAndWait {
             do {
@@ -683,14 +673,15 @@ extension ProjectService {
                 // update stat
                 let statUpdated = StatUpdateDTO(
                     userId: userId,
-                    newTotalFailedProjects: statDTO.totalFailedProjects + 1
+                    newTotalFailedProjects: failedcount + 1
                 )
                 
                 guard try statCD.updateObject(context: context, dto: statUpdated) else {
                     print("[ProjectService] StatObject change not detected")
                     return false
                 }
-                return true
+                let notifyManager = ChallengeNotifyManager(userId: userId)
+                return notifyManager.isNotifyNeed(context)
                 
             } catch {
                 print("[ProjectService] explode ProjectObject process failed: \(error.localizedDescription)")
@@ -703,17 +694,6 @@ extension ProjectService {
 //MARK: Todo - Create
 
 extension ProjectService {
-    
-    // shared
-    func canRegistNewTodo(with projectId: Int) -> Bool {
-        do {
-            let index = try searchProjectIndex(with: projectId)
-            return projectList[index].todoCanRegist > 0
-        } catch {
-            print("[ProjectService] Failed to search project index")
-            return false
-        }
-    }
     
     // executor
     private func setNewTodoProcess(with projectId: Int) -> Bool {
@@ -777,7 +757,6 @@ extension ProjectService {
                 }
                 
                 // update stat
-                print(statDTO)
                 let updatedStat = StatUpdateDTO(
                     userId: userId,
                     newTotalRegistedTodos: statDTO.totalRegistedTodos + 1

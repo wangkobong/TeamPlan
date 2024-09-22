@@ -12,7 +12,10 @@ import SwiftUI
 struct MyChallengeView: View {
     
     //MARK: Properties & Body
+    
     @ObservedObject var homeVM: HomeViewModel
+    
+    @State var isCardPush: Bool = false
     @Binding var isChallengeViewActive: Bool
     
     var body: some View {
@@ -26,24 +29,27 @@ struct MyChallengeView: View {
     }
     
     //MARK: Total Challenge Link
+    
     private var challengeLinkSection: some View {
         HStack {
             Text("나의 도전과제")
                 .font(.appleSDGothicNeo(.semiBold, size: 20))
             Spacer()
-            
-            NavigationLink(
-                destination: ChallengesView(),
-                isActive: $isChallengeViewActive)
-            {
-                Text("전체보기")
+
+            Button(action: { isChallengeViewActive = true} ) {
+                HStack {
+                    Text("전체보기")
+                    Image("right_arrow_home")
+                        .frame(width: 15, height: 15)
+                        .padding(.leading, -5)
+                        .padding(.bottom, 2)
+                }
             }
-            Image("right_arrow_home")
-                .frame(width: 15, height: 15)
-                .padding(.leading, -5)
-                .padding(.bottom, 2)
+            .font(.appleSDGothicNeo(.regular, size: 12))
         }
-        .font(.appleSDGothicNeo(.regular, size: 12))
+        .navigationDestination(isPresented: $isChallengeViewActive) {
+            ChallengesView()
+        }
     }
     
     //MARK: ChallengeCard Section
@@ -97,19 +103,25 @@ struct MyChallengeView: View {
                 .font(.appleSDGothicNeo(.regular, size: 16))
                 .foregroundColor(Color(hex: "3B3B3B"))
             
-            Text("도전하기")
-                .font(.appleSDGothicNeo(.semiBold, size: 12))
-                .foregroundColor(.white)
-                .frame(width: 70, height: 28)
-                .background(Color(red: 0.51, green: 0.87, blue: 1))
-                .cornerRadius(4)
-                .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 0)
-                .overlay(
-                RoundedRectangle(cornerRadius: 4)
-                .inset(by: 0.5)
-                .stroke(Color(red: 0.51, green: 0.87, blue: 1), lineWidth: 1)
-                )
-                
+            Button(action: { isCardPush = true } ) {
+                HStack {
+                    Text("도전하기")
+                        .font(.appleSDGothicNeo(.semiBold, size: 12))
+                        .foregroundColor(.white)
+                        .frame(width: 70, height: 28)
+                        .background(Color(red: 0.51, green: 0.87, blue: 1))
+                        .cornerRadius(4)
+                        .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 0)
+                        .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                        .inset(by: 0.5)
+                        .stroke(Color(red: 0.51, green: 0.87, blue: 1), lineWidth: 1)
+                        )
+                }
+            }
+            .navigationDestination(isPresented: $isCardPush) {
+                ChallengesView()
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: 144)
         .background(.white.opacity(0.8))

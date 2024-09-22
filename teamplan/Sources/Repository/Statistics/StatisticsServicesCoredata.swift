@@ -22,7 +22,7 @@ final class StatisticsServicesCoredata {
     func setObject(context: NSManagedObjectContext, object: StatisticsObject) throws -> Bool {
         let entity = StatisticsEntity(context: context)
         try createEntity(with: object, at: entity)
-        return checkEntity(with: entity)
+        return true
     }
     
     func getObject(context: NSManagedObjectContext, userId: String) throws -> Bool {

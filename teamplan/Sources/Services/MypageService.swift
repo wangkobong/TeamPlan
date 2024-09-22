@@ -8,7 +8,6 @@
 
 import CoreData
 import Foundation
-import FirebaseAuth
 
 final class MypageService {
     
@@ -20,78 +19,116 @@ final class MypageService {
     private let statCD: StatisticsServicesCoredata
     private let challengeCD: ChallengeServicesCoredata
     
+    private let mockGenerator: MockGenerator
+    private let storageManager: LocalStorageManager
+    
     private var userId: String
     private var completedChallenges: Int
-    private let context: LocalStorageManager
+    private var userData: UserObject
+    private var statData: StatisticsObject
+    
+    private lazy var eraseSC: EraseService = {
+        return EraseService(userId: userId)
+    }()
     
     init(userId: String) {
         self.userCD = UserServicesCoredata()
         self.statCD = StatisticsServicesCoredata()
         self.challengeCD = ChallengeServicesCoredata()
         
+        self.mockGenerator = MockGenerator(userId: userId)
+        self.storageManager = LocalStorageManager.shared
+        
+        self.mypageDTO = MypageDTO()
+        
         self.userId = userId
         self.completedChallenges = 0
-        self.context = LocalStorageManager.shared
-        self.mypageDTO = MypageDTO()
+        self.userData = UserObject()
+        self.statData = StatisticsObject()
     }
+    
+    //MARK: Prepare properties
     
     func prepareService() -> Bool {
+        var results = [Bool]()
+        let context = self.storageManager.context
+        
+        context.performAndWait {
+            results = [
+                fetchUserData(context),
+                fetchStatData(context),
+                fetchChallengeCount(context)
+            ]
+        }
+        
+        if results.allSatisfy({$0}) {
+            self.mypageDTO = MypageDTO(
+                nickName: userData.name,
+                protected: statData.totalFinishedProjects,
+                destroyed: statData.totalFailedProjects,
+                serviceTerm: statData.term,
+                completedProjects: statData.totalFinishedProjects,
+                completedChallenges: completedChallenges,
+                completedTodos: statData.totalFinishedTodos
+            )
+            return true
+        } else {
+            print("[MypageSC] Failed to prepare service data")
+            return false
+        }
+    }
+    
+    // User
+    private func fetchUserData(_ context: NSManagedObjectContext) -> Bool {
         do {
-            let context = self.context.context
-            
-            try context.performAndWait{
-                self.completedChallenges = try challengeCD.countCompleteObjects(context: context, userId: userId)
-                let isUserDataFetched = try userCD.getObject(context: context, userId: userId)
-                let isStatDataFetched = try statCD.getObject(context: context, userId: userId)
-                
-                if isUserDataFetched && isStatDataFetched {
-                    let user = userCD.object
-                    let stat = statCD.object
-                    self.mypageDTO = MypageDTO(
-                        nickName: user.name,
-                        protected: stat.totalFinishedProjects,
-                        destroyed: stat.totalFailedProjects,
-                        serviceTerm: stat.term,
-                        completedProjects: stat.totalFinishedProjects,
-                        completedChallenges: completedChallenges,
-                        completedTodos: stat.totalFinishedTodos
-                    )
-                }
+            guard try userCD.getObject(context: context, userId: userId) else {
+                print("[MypageSC] Failed to convert UserData")
+                return false
             }
+            self.userData = userCD.object
             return true
         } catch {
-            print("[MypageService] Failed to prepare service data")
+            print("[MypageSC] Failed to fetch UserData from storage")
             return false
         }
     }
     
-    func logout() async -> Bool {
-        return true
-        /*
-        if await loginService.logoutUser() {
-            print("[MypageService] Successfully proceed logout")
-            return true
-        } else {
-            return false
-        }
-        */
-    }
-    
-    func withdraw() async -> Bool {
-        return true
-        /* Delete every user data at local & server
-        if await deleteSync.deleteExecutor() {
-            
-            if await loginService.withdrawUser() {
-                print("[MypageService] Successfully proceed withdraw")
-                return true
-            } else {
-               return false
+    // Stat
+    private func fetchStatData(_ context: NSManagedObjectContext) -> Bool {
+        do {
+            guard try statCD.getObject(context: context, userId: userId) else {
+                print("[MypageSC] Failed to convert StatData")
+                return false
             }
-        } else {
+            self.statData = statCD.object
+            return true
+        } catch {
+            print("[MypageSC] Failed to fetch StatData from storage")
             return false
         }
-        */
+    }
+    
+    // Challenge
+    private func fetchChallengeCount(_ context: NSManagedObjectContext) -> Bool {
+        do {
+            self.completedChallenges = try challengeCD.countCompleteObjects(context: context, userId: userId)
+            return true
+        } catch {
+            print("[MypageSC] Failed to fetch challengeCount from storage")
+            return false
+        }
+    }
+    
+    //MARK: Mock Injection
+    
+    func mockDataInjection() async -> Bool {
+        return await mockGenerator.injectMockData()
+    }
+    
+    //MARK: Erase Data
+    
+    func eraseData() -> Bool {
+        return eraseSC.eraseExecutor()
     }
 }
 
@@ -134,7 +171,7 @@ struct MypageDTO {
 }
 
 enum MypageMenu: String {
-    case logout = "로그아웃"
-    case withdraw = "회원탈퇴"
+    case erase = "데이터 삭제하기"
     case version = "앱버젼"
+    case mock = "Mock데이터 추가하기"
 }

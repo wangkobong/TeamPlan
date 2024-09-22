@@ -12,8 +12,9 @@ import KeychainSwift
 struct HomeView: View {
     
     //MARK: Properties
-    @StateObject private var viewModel = HomeViewModel()
-    @EnvironmentObject private var authViewModel: AuthenticationViewModel
+    @StateObject private var homeViewModel = HomeViewModel()
+    @StateObject private var projectViewModel = ProjectViewModel()
+    
     @AppStorage("mainViewState") var mainViewState: MainViewState?
     
     @State private var percent: CGFloat = 0.65
@@ -50,9 +51,9 @@ struct HomeView: View {
                             userNameArea
                                 .padding(.top, 26)
                             
-                            MyProjectView(isProjectExist: $isExistProject, homeVM: viewModel)
+                            MyProjectView(homeVM: homeViewModel, projectVM: projectViewModel, isProjectExist: $isExistProject)
 
-                            MyChallengeView(homeVM: viewModel, isChallengeViewActive: $isChallengesViewActive)
+                            MyChallengeView(homeVM: homeViewModel, isChallengeViewActive: $isChallengesViewActive)
 
                             Spacer()
                         }
@@ -62,7 +63,7 @@ struct HomeView: View {
                     }
                     .onAppear {
                         Task {
-                            if await viewModel.updateData() {
+                            if await homeViewModel.updateData() {
                                 checkProperties()
                             } else {
                                 showUpdateAlert = true
@@ -70,14 +71,21 @@ struct HomeView: View {
                         }
                     }
                     .alert(isPresented: $showUpdateAlert) {
-                        Alert(title: Text("Error"), message: Text("Failed to update data"), dismissButton: .default(Text("OK")))
+                        Alert(
+                            title: Text("Error"), 
+                            message: Text("Failed to update data"), 
+                            dismissButton: .default(Text("OK"))
+                        )
                     }
                 }
             }
         }
         .onAppear {
             Task {
-                if await viewModel.prepareData() {
+                let isHomeViewModelReady = await homeViewModel.prepareData()
+                let isProjectrViewModelReady = await projectViewModel.prepareData()
+                
+                if isHomeViewModelReady && isProjectrViewModelReady {
                     isLoading = false
                 } else {
                     showLoadAlert = true
@@ -92,8 +100,8 @@ struct HomeView: View {
     
     private func checkProperties() {
         Task {
-            isChallenging = !viewModel.userData.myChallenges.isEmpty
-            isExistProject = !viewModel.userData.projectsDTOs.isEmpty
+            isChallenging = !homeViewModel.userData.myChallenges.isEmpty
+            isExistProject = !homeViewModel.userData.projectsDTOs.isEmpty
         }
     }
 }
@@ -108,10 +116,11 @@ extension HomeView {
                 .padding(.leading, -10)
             Spacer()
             
-            NavigationLink(destination: NotificationView(), isActive: $isNotificationViewActive) {
-                Image(systemName: "bell")
-                    .foregroundColor(.black)
-            }
+            Image(systemName: "bell")
+                .foregroundColor(.black)
+                .navigationDestination(isPresented: $isNotificationViewActive) {
+                    NotificationView()
+                }
         }
         .padding(.horizontal, 16)
     }
@@ -173,11 +182,11 @@ extension HomeView {
     
     //MARK: Guide: Overlay
     private var guideOverlay: some View {
-        HStack {
-            Image("bomb")
-            Spacer()
+        NavigationStack {
             HStack {
-                NavigationLink(destination: GuideView(), isActive: $isGuideViewActive) {
+                Image("bomb")
+                Spacer()
+                HStack {
                     Text("읽으러 가기")
                         .font(.appleSDGothicNeo(.bold, size: 12))
                         .foregroundColor(.theme.whiteColor)
@@ -191,7 +200,13 @@ extension HomeView {
                 .shadow(color: .black.opacity(0.05), radius: 5)
                 .padding(.trailing, -7)
                 .padding(.bottom, 10)
+                .onTapGesture {
+                    isGuideViewActive = true
+                }
                 Image("waterdrop_side")
+            }
+            .navigationDestination(isPresented: $isGuideViewActive) {
+                GuideView()
             }
         }
     }
@@ -209,7 +224,7 @@ extension HomeView {
     //MARK: userName: Name
     private var userNameSection: some View {
         HStack {
-            Text("\(viewModel.userData.userName)" + "님,")
+            Text("\(homeViewModel.userData.userName)" + "님,")
                 .font(.appleSDGothicNeo(.bold, size: 20))
                 .foregroundColor(.theme.blackColor)
                 .background(
@@ -224,7 +239,7 @@ extension HomeView {
     //MARK: userName: pharse
     private var pharseSection: some View {
         HStack {
-            Text("\(viewModel.userData.phrase)")
+            Text("\(homeViewModel.userData.phrase)")
                 .font(.appleSDGothicNeo(.bold, size: 20))
                 .foregroundColor(.theme.blackColor)
             Spacer()

@@ -95,6 +95,19 @@ final class NotificationServicesCoredata {
         }
         return true
     }
+    
+    func deleteTotalObject(_ context: NSManagedObjectContext, userId: String) -> Bool {
+        do {
+            let entities = try fetchAllEntities(for: userId, in: context)
+            for entity in entities {
+                context.delete(entity)
+            }
+            return true
+        } catch {
+            print("[NotifyLocalRepo] Failed to fetch all objects for delete: \(error.localizedDescription)")
+            return false
+        }
+    }
 }
 
 // MARK: Context Related

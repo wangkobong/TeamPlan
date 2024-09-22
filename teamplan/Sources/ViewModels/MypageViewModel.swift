@@ -13,14 +13,17 @@ final class MypageViewModel: ObservableObject {
     //MARK: Properties
     
     var userName: String
+    
     @Published var dto: MypageDTO
     @Published var accomplishes: [Accomplishment]
+    @Published var injectResult: Bool = false
+    @Published var eraseResult: Bool = false
     
     private let identifier: String
     private let service: MypageService
     
     //MARK: Initializer
-    // prepare prepertise : UserDefault (userName / Identifier)
+    
     init() {
         let volt = VoltManager.shared
         if let identifier = volt.getUserId(),
@@ -45,33 +48,26 @@ final class MypageViewModel: ObservableObject {
             print("[MypageViewModel] Failed to load data")
         }
         self.dto = service.mypageDTO
-        
-        DispatchQueue.main.async {
-            self.accomplishes = [
-                .init(accomplishTitle: AccomplishmentTitle.challenge.rawValue,
-                      accomplishCount: self.dto.completedChallenges),
-                .init(accomplishTitle: AccomplishmentTitle.project.rawValue,
-                      accomplishCount: self.dto.completedProjects),
-                .init(accomplishTitle: AccomplishmentTitle.todo.rawValue,
-                      accomplishCount: self.dto.completedTodos)
-            ]
-        }
+        self.accomplishes = [
+            .init(accomplishTitle: AccomplishmentTitle.challenge.rawValue,
+                  accomplishCount: self.dto.completedChallenges),
+            .init(accomplishTitle: AccomplishmentTitle.project.rawValue,
+                  accomplishCount: self.dto.completedProjects),
+            .init(accomplishTitle: AccomplishmentTitle.todo.rawValue,
+                  accomplishCount: self.dto.completedTodos)
+        ]
     }
     
-    func performAction(menu: MypageMenu) throws {
+    @MainActor
+    func performAction(menu: MypageMenu) async {
         switch menu {
             
-        case .logout:
-            Task {
-                let result = await service.logout()
-                print("[MyPageViewModel] Logout action result: \(result)")
-            }
-        case .withdraw:
-            Task{
-                let result = await service.withdraw()
-                print("[MyPageViewModel] Withdraw action result: \(result)")
-            }
- 
+        case .mock:
+            self.injectResult = await service.mockDataInjection()
+            
+        case .erase:
+            self.eraseResult = service.eraseData()
+            
         default:
             return
         }

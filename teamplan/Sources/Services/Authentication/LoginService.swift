@@ -65,7 +65,7 @@ final class LoginService{
         let context = storageManager.context
         
         guard checkData(context) else {
-            print("[LoginLoading] There is no userData")
+            print("[LoginSC] There is no userData")
             return false
         }
         
@@ -74,17 +74,17 @@ final class LoginService{
         }
         
         guard fetchData(context) else {
-            print("[LoginLoading] Failed to fetch userData")
+            print("[LoginSC] Failed to fetch userData")
             return false
         }
         
         guard updateProcess(context) else {
-            print("[LoginLoading] Failed to update properties")
+            print("[LoginSC] Failed to update properties")
             return false
         }
         
         guard await notifySC.firstLoginExecutor() else {
-            print("[LoginLoading] Failed to prepare notifyData")
+            print("[LoginSC] Failed to prepare notifyData")
             return false
         }
         return true
@@ -113,13 +113,13 @@ extension LoginService {
     private func isReloginUser(_ context: NSManagedObjectContext) -> Bool {
         do {
             guard try accessLogCD.getLatestObject(context: context, userId: userId) else {
-                print("[LoginLoading] Failed to convert Accesslog Data")
+                print("[LoginSC] Failed to convert Accesslog Data")
                 return false
             }
             let log = accessLogCD.object
             return util.compareTime(currentTime: loginDate, lastTime: log.accessRecord)
         } catch {
-            print("[LoginLoading] Failed to get Accesslog Data: \(error.localizedDescription)")
+            print("[LoginSC] Failed to get Accesslog Data: \(error.localizedDescription)")
             return false
         }
     }
@@ -135,7 +135,8 @@ extension LoginService {
         context.performAndWait {
             results = [
                 fetchStatData(context),
-                fetchCoreValueData(context)
+                fetchCoreValueData(context),
+                fetchProjectData(context)
             ]
         }
         return results.allSatisfy{$0}
@@ -148,6 +149,7 @@ extension LoginService {
                 return false
             }
             self.statData = statCD.object
+            self.userTerm = statCD.object.term
             return true
             
         } catch {
@@ -185,7 +187,6 @@ extension LoginService {
             return false
         }
     }
-    
 }
 
 // MARK: Update Properties
@@ -195,7 +196,6 @@ extension LoginService {
     // main
     private func updateProcess(_ context: NSManagedObjectContext) -> Bool {
         var results = [Bool]()
-        var notifyResult = false
         
         context.performAndWait {
             results = [
@@ -205,12 +205,12 @@ extension LoginService {
         }
         if results.allSatisfy({$0}) && updateProjectStatus(context) {
             guard storageManager.saveContext() else {
-                print("[LoginLoading] Failed to apply daily update at storage")
+                print("[LoginSC] Failed to apply daily update at storage")
                 return false
             }
             return true
         } else {
-            print("[LoginLoading] Daily update process failed")
+            print("[LoginSC] Daily update process failed")
             return false
         }
     }
@@ -220,12 +220,12 @@ extension LoginService {
         let updated = StatUpdateDTO(userId: userId, newTerm: userTerm + 1)
         do {
             guard try statCD.updateObject(context: context, dto: updated) else {
-                print("[LoginLoading] failed to detect update about serviceTerm")
+                print("[LoginSC] failed to detect update about serviceTerm")
                 return false
             }
             return true
         } catch {
-            print("[LoginLoading] Failed to update service Term: \(error.localizedDescription)")
+            print("[LoginSC] Failed to update service Term: \(error.localizedDescription)")
             return false
         }
     }
@@ -234,7 +234,7 @@ extension LoginService {
     private func updateLoginAt(_ context: NSManagedObjectContext, with loginDate: Date) -> Bool {
         let log = AccessLog(userId: userId, accessDate: loginDate)
         guard accessLogCD.setObject(context: context, object: log) else {
-            print("[LoginLoading] Failed to regist new accesslog")
+            print("[LoginSC] Failed to regist new accesslog")
             return false
         }
         return true
@@ -244,13 +244,13 @@ extension LoginService {
     private func updateProjectStatus(_ context: NSManagedObjectContext) -> Bool {
         
         if projectList.isEmpty {
-            print("[LoginLoading] There is no project to update")
+            print("[LoginSC] There is no project to update")
             return true
         }
         
         var explodeList: [Int] = []
         var projectUpdateList: [ProjectUpdateDTO] = []
-        var totalAlertedProjects: Int = statData.totalAlertedProjects
+        var totalAlertedProjects = statData.totalAlertedProjects
         
         for project in projectList {
             let projectStatus = identifyProject(with: project)
@@ -278,9 +278,9 @@ extension LoginService {
         
         do {
             if !projectUpdateList.isEmpty {
-                for updated in projectUpdateList {                
+                for updated in projectUpdateList {
                     guard try projectCD.updateObject(context: context, with: updated) else {
-                        print("[LoginLoading] Failed to update project \(updated.projectId)")
+                        print("[LoginSC] Failed to update project \(updated.projectId)")
                         return false
                     }
                 }
@@ -288,15 +288,16 @@ extension LoginService {
             
             if totalAlertedProjects != statData.totalAlertedProjects {
                 guard try statCD.updateObject(context: context, dto: StatUpdateDTO(userId: userId, newTotalAlertedProjects: totalAlertedProjects)) else {
-                    print("[LoginLoading] Failed to update statData")
+                    print("[LoginSC] Failed to update statData")
                     return false
                 }
             }
+            print("[LoginSC] explode list: \(explodeList.count)")
             
             if !explodeList.isEmpty {
                 for projectId in explodeList {
-                    guard projectSC.processExplodedProject(context, with: projectId, on: loginDate) else {
-                        print("[LoginLoading] Failed to process explode project")
+                            guard projectSC.processExplodedProject(context, with: projectId, and: userId, on: loginDate, also: statData.totalFailedProjects) else {
+                        print("[LoginSC] Failed to process explode project")
                         return false
                     }
                 }
@@ -304,7 +305,7 @@ extension LoginService {
             return true
             
         } catch {
-            print("[LoginLoading] Failed to process data: \(error.localizedDescription)")
+            print("[LoginSC] Failed to process data: \(error.localizedDescription)")
             return false
         }
     }
@@ -336,7 +337,7 @@ extension LoginService {
                 return .ongoing
             }
         } catch {
-            print("[NotifyService] Failed to calculate project period")
+            print("[LoginSC] Failed to calculate project period")
             return .unknown
         }
     }
