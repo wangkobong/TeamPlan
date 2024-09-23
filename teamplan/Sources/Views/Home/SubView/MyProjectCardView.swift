@@ -14,28 +14,31 @@ struct MyProjectCardView: View {
     let percent: CGFloat = 0.65
     
     var body: some View {
-        VStack {
-            projectHead
-            projectTitle
-            projectTodoCount
-            Spacer().frame(height: 35)
-            projectProgressBar
-                .padding(.bottom, 16)
-            projectDeadline
+        GeometryReader { geometry in
+            VStack {
+                projectHead
+                projectTitle
+                projectTodoCount
+                Spacer().frame(height: 35)
+                projectProgressBar
+                    .padding(.bottom, 16)
+                projectDeadline
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 192)
+            .frame(maxWidth: .infinity)
+            .clipped()
+            .background(
+                Rectangle()
+                    .foregroundColor(.clear)
+                    .frame(width: geometry.size.width * 0.9, height: 192)
+                    .background(.white)
+                    .cornerRadius(8)
+                    .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 0)
+            )
+            .padding(.horizontal, geometry.size.width * 0.07)
         }
-        .padding(.horizontal, 16)
-        .frame(height: 192)
-        .frame(maxWidth: .infinity)
-        .clipped()
-        .background(
-            Rectangle()
-              .foregroundColor(.clear)
-              .frame(width: 358, height: 192)
-              .background(.white)
-              .cornerRadius(8)
-              .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 0)
-        )
-        .padding(.horizontal, 16)
+        .frame(height: 192) // 카드의 높이를 고정
     }
     
     //MARK: Head
