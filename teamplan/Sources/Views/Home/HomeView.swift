@@ -29,6 +29,8 @@ struct HomeView: View {
     @State private var isRedirecting: Bool = false
     
     @State private var isLoading = true
+    @State private var isNotifyNeed = true
+    @State private var isRotating = false
     @State private var showLoadAlert = false
     @State private var showUpdateAlert = false
     //MARK: Main
@@ -118,11 +120,38 @@ extension HomeView {
             
             Image(systemName: "bell")
                 .foregroundColor(.black)
+                .rotationEffect(isRotating ? .degrees(30) : .degrees(0))
+                .onTapGesture {
+                    isNotificationViewActive = true
+                }
                 .navigationDestination(isPresented: $isNotificationViewActive) {
                     NotificationView()
                 }
+                .onAppear(){
+                    startRepeatingAnimation()
+                }
         }
         .padding(.horizontal, 16)
+    }
+    
+    private func startRepeatingAnimation() {
+        Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { timer in
+            
+            guard isNotifyNeed == true else {
+                timer.invalidate()
+                return
+            }
+            
+            withAnimation(.linear(duration: 0.1).repeatCount(50, autoreverses: true)) {
+                isRotating = true
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+                withAnimation{
+                    isRotating = false
+                }
+            }
+        }
     }
     
     //MARK: Guide: Area
