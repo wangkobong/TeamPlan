@@ -14,7 +14,7 @@ struct NotificationView: View {
     @State private var isLoading = true
     @State private var showAlert = false
     
-    @StateObject private var viewModel = NotificationViewModel()
+    @EnvironmentObject private var notifyVM: NotificationViewModel
     
     @Environment(\.dismiss) var dismiss
     
@@ -23,14 +23,17 @@ struct NotificationView: View {
             if isLoading {
                 LoadingView()
             } else {
-                if viewModel.allNotiList.isEmpty {
+                section
+                    .frame(height: 61)
+                
+                if notifyVM.filteredNotiList.isEmpty {
+                    Spacer()
                     NotificationEmptyView()
+                    Spacer()
                 } else {
-                    section
-                        .frame(height: 61)
                     ScrollView {
-                        NotificationListView(notifications: $viewModel.filteredNotiList)
-                            .environmentObject(viewModel)
+                        NotificationListView()
+                            .environmentObject(notifyVM)
                     }
                     Spacer()
                 }
@@ -49,7 +52,7 @@ struct NotificationView: View {
         }
         .onAppear {
             Task {
-                if await viewModel.prepareViewModel() {
+                if await notifyVM.prepareViewModel() {
                     isLoading = false
                 } else {
                     showAlert = true
@@ -70,7 +73,7 @@ struct NotificationView: View {
 
 extension NotificationView {
     private var section: some View {
-        WrappingHStack(viewModel.notiSections, id: \.self) { section in
+        WrappingHStack(notifyVM.notiSections, id: \.self) { section in
             VStack {
                 Text(section.title)
                     .foregroundColor(section.isSelected ? .theme.whiteColor : Color(hex: "3B3B3B"))
@@ -99,7 +102,7 @@ extension NotificationView {
     }
     
     private func filterSection(title: String) {
-        viewModel.notiSections = viewModel.notiSections.map { section in
+        notifyVM.notiSections = notifyVM.notiSections.map { section in
             var updatedSection = section
             updatedSection.isSelected = section.title == title ? true : false
             return updatedSection
@@ -107,12 +110,6 @@ extension NotificationView {
     }
     
     private func filterNotification(type: NotificationType) {
-        viewModel.filterNotifications(type: type)
+        notifyVM.filterNotifications(type: type)
     }
 }
-
-//struct NotificationView_Previews: PreviewProvider {
-//    static var previews: some View {
-//        NotificationView()
-//    }
-//}

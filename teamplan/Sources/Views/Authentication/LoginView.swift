@@ -27,31 +27,32 @@ struct LoginView: View {
     }
     
     private var loginView: some View {
-        VStack {
-            Spacer()
-                .frame(height: 100)
-            texts
-            
-            images
-            
-            Spacer()
-                .frame(height: 60)
-                            
-            buttons
-            
-            Spacer()
-            
-            descriptions
-        }
-        .background(
-            LinearGradient(
-                gradient: Gradient(colors: [Color(hex: "60B9FF").opacity(0.6), Color(hex: "7248E1").opacity(0.6)]),
-                startPoint: .top,
-                endPoint: .bottom
+        GeometryReader { geometry in
+            VStack {
+                Spacer()
+                    .frame(height: geometry.size.height * 0.12)
+                texts
+                
+                Spacer()
+                    .frame(height: geometry.size.height * 0.1)
+                
+                images
+                
+                Spacer()
+                                
+                buttons
+                    .padding(.bottom, geometry.size.height * 0.1)
+            }
+            .background(
+                LinearGradient(
+                    gradient: Gradient(colors: [Color(hex: "60B9FF").opacity(0.6), Color(hex: "7248E1").opacity(0.6)]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
             )
-        )
-        .transition(transition)
-        .zIndex(0)
+            .transition(transition)
+            .zIndex(0)
+        }
     }
     
     private var texts: some View {
@@ -119,15 +120,6 @@ struct LoginView: View {
             }
         }
         .padding(.horizontal, 55)
-    }
-    
-    private var descriptions: some View {
-        VStack {
-            Image(uiImage: Gen.Images.descriptionLoginView.image)
-                .frame(height: 32)
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 34)
-        }
     }
 }
 

@@ -14,16 +14,16 @@ final class ProjectService {
     var statDTO: StatDTO
     var projectList: [ProjectDTO] = []
     var projectRegistLimit: Int
-    
-    private let util: Utilities
-    private let userId: String
-    private let storageManager: LocalStorageManager
-    private let challengeNotifyManager: ChallengeNotifyManager
 
     private let statCD: StatisticsServicesCoredata
     private let coreValueCD: CoreValueServicesCoredata
     private let projectCD: ProjectServicesCoredata
     private let todoCD: TodoServiceCoredata
+    
+    private let util: Utilities
+    private let userId: String
+    private let storageManager: LocalStorageManager
+    private let notifyManager: ChallengeNotifyManager
     
     private var coreValue: CoreValueObject
     
@@ -35,7 +35,7 @@ final class ProjectService {
         self.util = Utilities()
         self.userId = userId
         self.storageManager = LocalStorageManager.shared
-        self.challengeNotifyManager = ChallengeNotifyManager(userId: userId)
+        self.notifyManager = ChallengeNotifyManager(userId: userId, storageManager: self.storageManager)
         
         self.statCD = StatisticsServicesCoredata()
         self.coreValue = CoreValueObject()
@@ -263,7 +263,7 @@ extension ProjectService {
             return false
         }
         
-        return challengeNotifyManager.isNotifyNeed(context)
+        return notifyManager.projectExecutor()
     }
     
     // creator
@@ -293,23 +293,21 @@ extension ProjectService {
     // update: Object
     private func updateObjectAboutProjectCreation(_ context: NSManagedObjectContext, with object: ProjectObject) -> Bool {
         
+        let updated = StatUpdateDTO(
+            userId: userId,
+            newTotalRegistedProjects: self.statDTO.totalRegistedProjects + 1
+        )
+        
         return context.performAndWait {
             do {
                 guard projectCD.setObject(context: context, object: object) else {
                     print("[ProjectService] Failed to set new project data at storage context")
                     return false
                 }
-                
-                let updated = StatUpdateDTO(
-                    userId: userId,
-                    newTotalRegistedProjects: self.statDTO.totalRegistedProjects + 1
-                )
-                
                 guard try statCD.updateObject(context: context, dto: updated) else {
                     print("[ProjectService] Failed to detect StatObject update")
                     return false
                 }
-                
                 guard storageManager.saveContext() else {
                     print("[ProjectService] Failed to apply new project data at storage")
                     return false
@@ -491,45 +489,45 @@ extension ProjectService {
     
     // update: object
     private func updateObjectAboutExtend(with projectId: Int, newDeadline: Date, usedDrop: Int, index: Int) -> Bool {
-        let context = storageManager.context
         
+        // prepare properties
+        let context = storageManager.context
+        let previousObject: ProjectObject
+        do {
+            guard try projectCD.getSingleObject(context: context, with: userId, and: projectId) else {
+                print("[ProjectService] Failed to convert project object")
+                return false
+            }
+            previousObject = projectCD.object
+        } catch {
+            print("[ProjectService] Failed to search target project: \(error.localizedDescription)")
+            return false
+        }
+        
+        let projectUpdated = ProjectUpdateDTO(
+            projectId: projectId,
+            userId: userId,
+            newExtendedCount: previousObject.extendedCount + 1,
+            newDeadline: newDeadline
+        )
+        let statUpdated = StatUpdateDTO(
+            userId: userId,
+            newDrop: self.statDTO.drop - usedDrop,
+            newTotalExtendedProjects: self.statDTO.totalExtendedProjects + 1
+        )
+        
+        // update storage
         return context.performAndWait{
             
-            let previousObject: ProjectObject
             do {
-                
-                // fetch project object
-                guard try projectCD.getSingleObject(context: context, with: userId, and: projectId) else {
-                    print("[ProjectService] Failed to convert project object")
-                    return false
-                }
-                previousObject = projectCD.object
-                
-                // update project object
-                let projectUpdated = ProjectUpdateDTO(
-                    projectId: projectId,
-                    userId: userId,
-                    newExtendedCount: previousObject.extendedCount + 1,
-                    newDeadline: newDeadline)
-  
                 guard try projectCD.updateObject(context: context, with: projectUpdated) else {
                     print("[ProjectService] ProjectObject change not detected")
                     return false
                 }
-
-                // update stat object
-                let statUpdated = StatUpdateDTO(
-                    userId: userId,
-                    newDrop: self.statDTO.drop - usedDrop,
-                    newTotalExtendedProjects: self.statDTO.totalExtendedProjects + 1
-                )
-
                 guard try statCD.updateObject(context: context, dto: statUpdated) else {
                     print("[ProjectService] StatObject change not detected")
                     return false
                 }
-                
-                // apply local storage
                 guard storageManager.saveContext() else {
                     print("[ProjectService] Failed to apply extend ProjectObject at storage")
                     return false
@@ -589,9 +587,9 @@ extension ProjectService {
                 print("[ProjectService] Failed to apply complete object at storage")
                 return false
             }
-            
             updateDTOAboutComplete(with: index)
-            return challengeNotifyManager.isNotifyNeed(context)
+            
+            return notifyManager.projectExecutor()
             
         } catch {
             print("[ProjectService] complete ProjectObject process failed: \(error.localizedDescription)")
@@ -601,33 +599,30 @@ extension ProjectService {
     
     // update: Object
     private func updateObjectAboutComplete(_ context: NSManagedObjectContext, with projectId: Int, at completeDate: Date, index: Int) -> Bool {
+        
+        // perpare properties
+        let projectUpdated = ProjectUpdateDTO(
+            projectId: projectId,
+            userId: userId,
+            newStatus: .finished,
+            newFinishedAt: completeDate
+        )              
+        let statUpdated = StatUpdateDTO(
+            userId: userId,
+            newTotalFinishedProjects: statDTO.totalFinishedProjects + 1
+        )
+        
+        // update storage
         return context.performAndWait {
             do {
-                // update project
-                let projectUpdated = ProjectUpdateDTO(
-                    projectId: projectId,
-                    userId: userId,
-                    newStatus: .finished,
-                    newFinishedAt: completeDate
-                )
-                
                 guard try projectCD.updateObject(context: context, with: projectUpdated) else {
                     print("[ProjectService] ProjectObject change not detected")
                     return false
                 }
-                
-                // update stat
-                let statUpdated = StatUpdateDTO(
-                    userId: userId,
-                    newTotalFinishedProjects: statDTO.totalFinishedProjects + 1
-                )
-                
                 guard try statCD.updateObject(context: context, dto: statUpdated) else {
                     print("[ProjectService] StatObject change not detected")
                     return false
                 }
-                
-                // apply storage
                 guard storageManager.saveContext() else {
                     print("[ProjectService] Failed to apply complete ProjectObject at storage")
                     return false
@@ -653,41 +648,51 @@ extension ProjectService {
 // only update object
 extension ProjectService {
     
-    func processExplodedProject(_ context: NSManagedObjectContext, with projectId: Int, and userId: String, on explodeDate: Date, also failedcount: Int) -> Bool {
+    func processExplodedProject(_ storageManager: LocalStorageManager, notifyManager: ChallengeNotifyManager, projectId: Int, userId: String, explodeDate: Date, failedcount: Int) -> Bool {
         
-        return context.performAndWait {
+        // prepare properties
+        let context = storageManager.context
+        
+        let projectUpdated = ProjectUpdateDTO(
+            projectId: projectId,
+            userId: userId,
+            newStatus: .exploded,
+            newFinishedAt: explodeDate
+        )
+        let statUpdated = StatUpdateDTO(
+            userId: userId,
+            newTotalFailedProjects: failedcount + 1
+        )
+        
+        // update process
+        let updateResult = context.performAndWait {
             do {
-                // update project
-                let projectUpdated = ProjectUpdateDTO(
-                    projectId: projectId,
-                    userId: userId,
-                    newStatus: .exploded,
-                    newFinishedAt: explodeDate
-                )
-                
                 guard try projectCD.updateObject(context: context, with: projectUpdated) else {
                     print("[ProjectService] ProjectObject change not detected")
                     return false
                 }
-                
-                // update stat
-                let statUpdated = StatUpdateDTO(
-                    userId: userId,
-                    newTotalFailedProjects: failedcount + 1
-                )
-                
                 guard try statCD.updateObject(context: context, dto: statUpdated) else {
                     print("[ProjectService] StatObject change not detected")
                     return false
                 }
-                let notifyManager = ChallengeNotifyManager(userId: userId)
-                return notifyManager.isNotifyNeed(context)
+                guard storageManager.saveContext() else {
+                    print("[ProjectService] Failed to apply complete ProjectObject at storage")
+                    return false
+                }
+                return true
                 
             } catch {
                 print("[ProjectService] explode ProjectObject process failed: \(error.localizedDescription)")
                 return false
             }
         }
+        guard updateResult else {
+            print("[ProjectService] Failed to update storage about explode project")
+            return false
+        }
+        
+        // check notify
+        return notifyManager.projectExecutor()
     }
 }
 
@@ -707,12 +712,11 @@ extension ProjectService {
                 return false
             }
             updateDTOAboutTodoCreation(with: newTodo, and: index)
-            return challengeNotifyManager.isNotifyNeed(context)
-            
         } catch {
-            print("[ProjectService] Failed to add new todo process: \(error)")
+            print("[ProjectService] Failed to set new todo at project: \(error)")
             return false
         }
+        return notifyManager.projectExecutor()
     }
 
     // creator
@@ -731,42 +735,42 @@ extension ProjectService {
     // update object
     private func updateObjectAboutTodoCreation(_ context: NSManagedObjectContext, with newTodo: TodoObject) -> Bool {
         
+        // prepare properties
+        do {
+            guard try projectCD.getSingleObject(context: context, with: userId, and: newTodo.projectId) else {
+                return false
+            }
+        } catch {
+            print("[ProjectService] Failed to search project data: \(error.localizedDescription)")
+            return false
+        }
+        let projectData = projectCD.object
+        let updatedProject = ProjectUpdateDTO(
+            projectId: newTodo.projectId,
+            userId: userId,
+            newTotalRegistedTodo: projectData.totalRegistedTodo + 1,
+            newDailyRegistedTodo: projectData.dailyRegistedTodo - 1
+        )
+        let updatedStat = StatUpdateDTO(
+            userId: userId,
+            newTotalRegistedTodos: statDTO.totalRegistedTodos + 1
+        )
+        
+        // update storage
         return context.performAndWait {
             do {
-                // set todo
                 guard try todoCD.setObject(context: context, with: newTodo) else {
                     print("[ProjectService] Failed to set new todo data at storage context")
                     return false
                 }
-                
-                // update project
-                guard try projectCD.getSingleObject(context: context, with: userId, and: newTodo.projectId) else {
-                    print("[ProjectService] Failed to search project data")
-                    return false
-                }
-                let projectData = projectCD.object
-                let updatedProject = ProjectUpdateDTO(
-                    projectId: newTodo.projectId,
-                    userId: userId,
-                    newTotalRegistedTodo: projectData.totalRegistedTodo + 1,
-                    newDailyRegistedTodo: projectData.dailyRegistedTodo - 1
-                )
                 guard try projectCD.updateObject(context: context, with: updatedProject) else {
                     print("[ProjectService] ProjectObject change not detected")
                     return false
                 }
-                
-                // update stat
-                let updatedStat = StatUpdateDTO(
-                    userId: userId,
-                    newTotalRegistedTodos: statDTO.totalRegistedTodos + 1
-                )
                 guard try statCD.updateObject(context: context, dto: updatedStat) else {
                     print("[ProjectService] StatObject change not detected")
                     return false
                 }
-                
-                // apply storage
                 guard storageManager.saveContext() else {
                     print("[ProjectService] Failed to apply new todo at storage")
                     return false
@@ -814,38 +818,42 @@ extension ProjectService {
 
     // update: Object
     private func updateObjectAboutTodoUpdate(with projectId: Int, and todoId: Int, to newStatus: TodoStatus) -> Bool {
-        let context = storageManager.context
         
+        // perpare properties
+        let context = storageManager.context
+        do {
+            guard try projectCD.getSingleObject(context: context, with: userId, and: projectId) else {
+                return false
+            }
+        } catch {
+            print("[ProjectService] Failed to search project data: \(error.localizedDescription)")
+            return false
+        }
+        let projectData = projectCD.object
+        let updatedTodo = TodoUpdateDTO(
+            projectId: projectId,
+            todoId: todoId,
+            userId: userId,
+            newStatus: newStatus
+        )
+        var updatedStat = StatUpdateDTO(userId: userId)
+        var updatedProject = ProjectUpdateDTO(projectId: projectId, userId: userId)
+        
+        switch newStatus {
+        case .finish:
+            updatedStat.newTotalFinishedTodos = statDTO.totalFinishedTodos + 1
+            updatedProject.newFinishedTodo = projectData.finishedTodo + 1
+        case .ongoing:
+            updatedStat.newTotalFinishedTodos = statDTO.totalFinishedTodos - 1
+            updatedProject.newFinishedTodo = projectData.finishedTodo - 1
+        }
+        
+        // update storage
         return context.performAndWait {
             do {
-                // update todo
-                let updatedTodo = TodoUpdateDTO(
-                    projectId: projectId,
-                    todoId: todoId,
-                    userId: userId,
-                    newStatus: newStatus
-                )
                 guard try todoCD.updateObject(context: context, updated: updatedTodo) else {
                     print("[ProjectService] TodoObject change not detected: [\(todoId)] in project: [\(projectId)]")
                     return false
-                }
-                
-                // update stat & project
-                guard try projectCD.getSingleObject(context: context, with: userId, and: projectId) else {
-                    print("[ProjectService] Failed to search project data")
-                    return false
-                }
-                let projectData = projectCD.object
-                var updatedStat = StatUpdateDTO(userId: userId)
-                var updatedProject = ProjectUpdateDTO(projectId: projectId, userId: userId)
-                
-                switch newStatus {
-                case .finish:
-                    updatedStat.newTotalFinishedTodos = statDTO.totalFinishedTodos + 1
-                    updatedProject.newFinishedTodo = projectData.finishedTodo + 1
-                case .ongoing:
-                    updatedStat.newTotalFinishedTodos = statDTO.totalFinishedTodos - 1
-                    updatedProject.newFinishedTodo = projectData.finishedTodo - 1
                 }
                 guard try statCD.updateObject(context: context, dto: updatedStat) else {
                     print("[ProjectService] TodoObject change not applied at statData")
@@ -855,8 +863,6 @@ extension ProjectService {
                     print("[ProjectService] TodoObject change not detected in project: [\(projectId)]")
                     return false
                 }
-                
-                // apply storage
                 guard storageManager.saveContext() else {
                     print("[ProjectService] Failed to apply updated TodoObject at storage: [\(todoId)] in project: [\(projectId)]")
                     return false
@@ -908,10 +914,10 @@ extension ProjectService {
     // update object
     private func updateObjectAboutTodoDesc(with projectId: Int, and todoId: Int, newDesc: String) -> Bool {
         let context = storageManager.context
+        let updated = TodoUpdateDTO(projectId: projectId, todoId: todoId, userId: userId, newDesc: newDesc)
         
         return context.performAndWait {
             do {
-                let updated = TodoUpdateDTO(projectId: projectId, todoId: todoId, userId: userId, newDesc: newDesc)
                 guard try todoCD.updateObject(context: context, updated: updated) else {
                     print("[ProjectService] TodoObject change not detected")
                     return false

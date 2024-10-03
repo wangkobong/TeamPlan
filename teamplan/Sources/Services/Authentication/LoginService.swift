@@ -17,9 +17,6 @@ final class LoginService{
     private let accessLogCD: AccessLogServicesCoredata
     private let coreValueCD: CoreValueServicesCoredata
     private let projectCD: ProjectServicesCoredata
-    private let projectSC: ProjectService
-    
-    private let notifySC: NotificationService
     
     private let util: Utilities
     private let voltManager: VoltManager
@@ -32,23 +29,20 @@ final class LoginService{
     private var projectList: [ProjectObject]
     private var statData: StatisticsObject
     
-    private init(userId: String){
+    private init(userId: String, loginDate: Date = Date()){
         self.userCD = UserServicesCoredata()
         self.statCD = StatisticsServicesCoredata()
         self.challengeCD = ChallengeServicesCoredata()
         self.accessLogCD = AccessLogServicesCoredata()
         self.coreValueCD = CoreValueServicesCoredata()
         self.projectCD = ProjectServicesCoredata()
-        self.projectSC = ProjectService(userId: userId)
-        
-        self.notifySC = NotificationService(userId: userId)
         
         self.util = Utilities()
         self.voltManager = VoltManager.shared
         self.storageManager = LocalStorageManager.shared
         
         self.userId = userId
-        self.loginDate = Date()
+        self.loginDate = loginDate
         self.userTerm = 0
         self.registLimit = 0
         self.projectList = []
@@ -69,9 +63,9 @@ final class LoginService{
             return false
         }
         
-        if isReloginUser(context) {
-            return true
-        }
+        //if isReloginUser(context) {
+        //    return true
+        //}
         
         guard fetchData(context) else {
             print("[LoginSC] Failed to fetch userData")
@@ -83,11 +77,26 @@ final class LoginService{
             return false
         }
         
-        guard await notifySC.firstLoginExecutor() else {
-            print("[LoginSC] Failed to prepare notifyData")
+        guard await notifyProcess() else {
+            print("[LoginSC] Failed to process notifyData")
             return false
         }
         return true
+    }
+    
+    private func notifyProcess() async -> Bool {
+        let notifyService = NotificationService(
+            loginDate: loginDate,
+            userId: userId,
+            statData: statData,
+            projectList: projectList,
+            statCD: statCD,
+            projectCD: projectCD,
+            challengeCD: challengeCD,
+            storageManager: storageManager,
+            util: util
+        )
+        return await notifyService.loginExecutor()
     }
 }
 
@@ -277,26 +286,54 @@ extension LoginService {
         }
         
         do {
+            // update project properties
             if !projectUpdateList.isEmpty {
-                for updated in projectUpdateList {
-                    guard try projectCD.updateObject(context: context, with: updated) else {
-                        print("[LoginSC] Failed to update project \(updated.projectId)")
-                        return false
+                
+                let projectUpdateResult = try context.performAndWait {
+                    for updated in projectUpdateList {
+                        guard try projectCD.updateObject(context: context, with: updated) else {
+                            print("[LoginSC] Failed to update project \(updated.projectId)")
+                            return false
+                        }
                     }
+                    return true
                 }
-            }
-            
-            if totalAlertedProjects != statData.totalAlertedProjects {
-                guard try statCD.updateObject(context: context, dto: StatUpdateDTO(userId: userId, newTotalAlertedProjects: totalAlertedProjects)) else {
-                    print("[LoginSC] Failed to update statData")
+                guard projectUpdateResult else {
+                    print("[LoginSC] Project update process failed")
                     return false
                 }
             }
-            print("[LoginSC] explode list: \(explodeList.count)")
             
+            // update stat properties
+            if totalAlertedProjects != statData.totalAlertedProjects {
+                
+                let statUpdateResult = try context.performAndWait {
+                    guard try statCD.updateObject(context: context, dto: StatUpdateDTO(userId: userId, newTotalAlertedProjects: totalAlertedProjects)) else {
+                        print("[LoginSC] Failed to update statData")
+                        return false
+                    }
+                    return true
+                }
+                guard statUpdateResult else {
+                    print("[LoginSC] StatData update process failed")
+                    return false
+                }
+            }
+            
+            // explode project process
             if !explodeList.isEmpty {
+                let today = Date()
+                let projectService = ProjectService(userId: userId)
+                let notifyManager = ChallengeNotifyManager(userId: userId, storageManager: storageManager)
                 for projectId in explodeList {
-                            guard projectSC.processExplodedProject(context, with: projectId, and: userId, on: loginDate, also: statData.totalFailedProjects) else {
+                    guard projectService.processExplodedProject(
+                        storageManager,
+                        notifyManager: notifyManager,
+                        projectId: projectId,
+                        userId: userId,
+                        explodeDate: today,
+                        failedcount: statData.totalFailedProjects
+                    ) else {
                         print("[LoginSC] Failed to process explode project")
                         return false
                     }
@@ -310,6 +347,8 @@ extension LoginService {
         }
     }
 }
+
+// Prepare Notification
 
 extension LoginService {
     

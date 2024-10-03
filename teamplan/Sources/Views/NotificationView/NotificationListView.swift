@@ -10,19 +10,13 @@ import SwiftUI
 
 struct NotificationListView: View {
     
-    @EnvironmentObject private var notificationViewModel: NotificationViewModel
-    @Binding var notifications: [NotificationModel]
+    @EnvironmentObject private var notifyVM: NotificationViewModel
     
     var body: some View {
-        ForEach(Array(notificationViewModel.filteredNotiList.enumerated()), id: \.element.id) { index, noti in
-            NotificationRowView(notification: $notificationViewModel.filteredNotiList[index])
+        ForEach(Array(notifyVM.filteredNotiList.enumerated()), id: \.element.id) { index, noti in
+            NotificationRowView(notification: $notifyVM.filteredNotiList[index])
+                .environmentObject(notifyVM)
             Divider()
         }
     }
 }
-
-//struct NotificationListView_Previews: PreviewProvider {
-//    static var previews: some View {
-//        NotificationListView()
-//    }
-//}

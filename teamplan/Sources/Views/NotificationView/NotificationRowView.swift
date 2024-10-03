@@ -10,7 +10,11 @@ import SwiftUI
 
 struct NotificationRowView: View {
     
+    @EnvironmentObject private var notifyVM: NotificationViewModel
     @Binding var notification: NotificationModel
+    
+    @State private var showUpdateAlert = false
+    @State private var showCheckAlert = false
     
     var body: some View {
         HStack {
@@ -31,17 +35,47 @@ struct NotificationRowView: View {
                 Spacer()
                 dateSection
                 Spacer()
-
+            }
+            .onTapGesture {
+                Task{
+                    await handelTap()
+                }
+            }
+            .alert(isPresented: $showUpdateAlert) {
+                Alert(
+                    title: Text("Error"),
+                    message: Text("Failed to update notifyData"),
+                    dismissButton: .default(Text("OK"))
+                )
+            }
+            .alert(isPresented: $showCheckAlert) {
+                Alert(
+                    title: Text("이게 맞나요?"),
+                    message: Text("이미 확인한 알림입니다."),
+                    dismissButton: .default(Text("OK"))
+                )
             }
             Spacer()
         }
         .frame(height: 89)
         .padding(.top, 10)
-        
+        .background(notification.isSelected ? Color.theme.whiteGreyColor : Color.white)
+        .cornerRadius(8)
     }
 }
 
 extension NotificationRowView {
+    
+    private func handelTap() async {
+        if notification.isSelected {
+            showCheckAlert = true
+        } else {
+            if await !notifyVM.updateNotify(with: notification) {
+                showUpdateAlert = true
+            }
+        }
+    }
+    
     private func switchView() -> some View {
         switch notification.type {
         case .project:
@@ -65,7 +99,6 @@ extension NotificationRowView {
                 .frame(width: 25, height: 25)
             Spacer()
         }
-
     }
 
     private var dateSection: some View {
@@ -76,12 +109,5 @@ extension NotificationRowView {
                 .foregroundColor(.theme.darkGreyColor)
         }
         .frame(height: 20)
-    }
-}
-
-struct NotificationRowView_Previews: PreviewProvider {
-    static var previews: some View {
-        NotificationRowView(notification: .constant(NotificationModel(title: "알림 제목", description: "알림 본문", type: .project, isSelected: false, date: Date())))
-            .previewLayout(.sizeThatFits)
     }
 }

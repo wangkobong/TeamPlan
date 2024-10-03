@@ -14,6 +14,7 @@ struct HomeView: View {
     //MARK: Properties
     @StateObject private var homeViewModel = HomeViewModel()
     @StateObject private var projectViewModel = ProjectViewModel()
+    @StateObject private var notifyViewModel = NotificationViewModel()
     
     @AppStorage("mainViewState") var mainViewState: MainViewState?
     
@@ -29,6 +30,8 @@ struct HomeView: View {
     @State private var isRedirecting: Bool = false
     
     @State private var isLoading = true
+    @State private var isNotifyNeed = false
+    @State private var isRotating = false
     @State private var showLoadAlert = false
     @State private var showUpdateAlert = false
     //MARK: Main
@@ -63,11 +66,8 @@ struct HomeView: View {
                     }
                     .onAppear {
                         Task {
-                            if await homeViewModel.updateData() {
-                                checkProperties()
-                            } else {
-                                showUpdateAlert = true
-                            }
+                            checkNotifyVM()
+                            await checkHomeVM()
                         }
                     }
                     .alert(isPresented: $showUpdateAlert) {
@@ -82,15 +82,7 @@ struct HomeView: View {
         }
         .onAppear {
             Task {
-                let isHomeViewModelReady = await homeViewModel.prepareData()
-                let isProjectrViewModelReady = await projectViewModel.prepareData()
-                
-                if isHomeViewModelReady && isProjectrViewModelReady {
-                    isLoading = false
-                } else {
-                    showLoadAlert = true
-                    isRedirecting = true
-                }
+                await prepareViewModel()
             }
         }
         .alert(isPresented: $showLoadAlert) {
@@ -98,10 +90,37 @@ struct HomeView: View {
         }
     }
     
-    private func checkProperties() {
-        Task {
+    private func checkHomeVM() async {
+        if await homeViewModel.updateData() {
             isChallenging = !homeViewModel.userData.myChallenges.isEmpty
             isExistProject = !homeViewModel.userData.projectsDTOs.isEmpty
+        } else {
+            showUpdateAlert = true
+        }
+    }
+    
+    private func checkNotifyVM() {
+        notifyViewModel.checkNewNotify()
+        if notifyViewModel.isNewNotifyAdded {
+            self.isNotifyNeed = true
+        } else {
+            self.isNotifyNeed = false
+        }
+    }
+    
+    private func prepareViewModel() async {
+        let isHomeViewModelReady = await homeViewModel.prepareData()
+        let isProjectrViewModelReady = await projectViewModel.prepareData()
+        let isNotifyViewModelReady = await notifyViewModel.prepareViewModel()
+        
+        if isHomeViewModelReady && isProjectrViewModelReady && isNotifyViewModelReady {
+            if notifyViewModel.isNewNotifyAdded {
+                self.isNotifyNeed = true
+            }
+            self.isLoading = false
+        } else {
+            self.showLoadAlert = true
+            self.isRedirecting = true
         }
     }
 }
@@ -110,19 +129,51 @@ extension HomeView {
     
     //MARK: Navi: Area
     private var navigationArea: some View {
-        HStack {
-            Image("title_home")
-                .frame(width: 61, height: 27)
-                .padding(.leading, -10)
-            Spacer()
-            
-            Image(systemName: "bell")
-                .foregroundColor(.black)
-                .navigationDestination(isPresented: $isNotificationViewActive) {
-                    NotificationView()
-                }
+        GeometryReader { geometry in
+            HStack {
+                Image("title_home")
+                    .frame(width: geometry.size.width * 0.15, height: geometry.size.height * 0.08)
+                    .padding(.leading, -10)
+                Spacer()
+                
+                Image(systemName: "bell")
+                    .foregroundColor(.black)
+                    .rotationEffect(isRotating ? .degrees(40) : .degrees(0))
+                    .onTapGesture {
+                        isNotificationViewActive = true
+                    }
+                    .navigationDestination(isPresented: $isNotificationViewActive) {
+                        NotificationView()
+                            .environmentObject(notifyViewModel)
+                    }
+                    .onAppear() {
+                        if isNotifyNeed {
+                            startRepeatingAnimation()
+                        }
+                    }
+            }
+            .padding(.horizontal, geometry.size.width * 0.05)
         }
-        .padding(.horizontal, 16)
+        .frame(height: 30)
+    }
+    
+    private func startRepeatingAnimation() {
+        
+        Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { timer in
+            
+            guard isNotifyNeed == true else {
+                timer.invalidate()
+                return
+            }
+            
+            withAnimation(.linear(duration: 0.1).repeatCount(50, autoreverses: true)) {
+                isRotating = true
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+                withAnimation{ isRotating = false }
+            }
+        }
     }
     
     //MARK: Guide: Area

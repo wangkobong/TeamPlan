@@ -20,11 +20,13 @@ final class NotificationServicesCoredata {
         createEntity(with: object, at: entity)
     }
     
-    func getTotalObjectList(_ context: NSManagedObjectContext, with userId: String) -> Bool {
+    func fetchTotalObjectList(_ context: NSManagedObjectContext, with userId: String) -> Bool {
         do {
+            self.objectList = []
             let entities = try fetchAllEntities(for: userId, in: context)
             for entity in entities {
-                if !convertToObject(with: entity) {
+                guard convertToObject(with: entity) else {
+                    print("[NotifyLocalRepo] Failed to convert entity to object ")
                     return false
                 }
             }
@@ -35,47 +37,58 @@ final class NotificationServicesCoredata {
         }
     }
     
-    func getCategoryObject(_ context: NSManagedObjectContext, userId: String, category: NotificationCategory) -> Bool {
+    func fetchCategoryObjectlist(_ context: NSManagedObjectContext, with userId: String, type: NotificationCategory) -> Bool {
         do {
-            var result = false
-            let entities = try fetchCategoryEntities(for: userId, in: category, context: context)
-            
+            self.objectList = []
+            let entities = try fetchCategoryEntities(for: userId, in: type, context: context)
             for entity in entities {
-                result = convertToObject(with: entity)
+                guard convertToObject(with: entity) else {
+                    print("[NotifyLocalRepo] Failed to convert entity to object ")
+                    return false
+                }
             }
-            return result
+            return true
+            
         } catch {
-            print("[NotifyLocalRepo] \(error.localizedDescription)")
+            print("[NotifyLocalRepo] Failed to fetch category objects: \(error.localizedDescription)")
             return false
         }
     }
     
-    func updateObject(_ context: NSManagedObjectContext, dtoList: [NotifyUpdateDTO]) -> Bool {
+    func updateObject(_ context: NSManagedObjectContext, dto: NotifyUpdateDTO) -> Bool {
+        
+        var entity: NotificationEntity?
+
+        if let challengeId = dto.challengeId {
+            entity = fetchEntity(for: dto.userId, notifyId: challengeId, category: .challenge, in: context)
+        }
+        if let projectId = dto.projectId {
+            entity = fetchEntity(for: dto.userId, notifyId: projectId, category: .project, in: context)
+        }
+        guard let entity = entity else {
+            print("[NotifyLocalRepo] Failed to fetch Entity for update")
+            return false
+        }
+        
+        if checkUpdate(from: entity, to: dto) {
+            return true
+        } else {
+            print("[NotifyLocalRepo] There is no argument to update")
+            return false
+        }
+    }
+    
+    func updateObjectList(_ context: NSManagedObjectContext, dtoList: [NotifyUpdateDTO]) -> Bool {
         var results: [Bool] = []
         for dto in dtoList {
-            var entity: NotificationEntity?
-
-            if let challengeId = dto.challengeId {
-                entity = fetchEntity(for: dto.userId, notifyId: challengeId, category: .challenge, in: context)
-            }
-            if let projectId = dto.projectId {
-                entity = fetchEntity(for: dto.userId, notifyId: projectId, category: .project, in: context)
-            }
-            guard let entity = entity else {
-                return false
-            }
-            results.append(checkUpdate(from: entity, to: dto))
+            results.append(updateObject(context, dto: dto))
         }
         if results.contains(true) {
-            do {
-                try context.save()
-                return true
-            } catch {
-                print("[NotifyLocalRepo] Failed to save updated data: \(error.localizedDescription)")
-                return false
-            }
+            return true
+        } else {
+            print("[NotifyLocalRepo] There is no argument to update at List")
+            return false
         }
-        return false
     }
     
     func deleteObject(_ context: NSManagedObjectContext, userId: String, notifyId: Int, category: NotificationCategory) -> Bool {
@@ -121,9 +134,8 @@ extension NotificationServicesCoredata {
            let challengeStatus = object.challengeStatus {
             entity.notify_id = Int32(challengeId)
             entity.status = Int32(challengeStatus.rawValue)
-        }
-        if let projectId = object.projectId,
-           let projectStatus = object.projectStatus {
+        } else if let projectId = object.projectId,
+                  let projectStatus = object.projectStatus {
             entity.notify_id = Int32(projectId)
             entity.status = Int32(projectStatus.rawValue)
         }
@@ -254,7 +266,7 @@ struct NotifyUpdateDTO {
     let newUpdateAt: Date?
     let isCheck: Bool?
     
-    init(userId: String, 
+    init(userId: String,
          projectId: Int? = nil,
          projectStatus: ProjectNotification? = nil,
          challengeId: Int? = nil,
@@ -273,5 +285,17 @@ struct NotifyUpdateDTO {
         self.newDesc = desc
         self.newUpdateAt = updateAt
         self.isCheck = isCheck
+    }
+    
+    init() {
+        self.userId = "unknown"
+        self.projectId = nil
+        self.newProjectStatus = nil
+        self.challengeId = nil
+        self.newChallengeStatus = nil
+        self.newTitle = nil
+        self.newDesc = nil
+        self.newUpdateAt = nil
+        self.isCheck = nil
     }
 }

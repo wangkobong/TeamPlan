@@ -46,53 +46,89 @@ final class NotificationService {
     
     private let today: Date
     private let userId: String
-    private let storageManager: LocalStorageManager
-    
-    private let util: Utilities
     private let statCD: StatisticsServicesCoredata
     private let projectCD: ProjectServicesCoredata
-    private let challengeCD: ChallengeServicesCoredata
     private let notifyCD: NotificationServicesCoredata
+    private let challengeCD: ChallengeServicesCoredata
     
     private var statData: StatisticsObject
     private var projectList: [ProjectObject]
-    private var projectNotifyList: [Int : NotificationObject]
+    
     private var challengeList: [ChallengeObject]
     private var challengeNotifyList: [Int : NotificationObject]
+    private var projectNotifyList: [Int : NotificationObject]
     
     private var updateNeedNotifyList: [NotifyUpdateDTO]
     private var previousNotifyList: [NotificationObject]
     private var truncateNotifyList: [Int : NotificationCategory]
     
-    init(userId: String) {
-        self.today = Date()
+    private let util: Utilities
+    private let storageManager: LocalStorageManager
+    
+    // background version
+    init(userId: String, processedDate: Date) {
+        self.today = processedDate
         self.userId = userId
-        self.notifyDataManager = NotifyDataManager()
-        self.storageManager = LocalStorageManager.shared
-        
-        self.util = Utilities()
         self.statCD = StatisticsServicesCoredata()
         self.projectCD = ProjectServicesCoredata()
-        self.challengeCD = ChallengeServicesCoredata()
         self.notifyCD = NotificationServicesCoredata()
+        self.challengeCD = ChallengeServicesCoredata()
         
         self.statData = StatisticsObject()
         self.projectList = []
-        self.projectNotifyList = [:]
-        self.challengeList = []
-        self.challengeNotifyList = [:]
         
+        self.challengeList = []
+        self.notifyDataManager = NotifyDataManager()
+        self.challengeNotifyList = [:]
+        self.projectNotifyList = [:]
         self.updateNeedNotifyList = []
         self.previousNotifyList = []
         self.truncateNotifyList = [:]
+        
+        self.util = Utilities()
+        self.storageManager = LocalStorageManager.shared
+    }
+    
+    // login version
+    init(
+        loginDate: Date,
+        userId: String,
+        statData: StatisticsObject,
+        projectList: [ProjectObject],
+        statCD: StatisticsServicesCoredata,
+        projectCD: ProjectServicesCoredata,
+        challengeCD: ChallengeServicesCoredata,
+        storageManager: LocalStorageManager,
+        util: Utilities
+    ){
+        self.today = loginDate
+        self.userId = userId
+        self.statCD = statCD
+        self.projectCD = projectCD
+        self.challengeCD = challengeCD
+        self.notifyCD = NotificationServicesCoredata()
+        
+        self.statData = statData
+        self.projectList = projectList
+        
+        self.challengeList = []
+        self.notifyDataManager = NotifyDataManager()
+        self.challengeNotifyList = [:]
+        self.projectNotifyList = [:]
+        self.updateNeedNotifyList = []
+        self.previousNotifyList = []
+        self.truncateNotifyList = [:]
+        
+        self.util = util
+        self.storageManager = storageManager
     }
     
     //MARK:  ----- Main -----
     
-    func firstLoginExecutor() async -> Bool {
+    func loginExecutor() async -> Bool {
         
         // fetch
-        guard fullFetchExecutor() else {
+        guard loginFetchExecutor() else {
             return false
         }
         
@@ -101,25 +137,23 @@ final class NotificationService {
             return false
         }
 
-        if await updateExecutor() {
-            await constructExecutor()
-            return true
-        } else {
-            return false
-        }
+        // update
+        return await updateExecutor()
     }
     
-    func fetchExecutor() async -> Bool {
-        // fetch
-        guard semiFetchExecutor() else {
+    func backgroundExecutor() async -> Bool {
+        
+        guard backgroundFetchExecutor() else {
             return false
         }
-        await constructExecutor()
-        return true
-    }
-    
-    func afterUpdateExecutor() {
-        // update single notify (storage & local)
+        
+        // preprocessing
+        guard await preprocessingExecutor() else {
+            return false
+        }
+
+        // update
+        return await updateExecutor()
     }
 }
 
@@ -127,61 +161,60 @@ final class NotificationService {
 
 extension NotificationService {
     
-    private func fullFetchExecutor() -> Bool {
+    private func loginFetchExecutor() -> Bool {
         let context = storageManager.context
+        
+        return context.performAndWait {
+            let isNotifyFetched = fetchNotifyList(context)
+            let isMyChallengeFetched = fetchMyChallenges(context)
+            
+            return isNotifyFetched && isMyChallengeFetched
+        }
+    }
+    
+    private func backgroundFetchExecutor() -> Bool {
+        let context = storageManager.createBackgroundContext()
         var results = [Bool]()
         
         context.performAndWait {
             results = [
-                fetchNotifyList(with: context, isFullFetch: true),
-                fetchStatData(with: context),
-                fetchValidProject(with: context),
-                fetchMyChallenges(with: context)
+                fetchNotifyList(context),
+                fetchMyChallenges(context),
+                fetchProjectList(context),
+                fetchStatData(context)
             ]
         }
         return results.allSatisfy{$0}
     }
     
-    private func semiFetchExecutor() -> Bool {
-        let context = storageManager.context
-        
-        return context.performAndWait {
-            return fetchNotifyList(with: context, isFullFetch: false)
-        }
-    }
-    
     // previous notify
-    private func fetchNotifyList(with context: NSManagedObjectContext, isFullFetch: Bool) -> Bool {
+    private func fetchNotifyList(_ context: NSManagedObjectContext) -> Bool {
         
-        guard notifyCD.getTotalObjectList(context, with: userId) else {
+        guard notifyCD.fetchTotalObjectList(context, with: userId) else {
             print("[NotifySC] Failed to get notify list")
             return false
         }
         let notifyList = notifyCD.objectList
-        
-        if isFullFetch {
-            for notify in notifyList {
-                if let challengeId = notify.challengeId {
-                    challengeNotifyList[challengeId] = notify
-                }
-                if let projectId = notify.projectId {
-                    projectNotifyList[projectId] = notify
-                }
+        for notify in notifyList {
+            if let challengeId = notify.challengeId {
+                challengeNotifyList[challengeId] = notify
             }
-        } else {
-            previousNotifyList.append(contentsOf: notifyList)
+            if let projectId = notify.projectId {
+                projectNotifyList[projectId] = notify
+            }
+            self.previousNotifyList.append(notify)
         }
         return true
     }
     
-    // statData
-    private func fetchStatData(with context: NSManagedObjectContext) -> Bool {
+    // myChallenge
+    private func fetchMyChallenges(_ context: NSManagedObjectContext) -> Bool {
         do {
-            guard try statCD.getObject(context: context, userId: userId) else {
-                print("[NotifySC] Error detected while converting StatEntity to object")
+            guard try challengeCD.getMyObjects(context: context, userId: userId) else {
+                print("[NotifySC] Failed to get myChallenges")
                 return false
             }
-            self.statData = statCD.object
+            self.challengeList = challengeCD.objects
             return true
         } catch {
             print(error.localizedDescription)
@@ -189,11 +222,11 @@ extension NotificationService {
         }
     }
     
-    // project
-    private func fetchValidProject(with context: NSManagedObjectContext) -> Bool {
+    // projects
+    private func fetchProjectList(_ context: NSManagedObjectContext) -> Bool {
         do {
             guard try projectCD.getValidObjects(context: context, with: userId) else {
-                print("[NotifySC] Failed to get valid project")
+                print("[NotifySC] Failed to get valid project from storage")
                 return false
             }
             self.projectList = projectCD.objectList
@@ -204,14 +237,15 @@ extension NotificationService {
         }
     }
     
-    // myChallenge
-    private func fetchMyChallenges(with context: NSManagedObjectContext) -> Bool {
+    
+    // statistics
+    private func fetchStatData(_ context: NSManagedObjectContext) -> Bool {
         do {
-            guard try challengeCD.getMyObjects(context: context, userId: userId) else {
-                print("[NotifySC] Failed to get myChallenges")
+            guard try statCD.getObject(context: context, userId: userId) else {
+                print("[NotifySC] Failed to get statData from storage")
                 return false
             }
-            self.challengeList = challengeCD.objects
+            self.statData = statCD.object
             return true
         } catch {
             print(error.localizedDescription)
@@ -251,8 +285,10 @@ extension NotificationService {
         for project in projectList {
             let candidateNotifyType = identifyProjectForNotify(with: project, on: today)
             
-            // check: truncate notify
+            // check: already exist notify
             if let previousNotify = projectNotifyList[project.projectId] {
+                
+                // check: truncate notify
                 if isTrucateNeed(notify: previousNotify) {
                     await notifyDataManager.addTruncateNotify(project.projectId, .project)
                     continue
@@ -262,12 +298,15 @@ extension NotificationService {
                     updateNeedNotifyList.append(
                         updateProjectNotify(data: project, newType: candidateNotifyType)
                     )
+                    continue
                 }
-                // check: new notify
+                // check: previous notify
+                await notifyDataManager.addNotify(previousNotify)
+                
+            // check: new notify
             } else {
-                await notifyDataManager.addNewNotify(
-                    createProjectNotify(data: project, type: candidateNotifyType, at: today)
-                )
+                let object = createProjectNotify(data: project, type: candidateNotifyType, at: today)
+                await notifyDataManager.addNewNotify(object)
             }
         }
         return true
@@ -279,6 +318,7 @@ extension NotificationService {
         return NotificationObject(
             userId: userId,
             projectId: data.projectId,
+            projectStatus: type,
             category: .project,
             title: data.title,
             desc: desc,
@@ -294,44 +334,55 @@ extension NotificationService {
             projectId: data.projectId,
             projectStatus: newType,
             desc: newDesc,
-            updateAt: today
+            updateAt: today,
+            isCheck: false
         )
     }
 
     //MARK: myChallenge
 
     private func preprocessingChallengeNotify() async -> Bool {
-        
         if challengeList.isEmpty {
             print("[NotifySC] There is no registed myChallenge to create notify")
             return true
         }
+        print(challengeNotifyList)
         
         for challenge in challengeList {
             
-            // check: too old notify
+            // check: already exist notify
             if let previousNotify = challengeNotifyList[challenge.challengeId] {
+                
+                // check: truncate notify
                 if isTrucateNeed(notify: previousNotify) {
                     await notifyDataManager.addTruncateNotify(challenge.challengeId, .challenge)
+                    continue
                 }
-            }
-            
+                
+                // check: previous notify
+                await notifyDataManager.addNotify(previousNotify)
+                
             // check: new candidate
-            let userProgress = getUserProgressForChallengeNotify(with: challenge.type)
-            if challenge.goal <= userProgress {
-                await notifyDataManager.addNewNotify(
-                    createChallengeNotify(with: challenge, at: today)
-                )
+            } else {
+                let userProgress = getUserProgressForChallengeNotify(with: challenge.type)
+                if challenge.goal <= userProgress {
+                    print("add new notify about challenge")
+                    await notifyDataManager.addNewNotify(
+                        createChallengeNotify(data: challenge, type: .canAchieve, date: today)
+                    )
+                }
             }
         }
         return true
     }
     
-    private func createChallengeNotify(with object: ChallengeObject, at date: Date) -> NotificationObject {
+    private func createChallengeNotify(data: ChallengeObject, type: ChallengeNoitification, date: Date) -> NotificationObject {
         return NotificationObject(
             userId: userId,
+            challengeId: data.challengeId,
+            challengeStatus: type,
             category: .challenge,
-            title: object.title,
+            title: data.title,
             desc: "도전과제가 완료되었습니다! 도전을 완료하여 물방울을 획득해주세요.",
             updateAt: date,
             isCheck: false
@@ -340,31 +391,18 @@ extension NotificationService {
     
     //MARK: util
     
-    // identify
-    private func identifyLegacyNotify() {
-        
-        for notify in previousNotifyList {
-            if isTrucateNeed(notify: notify) {
-                if let projectId = notify.projectId {
-                    truncateNotifyList[projectId] = .project
-                }
-                if let challengeId = notify.challengeId {
-                    truncateNotifyList[challengeId] = .challenge
-                }
-            }
-        }
-    }
-    
     // condition
     private func isTrucateNeed(notify: NotificationObject) -> Bool {
         
-        // Checked
-        if notify.isCheck && notify.updateAt < today {
+        // user check notify
+        let checkExpirationDate = Calendar.current.date(byAdding: .day, value: 3, to: notify.updateAt) ?? notify.updateAt
+        if notify.isCheck && checkExpirationDate < today {
             return true
         }
-        // UnChecked, but expired
-        let expirationDate = Calendar.current.date(byAdding: .weekOfYear, value: 2, to: notify.updateAt) ?? notify.updateAt
-        if !notify.isCheck && expirationDate < today {
+        
+        // user uncheck notify
+        let uncheckExpirationDate = Calendar.current.date(byAdding: .day, value: 7, to: notify.updateAt) ?? notify.updateAt
+        if !notify.isCheck && uncheckExpirationDate < today {
             return true
         }
         return false
@@ -381,21 +419,21 @@ extension NotificationService {
         
         if await !notifyDataManager.getTruncateList().isEmpty {
             guard await applyTruncateResult(context) else {
-                print("[UpdateExecutor] Failed to apply truncate results.")
+                print("[NotifySC] Failed to apply truncate results.")
                 return false
             }
         }
 
         if !updateNeedNotifyList.isEmpty {
-            guard applyUpdateResult(context) else {
-                print("[UpdateExecutor] Failed to apply update results.")
+            guard await applyUpdateResult(context) else {
+                print("[NotifySC] Failed to apply update results.")
                 return false
             }
         }
 
         if await !notifyDataManager.getNewNotifyList().isEmpty {
             guard await applyAddNewResult(context) else {
-                print("[UpdateExecutor] Failed to apply new additions.")
+                print("[NotifySC] Failed to apply new additions.")
                 return false
             }
         }
@@ -428,16 +466,6 @@ extension NotificationService {
     
     //MARK: truncate
     private func applyTruncateResult(_ context: NSManagedObjectContext) async -> Bool {
-        let storageResult = await applyTruncateResultToStorage(context)
-        if storageResult {
-            await applyTruncateResultToLocal()
-            return true
-        } else {
-            return false
-        }
-    }
-    
-    private func applyTruncateResultToStorage(_ context: NSManagedObjectContext) async -> Bool {
         let turncateList = await notifyDataManager.getTruncateList()
         
         return context.performAndWait {
@@ -450,78 +478,53 @@ extension NotificationService {
         }
     }
     
-    private func applyTruncateResultToLocal() async {
-        let truncateList = await notifyDataManager.getTruncateList()
-        previousNotifyList.removeAll { notify in
-            if let projectId = notify.projectId, truncateList[projectId] == .project {
-                return true
-            }
-            if let challengeId = notify.challengeId, truncateList[challengeId] == .challenge {
-                return true
-            }
-            return false
-        }
-    }
-    
     //MARK: update
-    private func applyUpdateResult(_ context: NSManagedObjectContext) -> Bool {
+    private func applyUpdateResult(_ context: NSManagedObjectContext) async -> Bool {
         let storageResult = applyUpdateResultToStorage(context)
         if storageResult {
-            applyUpdateResultToLocal()
+            await applyUpdateResultToLocal()
             return true
         } else {
             return false
         }
     }
-    
-    private func applyUpdateResultToLocal() {
-        for updateDTO in updateNeedNotifyList {
-            if let index = previousNotifyList.firstIndex(where: { notify in
-                (updateDTO.projectId != nil && notify.projectId == updateDTO.projectId) ||
-                (updateDTO.challengeId != nil && notify.challengeId == updateDTO.challengeId)
-            }) {
-                previousNotifyList[index].update(with: updateDTO)
-            }
-        }
-    }
-
     private func applyUpdateResultToStorage(_ context: NSManagedObjectContext) -> Bool {
-        if notifyCD.updateObject(context, dtoList: updateNeedNotifyList) {
+        if notifyCD.updateObjectList(context, dtoList: updateNeedNotifyList) {
             return storageManager.saveContext()
         } else {
             print("[NotifySC] Failed to process update notify")
             return false
         }
     }
-}
-
-//MARK: ----- Construct -----
-
-extension NotificationService {
     
-    private func constructExecutor() async {
-        
-        if !previousNotifyList.isEmpty {
-            for notify in previousNotifyList {
-                await notifyDataManager.addNotify(notify)
-            }
-        }
-        
-        let newNotifyList = await notifyDataManager.getNewNotifyList()
-        if !newNotifyList.isEmpty {
-            for notify in newNotifyList {
-                await notifyDataManager.addNotify(notify)
+    private func applyUpdateResultToLocal() async {
+        for updateDTO in updateNeedNotifyList {
+            if let index = previousNotifyList.firstIndex(where: { notify in
+                (updateDTO.projectId != nil && notify.projectId == updateDTO.projectId) ||
+                (updateDTO.challengeId != nil && notify.challengeId == updateDTO.challengeId)
+            }) {
+                let targetNotify = previousNotifyList[index]
+                let updatedNotify = NotificationObject(
+                    userId: targetNotify.userId,
+                    projectId: updateDTO.projectId,
+                    projectStatus: updateDTO.newProjectStatus,
+                    challengeId: updateDTO.challengeId,
+                    challengeStatus: updateDTO.newChallengeStatus,
+                    category: targetNotify.category,
+                    title: updateDTO.newTitle ?? targetNotify.title,
+                    desc: updateDTO.newDesc ?? targetNotify.desc,
+                    updateAt: updateDTO.newUpdateAt ?? targetNotify.updateAt,
+                    isCheck: updateDTO.isCheck ?? targetNotify.isCheck
+                )
+                await notifyDataManager.addNotify(updatedNotify)
             }
         }
     }
 }
+
 //MARK: ----- Util -----
 
 extension NotificationService {
-    
-    private func addNotify(_ object: NotificationObject) async {
-        
-    }
     
     private func getProjectNotifyDesc(with type: ProjectNotification) -> String {
         switch type {
@@ -533,6 +536,8 @@ extension NotificationService {
             return "마감일까지 하루 남았습니다!"
         case .theDay:
             return "목표 마감일입니다!"
+        case .explode:
+            return "결국 그날이 오고 말았습니다... 목표는 한 줌의 재가되어 사라졌습니다..."
         default:
             return "진행중인 목표입니다"
         }
@@ -562,7 +567,7 @@ extension NotificationService {
                 return .ongoing
             }
         } catch {
-            print("[NotifyService] Failed to calculate project period")
+            print("[NotifySC] Failed to calculate project period")
             return .unknown
         }
     }

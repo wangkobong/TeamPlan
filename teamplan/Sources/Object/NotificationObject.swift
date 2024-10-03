@@ -59,27 +59,6 @@ struct NotificationObject {
         self.updateAt = updateAt
         self.isCheck = isCheck
     }
-    
-    mutating func update(with dto: NotifyUpdateDTO) {
-        if let newTitle = dto.newTitle {
-            self.title = newTitle
-        }
-        if let newDesc = dto.newDesc {
-            self.desc = newDesc
-        }
-        if let newUpdateAt = dto.newUpdateAt {
-            self.updateAt = newUpdateAt
-        }
-        if let isCheck = dto.isCheck {
-            self.isCheck = isCheck
-        }
-        if let newProjectStatus = dto.newProjectStatus {
-            self.projectStatus = newProjectStatus
-        }
-        if let newChallengeStatus = dto.newChallengeStatus {
-            self.challengeStatus = newChallengeStatus
-        }
-    }
 }
 
 // MARK: - Enum

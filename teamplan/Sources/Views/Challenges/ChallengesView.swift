@@ -88,24 +88,22 @@ struct ChallengesView: View {
     }
     
     private var challengeAlertView: ChallengeAlertView {
-        let challenge: Binding<ChallengeDTO>
-        if viewModel.challengeList.indices.contains(self.indexForAlert) {
-            challenge = $viewModel.challengeList[self.indexForAlert]
-        } else {
-            challenge = .constant(ChallengeDTO(challengeId: 0, title: "", desc: "", goal: 0, type: .onboarding, reward: 0, step: 0, isFinished: false, isSelected: false, isUnlock: false))
-        }
+        let challengeId = self.indexForAlert
+        let challengeIndex = viewModel.challengeList.firstIndex { $0.challengeId == challengeId } ?? 0
+        let challenge = $viewModel.challengeList[challengeIndex]
+        
         return ChallengeAlertView(
             isPresented: $isPresented,
             allChallenge: $viewModel.challengeList,
             challenge: challenge,
             type: self.type,
-            index: self.indexForAlert
+            index: challengeIndex
         ) {
-            handleChallengeAlert()
+            handleChallengeAlert(with: challengeIndex)
         }
     }
     
-    private func handleChallengeAlert() {
+    private func handleChallengeAlert(with index: Int) {
         switch self.type {
         case .didComplete:
             break
@@ -120,7 +118,7 @@ struct ChallengesView: View {
             self.isPresented = true
             Task {
                 _ = await viewModel.setMyChallenge(
-                    with: $viewModel.challengeList[self.indexForAlert].challengeId.wrappedValue
+                    with: $viewModel.challengeList[index].challengeId.wrappedValue
                 )
             }
         case .complete:
@@ -259,7 +257,6 @@ extension ChallengesView {
     //MARK: Grid
     
     private var gridSection: some View {
-        
         VStack {
             HStack {
                 Text("모든 도전과제")
@@ -270,41 +267,48 @@ extension ChallengesView {
             }
             
             TabView(selection: $currentPage) {
-                ForEach(0..<(viewModel.challengeList.count / Int(12)), id: \.self) { pageIndex in
-                    gridPage(for: pageIndex)
+                let sortedChallengeList = viewModel.challengeList.sorted(by: { $0.challengeId < $1.challengeId })
+                let totalPages = (sortedChallengeList.count + 11) / 12
+                ForEach(0..<totalPages, id: \.self) { pageIndex in
+                    gridPage(for: pageIndex, challenges: sortedChallengeList)
                 }
             }
             .frame(height: 380)
             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
         }
     }
-    
-    private func gridPage(for pageIndex: Int) -> some View {
+
+    private func gridPage(for pageIndex: Int, challenges: [ChallengeDTO]) -> some View {
         let startIndex = pageIndex * 12
-        let endIndex = min(startIndex + 12, viewModel.challengeList.count)
-        let pageItems = viewModel.challengeList[startIndex..<endIndex]
+        let endIndex = min(startIndex + 12, challenges.count)
+        let pageItems = challenges[startIndex..<endIndex]
         
-        return LazyVGrid(columns: columns, spacing: 10) {
-            ForEach(pageItems.indices, id: \.self) { index in
-                let absoluteIndex = startIndex + (index - pageItems.startIndex)
-                let item = pageItems[index]
-                ChallengeDetailView(challenge: item)
-                    .frame(width: 62, height: 120)
-                    .onTapGesture {
-                        indexForAlert = absoluteIndex
-                        setChallengeAlert(with: item)
-                    }
+        return VStack {
+            LazyVGrid(columns: columns, spacing: 10) {
+                ForEach(pageItems.indices, id: \.self) { index in
+                    let item = pageItems[index]
+                    ChallengeDetailView(challenge: item)
+                        .frame(width: 62, height: 120)
+                        .onTapGesture {
+                            indexForAlert = item.challengeId
+                            setChallengeAlert(with: item)
+                        }
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .top)
+            Spacer()
         }
+        .padding(.top, 16)
         .tag(pageIndex)
     }
     
     private var pageControl: some View {
         HStack(spacing: 10) {
-            ForEach(0..<(viewModel.challengeList.count / 12), id: \.self) { index in
+            let totalPages = (viewModel.challengeList.count + 11) / 12
+            ForEach(0..<totalPages, id: \.self) { index in
                 Circle()
                     .frame(width: 9, height: 9)
-                    .foregroundColor(index == currentPage ? .theme.mainPurpleColor : .init(hex: "D9D9D9"))
+                    .foregroundColor(index == currentPage ? .theme.mainPurpleColor : Color(hex: "D9D9D9"))
             }
         }
         .padding(.bottom, 24)

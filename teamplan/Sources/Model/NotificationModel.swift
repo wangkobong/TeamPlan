@@ -16,7 +16,7 @@ struct NotificationSection: Identifiable {
 }
 
 struct NotificationModel: Identifiable, Hashable {
-    let id = UUID().uuidString
+    let id: Int
     let title: String
     let description: String
     let type: NotificationType

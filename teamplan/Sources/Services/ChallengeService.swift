@@ -19,6 +19,7 @@ final class ChallengeService {
     // private
     private let statCD: StatisticsServicesCoredata
     private let challengeCD: ChallengeServicesCoredata
+    private let notifyManager: ChallengeNotifyManager
     private let localStorageManager: LocalStorageManager
     
     private var userId: String
@@ -40,6 +41,13 @@ final class ChallengeService {
         self.statCD = StatisticsServicesCoredata()
         self.challengeCD = ChallengeServicesCoredata()
         self.localStorageManager = LocalStorageManager.shared
+        self.notifyManager = ChallengeNotifyManager(
+            userId: userId,
+            statCD: self.statCD,
+            challengeCD: self.challengeCD,
+            storageManager: self.localStorageManager,
+            myChallenges: self.myChallenges
+        )
     }
 }
 
@@ -126,6 +134,7 @@ extension ChallengeService {
             challengeList.append(MyChallengeDTO(object: challenge, progress: progress))
         }
         self.myChallenges = challengeList.sorted{ $0.selectedAt < $1.selectedAt }
+        self.notifyManager.updateMyChallenges(with: self.myChallenges)
         return true
     }
     
@@ -199,39 +208,45 @@ extension ChallengeService {
         // prepare storage & local properties
         async let isDataFetched = fetchDataFromList(with: challengeId)
         async let isIndexFetched = fetchIndexFromArray(with: challengeId)
-        let results = await [isDataFetched, isIndexFetched]
+        let fetchResults = await [isDataFetched, isIndexFetched]
         
-        guard results.allSatisfy({$0}) else {
+        guard fetchResults.allSatisfy({$0}) else {
             print("[ChallengeService] Unknown ChallengeId Detected")
             return false
         }
-        let updatedAt = Date()
         
         // update process
+        let updatedAt = Date()
         let context = localStorageManager.context
-        return context.performAndWait {
             
-            // update storage
-            let results = [
-                updateStatObjectAboutSet(context, with: challengeId),
-                updateChallengeObjectAboutSet(context, with: challengeId, at: updatedAt)
-            ]
-            guard results.allSatisfy({ $0 }) else {
-                print("[ChallengeService] Failed to update objects about set newChallenge")
-                return false
-            }
-            
-            // update context
+        let results = [
+            updateStatObjectAboutSet(context, with: challengeId),
+            updateChallengeObjectAboutSet(context, with: challengeId, at: updatedAt)
+        ]
+        guard results.allSatisfy({ $0 }) else {
+            print("[ChallengeService] Failed to update objects about set newChallenge")
+            return false
+        }
+        
+        // apply update
+        let storageUpdateResult = context.performAndWait {
             guard localStorageManager.saveContext() else {
                 print("[ChallengeService] Failed to update context about set newMyChallenge")
                 return false
             }
-            
-            // update local
-            let progress = getUserProgress(with: self.challengeData.type)
-            updateDTOAboutSet(with: challengeId, and: self.challengeData, also: progress)
             return true
         }
+        guard storageUpdateResult else {
+            print("[ChallengeService] Storage update process failed")
+            return false
+        }
+        
+        // update local
+        let progress = getUserProgress(with: self.challengeData.type)
+        updateDTOAboutSet(with: challengeId, and: self.challengeData, also: progress)
+        
+        // check notify
+        return notifyManager.challengeExecutor()
     }
     
     // Util
@@ -253,7 +268,9 @@ extension ChallengeService {
             newSelectedAt: updatedAt
         )
         do {
-            return try challengeCD.updateObject(context: context, dto: updated)
+            return try context.performAndWait {
+                return try challengeCD.updateObject(context: context, dto: updated)
+            }
         } catch {
             print("[ChallengeSC] Failed to detected challenge entity: \(error.localizedDescription)")
             return false
@@ -270,7 +287,9 @@ extension ChallengeService {
             newMyChallenges: newMyChallenges
         )
         do {
-            return try statCD.updateObject(context: context, dto: updated)
+            return try context.performAndWait {
+                return try statCD.updateObject(context: context, dto: updated)
+            }
         } catch {
             print("[ChallengeSC] Failed to detected stat entity: \(error.localizedDescription)")
             return false
@@ -282,6 +301,7 @@ extension ChallengeService {
         self.statDTO.myChallenges.append(challengeId)
         self.myChallenges.append(MyChallengeDTO(object: object, progress: progress))
         self.challengesDTO[challengeDTOIndex].isSelected = true
+        self.notifyManager.updateMyChallenges(with: self.myChallenges)
     }
 }
 

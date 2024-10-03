@@ -19,8 +19,6 @@ final class MockGenerator {
     private let projectCD: ProjectServicesCoredata
     private let storageManager: LocalStorageManager
     
-    private let notifySC: NotificationService
-    
     private var userId: String
     
     // mock Properties
@@ -43,8 +41,6 @@ final class MockGenerator {
         self.accessLogCD = AccessLogServicesCoredata()
         self.projectCD = ProjectServicesCoredata()
         self.storageManager = LocalStorageManager.shared
-        
-        self.notifySC = NotificationService(userId: userId)
     }
     
     //MARK: Executor
@@ -66,11 +62,26 @@ final class MockGenerator {
             return false
         }
         
-        guard await notifySC.firstLoginExecutor() else {
-            print("[mockGen] Failed to prepare notifyData")
+        guard await processNotify() else {
+            print("[mockGen] Failed to process notifyData")
             return false
         }
         return true
+    }
+    
+    private func processNotify() async -> Bool {
+        let notifyService = NotificationService(
+            loginDate: Date(),
+            userId: userId,
+            statData: localStat,
+            projectList: mockProjects,
+            statCD: statCD,
+            projectCD: projectCD,
+            challengeCD: ChallengeServicesCoredata(),
+            storageManager: storageManager,
+            util: Utilities()
+        )
+        return await notifyService.loginExecutor()
     }
 }
 
