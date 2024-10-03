@@ -17,13 +17,6 @@ struct TermsView: View {
     var body: some View {
         NavigationView {
             VStack {
-                
-                NavigationLink(
-                    destination: SignupView().defaultNavigationMFormatting(),
-                     isActive: $showSignup) {
-                          Text("")
-                               .hidden()
-                     }
 
                 Spacer()
                     .frame(height: 80)
@@ -56,20 +49,10 @@ struct TermsView: View {
             .onAppear {
                 print(termsViewModel.termsList)
             }
-//            .toolbar {
-//                ToolbarItem(placement: .navigationBarLeading) {
-//                    Button {
-//                        dismiss.callAsFunction()
-//                    } label: {
-//                        Image(systemName: "chevron.backward")
-//                            .foregroundColor(.theme.darkGreyColor)
-//                    }
-//
-//                }
-//            }
-            
+            .navigationDestination(isPresented: $showSignup) {
+                SignupView().defaultNavigationMFormatting()
+            }
         }
- 
     }
 }
 
@@ -77,7 +60,6 @@ struct TermsView_Previews: PreviewProvider {
     static var previews: some View {
         TermsView()
             .environmentObject(dev.termsViewModel)
-        
     }
 }
 

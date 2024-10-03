@@ -60,22 +60,12 @@ struct TermsDetailView: View {
             
         }
     }
-    
-    func test() {
-//        ForEach(viewModel.termsList.indices, id: \.self) { index in
-//            print("index: \(index)")
-//        }
-        guard let index = viewModel.termsList.firstIndex(where: {$0.id == terms.id}) else { return }
-        print(terms.id)
-        print("index: \(index)")
-    }
 }
 
 struct TermsDetailView_Previews: PreviewProvider {
     static var previews: some View {
         
         TermsDetailView(terms: TermsModel(title: "서비스 이용약관 동의", isSelected: false, buttonState: .optionalButton))
-        //.previewLayout(.sizeThatFits)
     }
 }
 
