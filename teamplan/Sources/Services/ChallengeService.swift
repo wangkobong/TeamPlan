@@ -140,22 +140,25 @@ extension ChallengeService {
     
     // prepare: Total Challenges
     private func prepareChallengeDTO() async -> Bool {
+        var tempChallengeList: [ChallengeDTO] = []
         
         for challenge in challengeList.values {
-            if challenge.step == 1 {
-                self.challengesDTO.append(mapFirstStepChallenge(with: challenge))
-            } else {
+            if challenge.lock {
                 guard let previous = self.challengeList[challenge.challengeId - 1] else {
-                    print("[ChallengeService] Failed to detected previous challengeData: \(challenge.challengeId - 1)")
-                    return false
-                }
-                self.challengesDTO.append(mapOtherStepChallenges(with: challenge, and: previous))
+                print("[ChallengeService] Failed to detected previous challengeData: \(challenge.challengeId - 1)")
+                return false
+            }
+            tempChallengeList.append(mapLockChallenges(with: challenge, and: previous))
+                
+            } else {
+                tempChallengeList.append(mapUnlockChallenge(with: challenge))
             }
         }
+        self.challengesDTO = tempChallengeList.sorted(by: { $0.challengeId < $1.challengeId })
         return true
     }
     
-    private func mapFirstStepChallenge(with object: ChallengeObject) -> ChallengeDTO {
+    private func mapUnlockChallenge(with object: ChallengeObject) -> ChallengeDTO {
         return ChallengeDTO(
                 challengeId: object.challengeId,
                 title: object.title,
@@ -171,7 +174,7 @@ extension ChallengeService {
             )
     }
     
-    private func mapOtherStepChallenges(with object: ChallengeObject, and prevObject: ChallengeObject) -> ChallengeDTO {
+    private func mapLockChallenges(with object: ChallengeObject, and prevObject: ChallengeObject) -> ChallengeDTO {
         return ChallengeDTO(
             challengeId: object.challengeId,
             title: object.title,

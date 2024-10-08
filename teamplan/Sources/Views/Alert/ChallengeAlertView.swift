@@ -72,12 +72,6 @@ public struct ChallengeAlertView: View {
     }
 }
 
-//struct ChallengeAlertView_Previews: PreviewProvider {
-//    static var previews: some View {
-//        ChallengeAlertView(isPresented: .constant(true), allChallenge: <#Binding<[ChallengeObject]>#>, type: .lock, index: 3, action: {})
-//    }
-//}
-
 extension ChallengeAlertView {
     private var didCompleteAlert: some View {
         VStack {
@@ -92,13 +86,13 @@ extension ChallengeAlertView {
             Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].islock, isComplete: self.allChallenge[index].isFinished))
                 .frame(width: 82, height: 82)
             
-            Text("\(allChallenge[self.index].desc)")
+            Text("\(allChallenge[self.index].title)")
                 .font(.appleSDGothicNeo(.bold, size: 24))
                 .multilineTextAlignment(.center)
                 .foregroundColor(.theme.mainPurpleColor)
     
             
-            Text("'\(getChallenge(index: self.index).desc)' 하여\n\(getChallenge(index: self.index).reward)개의 물방울을 획득했습니다.")
+            Text("'\(getChallenge(index: self.index).desc)' 달성으로\n\(getChallenge(index: self.index).reward)개의 물방울을 획득했습니다.")
                 .font(.appleSDGothicNeo(.regular, size: 17))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
@@ -106,7 +100,7 @@ extension ChallengeAlertView {
                 .padding(.top, 12)
                 .padding(.horizontal, 40)
             
-            Text("보상받기")
+            Text("확인")
                 .frame(maxWidth: .infinity)
                 .frame(height: 44)
                 .font(.appleSDGothicNeo(.bold, size: 14))
@@ -130,13 +124,13 @@ extension ChallengeAlertView {
             Image(ChallengeIconHelper.setIcon(type: self.allChallenge[index].type, isLock: self.allChallenge[index].islock, isComplete: self.allChallenge[index].isFinished))
                 .frame(width: 82, height: 82)
             
-            Text("\(getChallenge(index: self.index).title) 선택")
+            Text("\(getChallenge(index: self.index).title)")
                 .font(.appleSDGothicNeo(.bold, size: 24))
                 .multilineTextAlignment(.center)
                 .foregroundColor(.theme.mainPurpleColor)
     
             
-            Text("\(getChallenge(index: self.index).desc)")
+            Text("\(getChallenge(index: self.index).desc)\n( 도전중! )")
                 .font(.appleSDGothicNeo(.regular, size: 17))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
@@ -233,7 +227,7 @@ extension ChallengeAlertView {
                 .foregroundColor(.theme.mainPurpleColor)
     
             
-            Text("'\(getChallenge(index: self.index).prevTitle ?? "")'\n해결 후 잠금해제")
+            Text("'\(getChallenge(index: self.index).prevTitle ?? "아앗;;;")'\n해결 후 도전가능!")
                 .font(.appleSDGothicNeo(.regular, size: 17))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
@@ -374,7 +368,7 @@ extension ChallengeAlertView {
                     .padding(.top, 12)
                     .padding(.horizontal, 40)
                 
-                Text("닫기")
+                Text("확인")
                     .frame(maxWidth: .infinity)
                     .frame(height: 44)
                     .font(.appleSDGothicNeo(.bold, size: 14))
@@ -441,7 +435,7 @@ extension ChallengeAlertView {
                     .padding(.top, 12)
                     .padding(.horizontal, 40)
                 
-                Text("\(getChallenge(index: self.index).title) 완료하여 \n\(getChallenge(index: self.index).reward) 개의 물방울을 획득했습니다!")
+                Text("'\(getChallenge(index: self.index).title)' 도전을 성공하여\n\(getChallenge(index: self.index).reward) 개의 물방울을 획득했습니다!")
                     .font(.appleSDGothicNeo(.regular, size: 13))
                     .multilineTextAlignment(.center)
                     .foregroundColor(.theme.darkGreyColor)
