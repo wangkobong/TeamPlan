@@ -249,7 +249,7 @@ extension ChallengeService {
         updateDTOAboutSet(with: challengeId, and: self.challengeData, also: progress)
         
         // check notify
-        return notifyManager.challengeExecutor()
+        return notifyManager.challengeExecutor(with: statDTO)
     }
     
     // Util

@@ -17,7 +17,7 @@ final class ChallengeNotifyManager {
     private let challengeCD: ChallengeServicesCoredata
     private let storageManager: LocalStorageManager
     
-    private var statData: StatisticsObject
+    private var statData: StatDTO
     private var myChallengeList: [MyChallengeDTO]
     private var newNotifyList: [NotificationObject]
     private var previousNotifyList: [NotificationObject]
@@ -33,7 +33,7 @@ final class ChallengeNotifyManager {
         self.challengeCD = ChallengeServicesCoredata()
         self.storageManager = storageManager
         
-        self.statData = StatisticsObject()
+        self.statData = StatDTO()
         self.myChallengeList = []
         self.newNotifyList = []
         self.previousNotifyList = []
@@ -53,7 +53,7 @@ final class ChallengeNotifyManager {
         self.challengeCD = challengeCD
         self.storageManager = storageManager
         
-        self.statData = StatisticsObject()
+        self.statData = StatDTO()
         self.myChallengeList = myChallenges
         self.newNotifyList = []
         self.previousNotifyList = []
@@ -66,13 +66,10 @@ final class ChallengeNotifyManager {
     //MARK: Main
     
     // for projectService
-    func projectExecutor() -> Bool {
+    func projectExecutor(with statData: StatDTO) -> Bool {
         let today = Date()
         let context = storageManager.context
-        
-        guard fetchStatData(with: context) else {
-            return false
-        }
+        self.statData = statData
         
         guard fetchMyChallenges(with: context) else {
             return false
@@ -86,13 +83,10 @@ final class ChallengeNotifyManager {
     }
     
     // for challengeService
-    func challengeExecutor() -> Bool {
+    func challengeExecutor(with statData: StatDTO) -> Bool {
         let today = Date()
         let context = storageManager.context
-        
-        guard fetchStatData(with: context) else {
-            return false
-        }
+        self.statData = statData
         
         guard fetchNotify(context) else {
             return false
@@ -108,15 +102,11 @@ final class ChallengeNotifyManager {
         if myChallengeList.isEmpty {
             print("[NotifyManager] There is no registed myChallenge")
             return true
-        } else {
-            for challenge in myChallengeList {
-                let isChallengeCanAccomplish = challenge.goal <= challenge.progress
-                let isNotifyExist = !isNotifyExist(with: challenge.challengeID)
-                
-                if isChallengeCanAccomplish && isNotifyExist {
-                    let newNotify = createNewNotify(with: challenge, at: date)
-                    self.newNotifyList.append(newNotify)
-                }
+        }
+        for challenge in myChallengeList {
+            if challenge.goal <= challenge.progress && !isNotifyExist(with: challenge.challengeID) {
+                let newNotify = createNewNotify(with: challenge, at: date)
+                self.newNotifyList.append(newNotify)
             }
         }
         
@@ -125,12 +115,7 @@ final class ChallengeNotifyManager {
             print("[NotifyManager] There is no no achievable myChallenge")
             return true
         } else {
-            return context.performAndWait {
-                for notify in newNotifyList {
-                    notifyCD.setObject(context, object: notify)
-                }
-                return storageManager.saveContext()
-            }
+            return setNewNotifyAtStorage(context)
         }
     }
 }
@@ -139,20 +124,6 @@ final class ChallengeNotifyManager {
 
 extension ChallengeNotifyManager {
 
-    private func fetchStatData(with context: NSManagedObjectContext) -> Bool {
-        do {
-            guard try statCD.getObject(context: context, userId: userId) else {
-                print("[NotifyManager] Error detected while converting StatEntity to object")
-                return false
-            }
-            self.statData = statCD.object
-            return true
-        } catch {
-            print(error.localizedDescription)
-            return false
-        }
-    }
-    
     private func fetchMyChallenges(with context: NSManagedObjectContext) -> Bool {
         do {
             guard try challengeCD.getMyObjects(context: context, userId: userId) else {
@@ -166,7 +137,7 @@ extension ChallengeNotifyManager {
             }
             return true
         } catch {
-            print(error.localizedDescription)
+            print("[NotifyManager]: \(error.localizedDescription)")
             return false
         }
     }
@@ -177,7 +148,6 @@ extension ChallengeNotifyManager {
             return false
         }
         self.previousNotifyList = notifyCD.objectList
-        print("[NotifyManager] previous notify: \(self.previousNotifyList)")
         return true
     }
     
@@ -192,10 +162,22 @@ extension ChallengeNotifyManager {
             challengeStatus: .canAchieve,
             category: .challenge,
             title: dto.title,
-            desc: "'\(dto.title)' 도전과제가 완료 가능합니다!",
+            desc: "'\(dto.title)' 도전과제를 완료하여 물방울을 획득해보세요!",
             updateAt: date,
             isCheck: false
         )
+    }
+    
+    private func setNewNotifyAtStorage(_ context: NSManagedObjectContext) -> Bool {
+        var result: Bool = false
+        
+        context.performAndWait {
+            for notify in newNotifyList {
+                notifyCD.setObject(context, object: notify)
+            }
+            result = storageManager.saveContext()
+        }
+        return result
     }
     
     private func getUserProgress(with type: ChallengeType) -> Int {
