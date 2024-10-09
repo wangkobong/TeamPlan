@@ -25,9 +25,14 @@ final class LoginService{
     private var userId: String
     private var loginDate: Date
     private var userTerm: Int
-    private var registLimit: Int
-    private var projectList: [ProjectObject]
     private var statData: StatisticsObject
+    
+    private var todoRegistLimit: Int
+    private var projectList: [ProjectObject]
+    private var projectUpdateList: [ProjectUpdateDTO]
+    private var projectExplodeList: [Int]
+    private var projectAlertCount: Int
+    private var projectExplodeCount: Int
     
     private init(userId: String, loginDate: Date = Date()){
         self.userCD = UserServicesCoredata()
@@ -44,9 +49,14 @@ final class LoginService{
         self.userId = userId
         self.loginDate = loginDate
         self.userTerm = 0
-        self.registLimit = 0
-        self.projectList = []
         self.statData = StatisticsObject()
+        
+        self.todoRegistLimit = 0
+        self.projectList = []
+        self.projectUpdateList = []
+        self.projectExplodeList = []
+        self.projectAlertCount = 0
+        self.projectExplodeCount = 0
     }
     
     static func initService(with userId: String) -> LoginService {
@@ -63,9 +73,9 @@ final class LoginService{
             return false
         }
         
-        //if isReloginUser(context) {
-        //    return true
-        //}
+        if isReloginUser(context) {
+            return true
+        }
         
         guard fetchData(context) else {
             print("[LoginSC] Failed to fetch userData")
@@ -173,7 +183,7 @@ extension LoginService {
                 print("[LoginSC] Failed to fetch CoreValue from storage")
                 return false
             }
-            self.registLimit = coreValueCD.object.todoRegistLimit
+            self.todoRegistLimit = coreValueCD.object.todoRegistLimit
             return true
             
         } catch{
@@ -212,14 +222,20 @@ extension LoginService {
                 updateLoginAt(context, with: loginDate)
             ]
         }
-        if results.allSatisfy({$0}) && updateProjectStatus(context) {
-            guard storageManager.saveContext() else {
-                print("[LoginSC] Failed to apply daily update at storage")
-                return false
-            }
+        
+        guard results.allSatisfy({$0}) && updateProjectStatus(context) else {
+            print("[LoginSC] Failed to update userData")
+            return false
+        }
+        var applyResult: Bool = false
+        
+        context.performAndWait {
+            applyResult = storageManager.saveContext()
+        }
+        if applyResult {
             return true
         } else {
-            print("[LoginSC] Daily update process failed")
+            print("[LoginSC] Failed to apply userData to storage")
             return false
         }
     }
@@ -248,111 +264,75 @@ extension LoginService {
         }
         return true
     }
+}
+
+//MARK: Update Project
+
+extension LoginService {
     
     // project
     private func updateProjectStatus(_ context: NSManagedObjectContext) -> Bool {
         
         if projectList.isEmpty {
-            print("[LoginSC] There is no project to update")
+            print("[ProjectSC] There is no project to update")
             return true
         }
         
-        var explodeList: [Int] = []
-        var projectUpdateList: [ProjectUpdateDTO] = []
-        var totalAlertedProjects = statData.totalAlertedProjects
-        
-        for project in projectList {
-            let projectStatus = identifyProject(with: project)
-            
-            switch projectStatus {
-                
-            // alert count
-            case .nearDeadline, .oneDayLeft:
-                projectUpdateList.append(
-                    ProjectUpdateDTO(projectId: project.projectId, userId: userId, newDailyRegistedTodo: registLimit)
-                )
-                totalAlertedProjects += 1
-                
-            // explode
-            case .explode:
-                explodeList.append(project.projectId)
-                
-            // ongoing
-            default:
-                projectUpdateList.append(
-                    ProjectUpdateDTO(projectId: project.projectId, userId: userId, newDailyRegistedTodo: registLimit)
-                )
-            }
+        guard distinctProjectByStatus() else {
+            print("[ProjectSC] Failed to distinct project by status")
+            return true
         }
         
-        do {
-            // update project properties
-            if !projectUpdateList.isEmpty {
-                
-                let projectUpdateResult = try context.performAndWait {
-                    for updated in projectUpdateList {
-                        guard try projectCD.updateObject(context: context, with: updated) else {
-                            print("[LoginSC] Failed to update project \(updated.projectId)")
-                            return false
-                        }
-                    }
-                    return true
-                }
-                guard projectUpdateResult else {
-                    print("[LoginSC] Project update process failed")
-                    return false
-                }
-            }
-            
-            // update stat properties
-            if totalAlertedProjects != statData.totalAlertedProjects {
-                
-                let statUpdateResult = try context.performAndWait {
-                    guard try statCD.updateObject(context: context, dto: StatUpdateDTO(userId: userId, newTotalAlertedProjects: totalAlertedProjects)) else {
-                        print("[LoginSC] Failed to update statData")
-                        return false
-                    }
-                    return true
-                }
-                guard statUpdateResult else {
-                    print("[LoginSC] StatData update process failed")
-                    return false
-                }
-            }
-            
-            // explode project process
-            if !explodeList.isEmpty {
-                let today = Date()
-                let projectService = ProjectService(userId: userId)
-                let notifyManager = ChallengeNotifyManager(userId: userId, storageManager: storageManager)
-                for projectId in explodeList {
-                    guard projectService.processExplodedProject(
-                        storageManager,
-                        notifyManager: notifyManager,
-                        projectId: projectId,
-                        userId: userId,
-                        explodeDate: today,
-                        failedcount: statData.totalFailedProjects
-                    ) else {
-                        print("[LoginSC] Failed to process explode project")
-                        return false
-                    }
-                }
-            }
+        let updateResult = [
+            ongogingProjectProcess(context),
+            explodeProjectProcess(context),
+            updateStatData(context)
+        ]
+        
+        if updateResult.allSatisfy({$0}) {
             return true
-            
-        } catch {
-            print("[LoginSC] Failed to process data: \(error.localizedDescription)")
+        } else {
+            print("[ProjectSC] Failed to update projectStatus")
             return false
         }
     }
-}
-
-// Prepare Notification
-
-extension LoginService {
     
-    private func identifyProject(with object: ProjectObject) -> ProjectNotification {
+    private func distinctProjectByStatus() -> Bool {
+        
+        for project in projectList {
+            switch identifyProjectStatus(with: project) {
+                
+            case .nearDeadline, .oneDayLeft:
+                projectUpdateList.append(
+                    ProjectUpdateDTO(
+                        projectId: project.projectId,
+                        userId: userId,
+                        newDailyRegistedTodo: todoRegistLimit
+                    )
+                )
+                projectAlertCount += 1
+                
+            case .explode:
+                projectExplodeList.append(project.projectId)
+                projectExplodeCount += 1
+                
+            case .unknown:
+                return false
+                
+            default:
+                projectUpdateList.append(
+                    ProjectUpdateDTO(
+                        projectId: project.projectId,
+                        userId: userId,
+                        newDailyRegistedTodo: todoRegistLimit
+                    )
+                )
+            }
+        }
+        return true
+    }
+    
+    private func identifyProjectStatus(with object: ProjectObject) -> ProjectNotification {
         do {
             let totalPeriod = try util.calculateDatePeriod(with: object.startedAt, and: object.deadline)
             let progressedPeriod = try util.calculateDatePeriod(with: object.startedAt, and: loginDate)
@@ -380,4 +360,93 @@ extension LoginService {
             return .unknown
         }
     }
+    
+    private func ongogingProjectProcess(_ context: NSManagedObjectContext) -> Bool {
+        
+        if projectUpdateList.isEmpty {
+            print("[ProjectSC] There is no ongoing project to process")
+            return true
+        }
+        
+        var processResult: [Bool] = []
+        for updated in projectUpdateList {
+            let result = context.performAndWait{
+                do {
+                    guard try projectCD.updateObject(context: context, with: updated) else {
+                        print("[ProjectSC] ProjectObject change not detected")
+                        return false
+                    }
+                    return true
+                } catch {
+                    print("[ProjectSC] Failed to update ongoing project: \(error.localizedDescription)")
+                    return false
+                }
+            }
+            processResult.append(result)
+        }
+        return processResult.allSatisfy{$0}
+    }
+    
+    private func explodeProjectProcess(_ context: NSManagedObjectContext) -> Bool {
+        
+        if projectExplodeList.isEmpty {
+            print("[ProjectSC] There is no explode project to process")
+            return true
+        }
+        
+        var processResult: [Bool] = []
+        for projectId in projectExplodeList {
+            
+            let projectUpdated = ProjectUpdateDTO(
+                projectId: projectId,
+                userId: userId,
+                newStatus: .exploded,
+                newFinishedAt: loginDate
+            )
+            let result = context.performAndWait {
+                do {
+                    guard try projectCD.updateObject(context: context, with: projectUpdated) else {
+                        print("[ProjectSC] ProjectObject change not detected")
+                        return false
+                    }
+                    return true
+                } catch {
+                    print("[ProjectSC] Failed to process explode project: \(error.localizedDescription)")
+                    return false
+                }
+            }
+            processResult.append(result)
+        }
+        return processResult.allSatisfy{$0}
+    }
+    
+    private func updateStatData(_ context: NSManagedObjectContext) -> Bool {
+        
+        guard projectAlertCount > 0 || projectExplodeCount > 0 else {
+            print("[ProjectSC] There is no data to update stat")
+            return true
+        }
+
+        var updated = StatUpdateDTO(userId: userId)
+        if projectAlertCount > 0 {
+            updated.newTotalAlertedProjects = statData.totalAlertedProjects + projectAlertCount
+        }
+        if projectExplodeCount > 0 {
+            updated.newTotalFailedProjects = statData.totalFailedProjects + projectExplodeCount
+        }
+
+        return context.performAndWait {
+            do {
+                guard try statCD.updateObject(context: context, dto: updated) else {
+                    print("[ProjectSC] Failed to update statData")
+                    return false
+                }
+                return true
+            } catch {
+                print("[ProjectSC] Error updating statData: \(error.localizedDescription)")
+                return false
+            }
+        }
+    }
+    
 }

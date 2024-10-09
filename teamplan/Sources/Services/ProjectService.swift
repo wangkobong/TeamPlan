@@ -189,33 +189,42 @@ extension ProjectService {
     
     // fetch project
     private func prepareProjectData(with context: NSManagedObjectContext) -> Bool {
+        self.projectList = []
+        var tempProjectList: [ProjectDTO] = []
+        
+        // fetch raw data
         do {
-            self.projectList = []
-            if try projectCD.getValidObjects(context: context, with: userId) {
-                
-                // fetch data
-                for project in projectCD.objectList {
-                    self.projectList.append(try convertExistObjectToDTO(with: project))
-                }
-                if self.projectList.isEmpty {
-                    return true
-                }
-                
-                // sort data
-                let arraySize = self.projectList.count - 1
-                for index in 0...arraySize {
-                    sortTodoArray(with: index)
-                }
-                
-                return true
-            } else {
-                print("[ProjectService] Failed to fetch ProjectData")
+            guard try projectCD.getValidObjects(context: context, with: userId) else {
+                print("[ProjectService] Failed to convert ProjectEntity")
                 return false
             }
         } catch {
-            print("[ProjectService] Failed to prepare ProjectData")
+            print("[ProjectService] \(error.localizedDescription)")
             return false
         }
+        
+        // data check
+        if projectCD.objectList.isEmpty {
+            return true
+        }
+        
+        // convert to dto
+        do {
+            for project in projectCD.objectList {
+                tempProjectList.append( try convertExistObjectToDTO(with: project) )
+            }
+            self.projectList = tempProjectList.sorted(by: { $0.remainDays < $1.remainDays })
+        } catch {
+            print("[ProjectService] \(error.localizedDescription)")
+            return false
+        }
+        
+        // preprocessing
+        let arraySize = self.projectList.count - 1
+        for index in 0...arraySize {
+            sortTodoArray(with: index)
+        }
+        return true
     }
 }
 
@@ -263,7 +272,7 @@ extension ProjectService {
             return false
         }
         
-        return notifyManager.projectExecutor()
+        return notifyManager.projectExecutor(with: statDTO)
     }
     
     // creator
@@ -589,7 +598,7 @@ extension ProjectService {
             }
             updateDTOAboutComplete(with: index)
             
-            return notifyManager.projectExecutor()
+            return notifyManager.projectExecutor(with: statDTO)
             
         } catch {
             print("[ProjectService] complete ProjectObject process failed: \(error.localizedDescription)")
@@ -692,7 +701,7 @@ extension ProjectService {
         }
         
         // check notify
-        return notifyManager.projectExecutor()
+        return notifyManager.projectExecutor(with: statDTO)
     }
 }
 
@@ -716,7 +725,7 @@ extension ProjectService {
             print("[ProjectService] Failed to set new todo at project: \(error)")
             return false
         }
-        return notifyManager.projectExecutor()
+        return notifyManager.projectExecutor(with: statDTO)
     }
 
     // creator

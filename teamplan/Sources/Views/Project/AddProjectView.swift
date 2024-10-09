@@ -315,7 +315,7 @@ extension AddProjectView {
     //MARK: Bottom Button Area
     
     private var bottomButtonArea: some View {
-        Text("프로젝트 시작하기")
+        Text("목표를 등록하기")
             .foregroundColor(.white)
             .frame(height: 48)
             .frame(maxWidth: .infinity)

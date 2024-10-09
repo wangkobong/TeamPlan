@@ -24,7 +24,6 @@ struct ChallengesView: View {
     @State private var toast: Toast? = nil
     
     let columns = [
-      //추가 하면 할수록 화면에 보여지는 개수가 변함
         GridItem(.adaptive(minimum: 57)),
         GridItem(.adaptive(minimum: 57)),
         GridItem(.adaptive(minimum: 57)),
@@ -36,7 +35,7 @@ struct ChallengesView: View {
         return ($viewModel.challengeList.count + itemsPerPage - 1) / itemsPerPage
     }
     
-    //MARK: Main Body
+    //MARK: Main
     
     var body: some View {
         ScrollView {
@@ -62,18 +61,10 @@ struct ChallengesView: View {
             }
         }
         .onAppear{
-            Task {
-                let isViewModelReady = await viewModel.prepareData()
-                
-                if isViewModelReady {
-                    isLoading = false
-                } else {
-                    showInitAlert = true
-                }
-            }
+            handleOnAppear()
         }
         .alert(isPresented: $showInitAlert) {
-            Alert(title: Text("너무 빨랐습니다ㅠ"), message: Text("도전과제 기능을 준비중입니다! 잠시후 다시 시도해주세요"), dismissButton: .default(Text("OK")))
+            Alert(title: Text("너무 빨랐습니다!"), message: Text("도전과제 기능을 준비중입니다! 잠시후 다시 시도해주세요"), dismissButton: .default(Text("OK")))
         }
     }
     
@@ -88,9 +79,8 @@ struct ChallengesView: View {
     }
     
     private var challengeAlertView: ChallengeAlertView {
-        let challengeId = self.indexForAlert
-        let challengeIndex = viewModel.challengeList.firstIndex { $0.challengeId == challengeId } ?? 0
-        let challenge = $viewModel.challengeList[challengeIndex]
+        let challengeIndex =  indexForAlert
+        let challenge = $viewModel.challengeList[indexForAlert]
         
         return ChallengeAlertView(
             isPresented: $isPresented,
@@ -100,6 +90,16 @@ struct ChallengesView: View {
             index: challengeIndex
         ) {
             handleChallengeAlert(with: challengeIndex)
+        }
+    }
+    
+    private func handleOnAppear() {
+        Task {
+            if await viewModel.prepareData() {
+                isLoading = false
+            } else {
+                showInitAlert = true
+            }
         }
     }
     
@@ -156,7 +156,6 @@ extension ChallengesView {
                     .foregroundColor(.theme.darkGreyColor)
                 Spacer()
             }
-        
         }
         .padding(.leading, 16)
         .padding(.top, 14)
@@ -168,7 +167,6 @@ extension ChallengesView {
     private var topCardSection: some View {
         
         VStack {
-//           let _ = Self._printChanges()
             HStack {
                 Text("나의 도전과제")
                     .font(.appleSDGothicNeo(.semiBold, size: 20))
@@ -183,9 +181,7 @@ extension ChallengesView {
                 }
                 
                 if $viewModel.myChallenges.count < 3 {
-                    // 나머지 뷰를 채우는 코드
                     ForEach($viewModel.myChallenges.count..<3, id: \.self) { index in
-                        // 다른 뷰 표시 (여기서는 기본 Text를 사용하겠습니다.)
                         ChallengeEmptyView()
                             .background(.white)
                             .cornerRadius(4)
@@ -243,13 +239,16 @@ extension ChallengesView {
     
     private func handleChallengeCardTap(for index: Int) {
         withAnimation(.linear) {
+            // For front & back card
             self.selectedCardIndex = (self.selectedCardIndex == index) ? nil : index
-            if let challengeIndex = viewModel.challengeList.firstIndex(where: {$0.challengeId == self.viewModel.myChallenges[index].challengeID }) {
-                // index를 사용하여 작업 수행
+            
+            // For challengeAlert
+            if let challengeIndex = viewModel.challengeList.firstIndex(where: {
+                $0.challengeId == self.viewModel.myChallenges[index].challengeID
+            }) {
                 self.indexForAlert = challengeIndex
             } else {
-                // 배열에서 조건을 만족하는 요소를 찾지 못한 경우에 대한 처리
-                print("해당하는 요소가 없습니다.")
+                print("[ChallengeView] Invalid MyChallenge Index detected!!")
             }
         }
     }
@@ -267,10 +266,9 @@ extension ChallengesView {
             }
             
             TabView(selection: $currentPage) {
-                let sortedChallengeList = viewModel.challengeList.sorted(by: { $0.challengeId < $1.challengeId })
-                let totalPages = (sortedChallengeList.count + 11) / 12
+                let totalPages = (viewModel.challengeList.count + 11) / 12
                 ForEach(0..<totalPages, id: \.self) { pageIndex in
-                    gridPage(for: pageIndex, challenges: sortedChallengeList)
+                    gridPage(for: pageIndex)
                 }
             }
             .frame(height: 380)
@@ -278,10 +276,10 @@ extension ChallengesView {
         }
     }
 
-    private func gridPage(for pageIndex: Int, challenges: [ChallengeDTO]) -> some View {
+    private func gridPage(for pageIndex: Int) -> some View {
         let startIndex = pageIndex * 12
-        let endIndex = min(startIndex + 12, challenges.count)
-        let pageItems = challenges[startIndex..<endIndex]
+        let endIndex = min(startIndex + 12, viewModel.challengeList.count)
+        let pageItems = viewModel.challengeList[startIndex..<endIndex]
         
         return VStack {
             LazyVGrid(columns: columns, spacing: 10) {
@@ -290,8 +288,7 @@ extension ChallengesView {
                     ChallengeDetailView(challenge: item)
                         .frame(width: 62, height: 120)
                         .onTapGesture {
-                            indexForAlert = item.challengeId
-                            setChallengeAlert(with: item)
+                            handleGridPageTap(with: item)
                         }
                 }
             }
@@ -314,6 +311,19 @@ extension ChallengesView {
         .padding(.bottom, 24)
     }
     
+    private func handleGridPageTap(with item: ChallengeDTO) {
+        withAnimation(.linear) {
+            // For challengeAlertView
+            if let challengeIndex = viewModel.challengeList.firstIndex(where: {
+                $0.challengeId == item.challengeId
+            }) {
+                self.indexForAlert = challengeIndex
+                setChallengeAlert(with: item)
+            } else {
+                print("[ChallengeView] Invalid FullChallenge Index detected!!")
+            }
+        }
+    }
     
     private func setChallengeAlert(with challenge: ChallengeDTO) {
         // 완료한 도전과제

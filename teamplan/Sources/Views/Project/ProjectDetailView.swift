@@ -212,7 +212,7 @@ extension ProjectDetailView {
                 .shadow(color: Color.black.opacity(0.3), radius: 5, x: 0, y: 2)
             
             
-            Text("프로젝트 완료하기")
+            Text("목표 완료하기")
                 .foregroundColor(.white)
                 .frame(height: 48)
                 .frame(maxWidth: .infinity)

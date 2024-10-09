@@ -288,6 +288,11 @@ extension NotificationService {
             // check: already exist notify
             if let previousNotify = projectNotifyList[project.projectId] {
                 
+                // check: invalid status
+                if candidateNotifyType == .unknown {
+                    print("[NotifySC] Invalid notify type detected!")
+                    break
+                }
                 // check: truncate notify
                 if isTrucateNeed(notify: previousNotify) {
                     await notifyDataManager.addTruncateNotify(project.projectId, .project)
@@ -342,12 +347,11 @@ extension NotificationService {
     //MARK: myChallenge
 
     private func preprocessingChallengeNotify() async -> Bool {
+        
         if challengeList.isEmpty {
             print("[NotifySC] There is no registed myChallenge to create notify")
             return true
         }
-        print(challengeNotifyList)
-        
         for challenge in challengeList {
             
             // check: already exist notify
@@ -366,9 +370,8 @@ extension NotificationService {
             } else {
                 let userProgress = getUserProgressForChallengeNotify(with: challenge.type)
                 if challenge.goal <= userProgress {
-                    print("add new notify about challenge")
                     await notifyDataManager.addNewNotify(
-                        createChallengeNotify(data: challenge, type: .canAchieve, date: today)
+                        createChallengeNotify(data: challenge, date: today)
                     )
                 }
             }
@@ -376,14 +379,14 @@ extension NotificationService {
         return true
     }
     
-    private func createChallengeNotify(data: ChallengeObject, type: ChallengeNoitification, date: Date) -> NotificationObject {
+    private func createChallengeNotify(data: ChallengeObject, date: Date) -> NotificationObject {
         return NotificationObject(
             userId: userId,
             challengeId: data.challengeId,
-            challengeStatus: type,
+            challengeStatus: .canAchieve,
             category: .challenge,
             title: data.title,
-            desc: "도전과제가 완료되었습니다! 도전을 완료하여 물방울을 획득해주세요.",
+            desc: "'\(data.title)' 도전과제를 완료하여 물방울을 획득해보세요!",
             updateAt: date,
             isCheck: false
         )
@@ -537,7 +540,7 @@ extension NotificationService {
         case .theDay:
             return "목표 마감일입니다!"
         case .explode:
-            return "결국 그날이 오고 말았습니다... 목표는 한 줌의 재가되어 사라졌습니다..."
+            return "결국 그날이 오고 말았습니다...\n목표는 한 줌의 재가되어 사라졌습니다..."
         default:
             return "진행중인 목표입니다"
         }

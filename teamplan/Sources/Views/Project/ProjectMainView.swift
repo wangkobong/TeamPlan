@@ -114,7 +114,7 @@ extension ProjectMainView {
                     Spacer()
                 }
                 HStack {
-                    Text("\(projectViewModel.projectList.count)개의 프로젝트가 있어요")
+                    Text("\(projectViewModel.projectList.count)개의 목표가 등록되어 있어요")
                         .font(.appleSDGothicNeo(.bold, size: 20))
                         .foregroundColor(.theme.blackColor)
                     Spacer()
@@ -154,7 +154,7 @@ extension ProjectMainView {
             HStack(alignment: .center) {
                 Spacer()
                 VStack {
-                    Text("등록했던 모든 목표")
+                    Text("등록한 목표들")
                         .font(.appleSDGothicNeo(.semiBold, size: 12))
                         .foregroundColor(.theme.blackColor)
                         .multilineTextAlignment(.center)
@@ -176,7 +176,7 @@ extension ProjectMainView {
                 Spacer()
                 
                 VStack {
-                    Text("완료했던 모든 목표")
+                    Text("완료한 목표들")
                         .font(.appleSDGothicNeo(.semiBold, size: 12))
                         .foregroundColor(.theme.blackColor)
                         .multilineTextAlignment(.center)
