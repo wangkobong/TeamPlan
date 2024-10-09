@@ -37,7 +37,7 @@ final class ProjectServicesCoredata {
             let entity = try getSingleEntity(context: context, with: projectId, and: userId)
             return convertToObject(with: entity)
         } catch {
-            print("[Coredata-Project] Failed to get project: \(error.localizedDescription)")
+            print("[ProjectLocalRepo] Failed to get project: \(error.localizedDescription)")
             return false
         }
     }
@@ -47,7 +47,7 @@ final class ProjectServicesCoredata {
             let entities = try getTotalEntities(context: context, with: userId)
             return convertToObjects(with: entities)
         } catch {
-            print("[Coredata-Project] Failed to get projects: \(error.localizedDescription)")
+            print("[ProjectLocalRepo] Failed to get projects: \(error.localizedDescription)")
             return false
         }
     }
@@ -57,7 +57,7 @@ final class ProjectServicesCoredata {
             let entities = try getValidEntities(context: context, with: userId)
             return convertToObjects(with: entities)
         } catch {
-            print("[Coredata-Project] Failed to get valid projects: \(error.localizedDescription)")
+            print("[ProjectLocalRepo] Failed to get valid projects: \(error.localizedDescription)")
             return false
         }
     }
@@ -67,7 +67,7 @@ final class ProjectServicesCoredata {
             let entities = try getUploadEntities(context: context, with: userId)
             return convertToObjects(with: entities)
         } catch {
-            print("[Coredata-Project] Failed to get upload projects: \(error.localizedDescription)")
+            print("[ProjectLocalRepo] Failed to get upload projects: \(error.localizedDescription)")
             return false
         }
     }
@@ -86,7 +86,7 @@ final class ProjectServicesCoredata {
         let entities = try getTotalEntities(context: context, with: userId)
         
         if entities.isEmpty {
-            print("[Coredata-Project] There is no project to delete")
+            print("[ProjectLocalRepo] There is no project to delete")
             return
         }
         
@@ -99,7 +99,7 @@ final class ProjectServicesCoredata {
         let entities = try getTruncateEntities(context: context, with: userId)
         
         if entities.isEmpty {
-            print("[Coredata-Project] There is no project to truncate")
+            print("[ProjectLocalRepo] There is no project to truncate")
             return true
         }
         
@@ -123,7 +123,7 @@ extension ProjectServicesCoredata {
             }.sorted { $0.remainDay < $1.remainDay }
             return true
         } catch {
-            print("[Coredata-Project] Failed to convert alert entities to DTO: \(error.localizedDescription)")
+            print("[ProjectLocalRepo] Failed to convert alert entities to DTO: \(error.localizedDescription)")
             return false
         }
     }
@@ -152,31 +152,31 @@ extension ProjectServicesCoredata {
     
     private func checkEntity(with entity: Entity) -> Bool {
         if entity.user_id == nil {
-            print("[Coredata-Project] nil detected: 'user_id'")
+            print("[ProjectLocalRepo] nil detected: 'user_id'")
             return false
         }
         if entity.title == nil {
-            print("[Coredata-Project] nil detected: 'title'")
+            print("[ProjectLocalRepo] nil detected: 'title'")
             return false
         }
         if entity.registed_at == nil {
-            print("[Coredata-Project] nil detected: 'registed_at'")
+            print("[ProjectLocalRepo] nil detected: 'registed_at'")
             return false
         }
         if entity.started_at == nil {
-            print("[Coredata-Project] nil detected: 'started_at'")
+            print("[ProjectLocalRepo] nil detected: 'started_at'")
             return false
         }
         if entity.deadline == nil {
-            print("[Coredata-Project] nil detected: 'deadline'")
+            print("[ProjectLocalRepo] nil detected: 'deadline'")
             return false
         }
         if entity.finished_at == nil {
-            print("[Coredata-Project] nil detected: 'finished_at'")
+            print("[ProjectLocalRepo] nil detected: 'finished_at'")
             return false
         }
         if entity.synced_at == nil {
-            print("[Coredata-Project] nil detected: 'synced_at'")
+            print("[ProjectLocalRepo] nil detected: 'synced_at'")
             return false
         }
         return true
@@ -270,7 +270,7 @@ extension ProjectServicesCoredata {
               let finishedAt = entity.finished_at,
               let syncedAt = entity.synced_at
         else {
-            print("[Coredata-Project] Failed to convert entity to object")
+            print("[ProjectLocalRepo] Failed to convert entity to object")
             return false
         }
         
@@ -304,7 +304,7 @@ extension ProjectServicesCoredata {
             if convertToObject(with: entity) {
                 self.objectList.append(self.object)
             } else {
-                print("[Coredata-Project] Failed to convert entity to object")
+                print("[ProjectLocalRepo] Failed to convert entity to object")
                 return false
             }
         }
@@ -316,7 +316,7 @@ extension ProjectServicesCoredata {
         return todos.compactMap { todoEntity in
             guard let desc = todoEntity.desc,
                   let status = TodoStatus(rawValue: Int(todoEntity.status)) else {
-                print("[Coredata-Project] Failed to convert todo entity")
+                print("[ProjectLocalRepo] Failed to convert todo entity")
                 return nil
             }
             return TodoObject(
@@ -335,7 +335,7 @@ extension ProjectServicesCoredata {
         guard let title = entity.title,
               let startAt = entity.started_at,
               let deadline = entity.deadline else {
-            print("[Coredata-Project] Failed to convert entity to ProjectHomeDTO")
+            print("[ProjectLocalRepo] Failed to convert entity to ProjectHomeDTO")
             return false
         }
         do {
@@ -357,7 +357,7 @@ extension ProjectServicesCoredata {
             )
             return true
         } catch {
-            print("[Coredata-Project] Failed to calculate project periods: \(error.localizedDescription)")
+            print("[ProjectLocalRepo] Failed to calculate project periods: \(error.localizedDescription)")
             return false
         }
     }
@@ -531,13 +531,13 @@ extension ProjectServicesCoredata {
         do {
             let entities = try getValidEntities(context: context, with: userId)
             if entities.isEmpty {
-                print("[Coredata-Project] There is no project to convert to BackgroundDTO")
+                print("[ProjectLocalRepo] There is no project to convert to BackgroundDTO")
                 return true
             }
             self.backgroundDTO = try entities.map{ try convertEntityToDTO(with: $0) }
             return true
         } catch {
-            print("[Coredata-Project] Failed to get entity to ProjectHomeDTO: \(error.localizedDescription)")
+            print("[ProjectLocalRepo] Failed to get entity to ProjectHomeDTO: \(error.localizedDescription)")
             return false
         }
     }

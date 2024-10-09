@@ -22,6 +22,7 @@ final class NotificationViewModel: ObservableObject {
     private var objectList: [NotificationObject]
     private var modelList: [NotificationModel]
     
+    @MainActor
     init(){
         let volt = VoltManager.shared
         if let userId = volt.getUserId(){
@@ -101,7 +102,7 @@ final class NotificationViewModel: ObservableObject {
     private func prepareNotiySection() {
         self.notiSections = [
             NotificationSection(title: "전체", type: .all, isSelected: true),
-            NotificationSection(title: "프로젝트", type: .project),
+            NotificationSection(title: "목표관리", type: .project),
             NotificationSection(title: "도전과제", type: .challenge)
         ]
     }

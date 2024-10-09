@@ -42,7 +42,6 @@ final class LiteNotifyService {
                 print("[LiteNotifySC] Failed to apply update result to storage")
                 return false
             }
-            print("[LiteNotifySC] Successfully apply isCheck Status at storage")
             return true
         } else {
             return false
