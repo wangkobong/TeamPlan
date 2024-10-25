@@ -9,11 +9,11 @@
 import SwiftUI
 
 struct ToDoView: View {
-    
     @ObservedObject var projectViewModel: ProjectViewModel
     @Binding var toDo: TodoDTO
     @State private var isEditing: Bool = false
     @State private var showAlert: Bool = false
+    @State private var tempDesc: String = ""
     let projectId: Int
     
     var body: some View {
@@ -26,7 +26,7 @@ struct ToDoView: View {
                         }
                     }
                 ZStack {
-                    TextField(getPlaceholder(), text: $toDo.desc) { editing in
+                    TextField(getPlaceholder(), text: $tempDesc) { editing in
                         self.isEditing = editing
                     }
                     .padding(.horizontal, 16)
@@ -38,13 +38,12 @@ struct ToDoView: View {
                             .opacity(toDo.status == .finish ? 1 : 0)
                     )
                     .disabled(toDo.status == .finish ? true : false)
-                    .onChange(of: toDo.desc) { newValue in
-                        if newValue.count > 20 {
-                            showAlert = true
-                            toDo.desc = String(newValue.prefix(20))
-                        }
-                    }
                     .onSubmit {
+                        if tempDesc.count > 20 {
+                            showAlert = true
+                            tempDesc = String(tempDesc.prefix(20))
+                        }
+                        toDo.desc = tempDesc
                         if toDo.desc != "" {
                             projectViewModel.updateTodoDescription(
                                 with: projectId, todoId: toDo.todoId, newDesc: toDo.desc
@@ -61,6 +60,9 @@ struct ToDoView: View {
             
             Spacer()
         }
+        .onAppear {
+            tempDesc = toDo.desc
+        }
         .alert(isPresented: $showAlert) {
             Alert(
                 title: Text("글자 수 초과"),
@@ -70,7 +72,6 @@ struct ToDoView: View {
         }
     }
 }
-
 //struct ToDoView_Previews: PreviewProvider {
 //    static var previews: some View {
 //        ToDoView(toDo: Todo)
