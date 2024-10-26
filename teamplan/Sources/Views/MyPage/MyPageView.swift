@@ -12,8 +12,6 @@ import SwiftUI
 
 enum MyPageAlertState {
     case none
-    case mockInjection
-    case alreaadyInjected
     case eraseData
     case versionCheck
 }
@@ -24,7 +22,7 @@ struct MyPageView: View {
     @AppStorage("mainViewState") var mainViewState: MainViewState?
     
     private var leftRightInset: CGFloat = 16
-    private var menuTitles: [MypageMenu] = [.mock, .erase, .version]
+    private var menuTitles: [MypageMenu] = [.erase, .version]
     
     @State private var showAlert = false
     @State private var isLoading = false
@@ -53,8 +51,8 @@ struct MyPageView: View {
                 message: Text(getAlertMessage()),
                 primaryButton: .destructive(Text(getAlertTitle())) {
                     switch myPageAlertState {
-                    case .mockInjection:
-                        tryMockInjection(for: .mock)
+                    //case .mockInjection:
+                    //    tryMockInjection(for: .mock)
                     case .eraseData:
                         tryEraseData(for: .erase)
                     default:
@@ -162,13 +160,13 @@ extension MyPageView {
 
     private func handleMenuTap(for menu: MypageMenu) {
         switch menu {
-        case .mock:
-            if self.mockInjected {
-                myPageAlertState = .alreaadyInjected
-            } else {
-                myPageAlertState = .mockInjection
-            }
-            showAlert = true
+        //case .mock:
+        //    if self.mockInjected {
+        //        myPageAlertState = .alreaadyInjected
+        //    } else {
+        //        myPageAlertState = .mockInjection
+        //    }
+        //    showAlert = true
         case .erase:
             myPageAlertState = .eraseData
             showAlert = true
@@ -206,14 +204,14 @@ extension MyPageView {
         switch myPageAlertState {
         case .none:
             return ""
-        case .mockInjection:
-            return "추가하기"
+        //case .mockInjection:
+        //    return "추가하기"
         case .eraseData:
-            return "삭제하기"
+            return "모든 데이터 삭제하기"
         case .versionCheck:
             return "버젼확인"
-        case .alreaadyInjected:
-            return "확인"
+        //case .alreaadyInjected:
+        //    return "확인"
         }
     }
     
@@ -221,14 +219,14 @@ extension MyPageView {
         switch myPageAlertState {
         case .none:
             return ""
-        case .mockInjection:
-            return "주의!\n사용자의 통계정보가 변경될 것이며, 임시목표들이 생성될 것입니다! "
+        //case .mockInjection:
+        //    return "주의!\n사용자의 통계정보가 변경될 것이며, 임시목표들이 생성될 것입니다! "
         case .eraseData:
             return "주의!\n 지금까지의 모든 데이터가 삭제될 것입니다!"
         case .versionCheck:
             return "0.0.85_test"
-        case .alreaadyInjected:
-            return "이미 데이터를 추가하였습니다."
+        //case .alreaadyInjected:
+        //    return "이미 데이터를 추가하였습니다."
         }
     }
 }

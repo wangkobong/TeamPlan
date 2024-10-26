@@ -61,10 +61,8 @@ final class MypageViewModel: ObservableObject {
     @MainActor
     func performAction(menu: MypageMenu) async {
         switch menu {
-            
-        case .mock:
-            self.injectResult = await service.mockDataInjection()
-            
+        //case .mock:
+        //    self.injectResult = await service.mockDataInjection()
         case .erase:
             self.eraseResult = service.eraseData()
             

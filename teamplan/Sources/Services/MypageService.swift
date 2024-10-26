@@ -171,7 +171,6 @@ struct MypageDTO {
 }
 
 enum MypageMenu: String {
-    case erase = "데이터 삭제하기"
+    case erase = "모든 데이터 삭제하기"
     case version = "앱버젼"
-    case mock = "Mock데이터 추가하기"
 }
