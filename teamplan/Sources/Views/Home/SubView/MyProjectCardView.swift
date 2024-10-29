@@ -82,7 +82,7 @@ struct MyProjectCardView: View {
     
     private var projectTodoCount: some View {
         HStack {
-            Text("총 \(project.remainTodo)개의 TODO가 남아있어요")
+            Text("총 \(project.remainTodo)개의 할 일이 남아있어요")
                 .font(.appleSDGothicNeo(.regular, size: 12))
                 .foregroundColor(.black)
             Spacer()
@@ -90,9 +90,7 @@ struct MyProjectCardView: View {
     }
     
     //MARK: Progress Bar
-    /// ios 제공하는 기본 ProgressBar 사용으로 대체하였습니다.
-    /// ProgressView 는 주어진 값 (calcPercent()에 의해 계산된 값)과 총 값 (1.0)을 사용하여 진행 상태를 표시합니다.
-    ///  ProgressView의 스타일은 기존 둥근형태와 폭탄 아이콘 사용을 위해 CustomProgressViewStyle 을 사용합니다.
+    
     private var projectProgressBar: some View {
         ProgressView(value: calcPercent(), total: 1.0)
             .frame(height: 10)
