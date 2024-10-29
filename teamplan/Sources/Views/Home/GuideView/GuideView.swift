@@ -32,7 +32,7 @@ struct GuideView: View {
             }
         }
         .navigationBarBackButtonHidden(true)
-        .navigationTitle("가이드북")
+        .navigationTitle("투두팡 설명서")
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
 
@@ -88,21 +88,23 @@ extension GuideView {
     private var firstImage: some View {
         VStack {
             Spacer()
-                .frame(height: 80)
+                .frame(height: 67)
             
             Image("guide_image1")
-                .frame(height: 284)
+                .frame(height: 340)
         }
     }
     
     private var secondImage: some View {
         VStack {
             Spacer()
-                .frame(height: 20)
+                .frame(height: 48)
+            
+            Image("guide_image_no2")
+                .frame(width: 35, height: 20)
             
             Image("guide_image2")
-                .frame(height: 306)
-
+                .frame(height: 325)
         }
     }
     
@@ -112,24 +114,24 @@ extension GuideView {
                 .frame(height: 20)
             
             Image("guide_image3")
-                .frame(height: 284)
+                .frame(height: 340)
         }
     }
     
     private var fourthImage: some View {
         VStack {
             Spacer()
-                .frame(height: 20)
+                .frame(height: 50)
             
             Image("guide_image4")
-                .frame(height: 284)
+                .frame(height: 340)
         }
     }
     
     private var fifthImage: some View {
         VStack {
             Spacer()
-                .frame(height: 40)
+                .frame(height: 95)
             
             Image("guide_image5")
                 .frame(height: 91)
