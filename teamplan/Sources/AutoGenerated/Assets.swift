@@ -47,6 +47,7 @@ internal enum Gen {
     internal static let guideImage3 = ImageAsset(name: "guide_image3")
     internal static let guideImage4 = ImageAsset(name: "guide_image4")
     internal static let guideImage5 = ImageAsset(name: "guide_image5")
+    internal static let guideImageNo2 = ImageAsset(name: "guide_image_no2")
     internal static let bookCircleBlue = ImageAsset(name: "book_circle_blue")
     internal static let bookCircleGrey = ImageAsset(name: "book_circle_grey")
     internal static let calendarCircleBlue = ImageAsset(name: "calendar_circle_blue")
