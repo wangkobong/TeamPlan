@@ -8,6 +8,7 @@
  import SwiftUI
  import BackgroundTasks
  import UserNotifications
+ import FirebaseCore
 
  @main
  struct TeamPlanApp: App {
@@ -48,10 +49,10 @@
      func setAppState(_ appState: AppState) {
          self.appState = appState
      }
-     
+
      // Background Task & Local Push
      func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-         
+         FirebaseApp.configure()
          // Request notification permission
          requestNotificationAuthorization()
          

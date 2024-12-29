@@ -10,6 +10,12 @@ let project = Project(
         .remote(
             url: "https://github.com/evgenyneu/keychain-swift",
             requirement: .branch("master")),
+        .remote(
+            url: "https://github.com/firebase/firebase-ios-sdk",
+            requirement: .upToNextMajor(from: "11.6.0")),
+        .remote(
+            url: "https://github.com/google/GoogleSignIn-iOS",
+            requirement: .upToNextMajor(from: "8.0.0"))
     ],
     targets: [
         Target(
@@ -27,6 +33,10 @@ let project = Project(
             dependencies: [
                 .package(product: "WrappingHStack"),
                 .package(product: "KeychainSwift"),
+                .package(product: "FirebaseAuth"),
+                .package(product: "FirebaseAnalytics"),
+                .package(product: "GoogleSignIn"),
+                .package(product: "GoogleSignInSwift")
             ]
         ),
     ]
