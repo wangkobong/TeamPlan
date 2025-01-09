@@ -37,6 +37,12 @@ final class AuthenticationViewModel: ObservableObject {
     // published
     @Published var isReSignupNeeded: Bool = false
     
+    private let authRepository: AuthRepository
+    
+    init(authRepository: AuthRepository = AuthRepository()) {
+        self.authRepository = authRepository
+    }
+    
     // private
     private let signupService = SignupService()
     private let voltManager = VoltManager.shared
@@ -131,6 +137,8 @@ final class AuthenticationViewModel: ObservableObject {
                               let authResult = try await Auth.auth().signIn(with: credential)
                               let user = authResult.user
  
+                              
+                              let test = try await self.authRepository.tryLogin(token: idToken, userId: user.uid)
                               continuation.resume(returning: ())
                           } catch {
                               continuation.resume(throwing: error)
@@ -179,7 +187,7 @@ final class AuthenticationViewModel: ObservableObject {
                              
                              let authResult = try await Auth.auth().signIn(with: credential)
                              let user = authResult.user
-
+                             
                              continuation.resume(returning: ())
                          } catch let signInError as NSError {
                              print("Firebase sign in error: \(signInError.localizedDescription)")
