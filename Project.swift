@@ -15,7 +15,10 @@ let project = Project(
             requirement: .upToNextMajor(from: "11.6.0")),
         .remote(
             url: "https://github.com/google/GoogleSignIn-iOS",
-            requirement: .upToNextMajor(from: "8.0.0"))
+            requirement: .upToNextMajor(from: "8.0.0")),
+        .remote(
+            url: "https://github.com/Alamofire/Alamofire.git",
+            requirement: .exact("5.10.2"))
     ],
     targets: [
         Target(
@@ -36,7 +39,8 @@ let project = Project(
                 .package(product: "FirebaseAuth"),
                 .package(product: "FirebaseAnalytics"),
                 .package(product: "GoogleSignIn"),
-                .package(product: "GoogleSignInSwift")
+                .package(product: "GoogleSignInSwift"),
+                .package(product: "Alamofire")
             ]
         ),
     ]
