@@ -64,8 +64,8 @@ extension IntroView {
         isLoading = true
         let volt = VoltManager.shared
         if let userId = volt.getUserId() {
-            let loginResult = await authViewModel.tryLogin(userId: userId)
-            self.mainViewState = loginResult ? .main : .login
+//            let loginResult = await authViewModel.tryLogin(userId: userId)
+//            self.mainViewState = loginResult ? .main : .login
         } else {
             self.mainViewState = .login
         }

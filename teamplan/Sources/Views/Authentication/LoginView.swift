@@ -10,6 +10,7 @@ import SwiftUI
 struct LoginView: View {
     
     @AppStorage("mainViewState") var mainViewState: MainViewState?
+    @EnvironmentObject var authViewModel: AuthenticationViewModel
 
     let transition: AnyTransition = .asymmetric(
         insertion: .move(edge: .trailing),
@@ -117,6 +118,51 @@ struct LoginView: View {
                         RoundedRectangle(cornerRadius: 4)
                             .fill(Color(hex: "007AFF"))
                     )
+            }
+            
+            // 구글 로그인 버튼
+            Button(action: {
+                Task {
+                    let result = try await authViewModel.tryGoogleLogin()
+                }
+            }) {
+                HStack {
+                    Image(uiImage: Gen.Images.googleLogoLoginView.image)
+                        .resizable()
+                        .frame(width: 20, height: 20)
+                    Text("구글로 계속하기")
+                        .font(.appleSDGothicNeo(.medium, size: 16))
+                }
+                .foregroundColor(.black)
+                .frame(height: 48)
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.white)
+                        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 2)
+                )
+            }
+            
+            // 애플 로그인 버튼
+            Button(action: {
+                Task {
+                    let result = try await authViewModel.tryAppleLogin()
+                }
+            }) {
+                HStack {
+                    Image(systemName: "apple.logo")
+                        .resizable()
+                        .frame(width: 20, height: 24)
+                    Text("Apple로 계속하기")
+                        .font(.appleSDGothicNeo(.medium, size: 16))
+                }
+                .foregroundColor(.white)
+                .frame(height: 48)
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.black)
+                )
             }
         }
         .padding(.horizontal, 55)
