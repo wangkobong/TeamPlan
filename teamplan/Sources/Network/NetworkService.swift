@@ -10,7 +10,7 @@ import Foundation
 import Alamofire
 
 class NetworkService {
-    private let baseURL = "http://todopang.uk"
+    private let baseURL = "https://todopang.uk"
     private let session: Session
     private var token: String?
     
@@ -44,7 +44,7 @@ class NetworkService {
         ]
         
         if let token = token {
-            headers["Token"] = token
+            headers["Authorization"] = "Bearer \(token)"
         }
         
         // Request 로깅
