@@ -134,11 +134,15 @@ final class AuthenticationViewModel: ObservableObject {
                                                 
                       Task {
                           do {
-                              let authResult = try await Auth.auth().signIn(with: credential)
-                              let user = authResult.user
- 
+                              let user = try await Auth.auth().signIn(with: credential).user
                               
-                              let test = try await self.authRepository.tryLogin(token: idToken, userId: user.uid)
+                              // FirebaseAuth IdToken 추출
+                              guard let firebaseIdToken = try await Auth.auth().currentUser?.getIDTokenResult() else {
+                                  continuation.resume(throwing: NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to get FirebaseID token"]))
+                                  return
+                              }
+                              
+                              let test = try await self.authRepository.tryLogin(token: firebaseIdToken.token, userId: user.uid)
                               continuation.resume(returning: ())
                           } catch {
                               continuation.resume(throwing: error)
