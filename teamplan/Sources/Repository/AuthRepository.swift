@@ -15,11 +15,24 @@ class AuthRepository {
     init(networkService: NetworkService = NetworkService()) {
         self.networkService = networkService
     }
+    
+    func trySignup(userSignupData: UserSignupData) async throws -> Bool {
+        
+        // 회원가입 API 호출
+        let response: APIResponse<String?> = try await networkService.request(.signup(userId: userSignupData.userId,
+                                                                                      name: userSignupData.name,
+                                                                                      email: userSignupData.email,
+                                                                                      socialType: userSignupData.socialType))
+        
+        return response.status == 200 && response.result == "SUCCESS"
+    }
 
     func tryLogin(token: String, userId: String) async throws -> Bool {
-        
+        print("NetworkService instance:", networkService) // 객체 확인
+
         networkService.setToken(token)
-        
+        print("NetworkService instance2:", networkService) // 객체 확인
+
         // 로그인 API 호출
         let response: APIResponse<String?> = try await networkService.request(.login(userId: userId))
         

@@ -72,6 +72,16 @@ final class AuthenticationViewModel: ObservableObject {
         return true
     }
     
+    func trySignup2(userSignupData: UserSignupData) async -> Bool {
+        do {
+            let signupResult = try await self.authRepository.trySignup(userSignupData: userSignupData)
+            return true
+        } catch {
+            print("Signup error:", error)
+            return false
+        }
+    }
+    
     // MARK: - Login
     
     func tryLogin(userId: String) async -> Bool {
@@ -94,7 +104,7 @@ final class AuthenticationViewModel: ObservableObject {
         }
     }
     
-    func tryGoogleLogin() async throws {
+    func tryGoogleLogin() async throws -> User? {
         // 1. Google Sign In 설정
         guard let clientID = FirebaseApp.app()?.options.clientID,
               let windowScene = await UIApplication.shared.connectedScenes.first as? UIWindowScene,
@@ -143,7 +153,7 @@ final class AuthenticationViewModel: ObservableObject {
                               }
                               
                               let test = try await self.authRepository.tryLogin(token: firebaseIdToken.token, userId: user.uid)
-                              continuation.resume(returning: ())
+                              continuation.resume(returning: user)
                           } catch {
                               continuation.resume(throwing: error)
                           }

@@ -123,7 +123,15 @@ struct LoginView: View {
             // 구글 로그인 버튼
             Button(action: {
                 Task {
-                    let result = try await authViewModel.tryGoogleLogin()
+                    let userInfo = try await authViewModel.tryGoogleLogin()
+//                    if userInfo == nil {
+//                        let signupData = UserSignupData(userId: <#T##String#>,
+//                                                        name: <#T##String#>,
+//                                                        email: <#T##String#>,
+//                                                        socialType: .google)
+//                        let signupResult =
+//                    }
+                    
                 }
             }) {
                 HStack {
