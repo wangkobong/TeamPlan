@@ -37,45 +37,36 @@ class NetworkService {
     // 기본 요청 메서드
     func request<T: Decodable>(_ endpoint: APIEndpoint) async throws -> T {
         let url = baseURL + endpoint.path
-        
-        var headers: HTTPHeaders = [
-            "Content-Type": "application/json",
-            "accept": "application/json"
-        ]
-        
-        if let token = token {
-            headers["Authorization"] = "Bearer \(token)"
-        }
-        
-        // Request 로깅
-        print("🚀 Request URL: \(url)")
-        print("📤 Request Method: \(endpoint.method.rawValue)")
-        print("📤 Request Headers: \(headers)")
-        if let parameters = endpoint.parameters {
-            print("📦 Request Parameters: \(parameters)")
-        }
-        
-        do {
-            let request = session.request(
+            
+            var headers: HTTPHeaders = [
+                "Content-Type": "application/json",
+                "accept": "application/json",
+                "User-Agent": "TodoPang iOS"
+            ]
+            
+            if let token = token {
+                headers["Authorization"] = "Bearer \(token)"
+            }
+            
+            print("🚀 Request URL: \(url)")
+            print("📤 Request Method: \(endpoint.method.rawValue)")
+            print("📤 Request Headers: \(headers)")
+            
+             let response = try await AF.request(
                 url,
                 method: endpoint.method,
                 parameters: endpoint.parameters,
                 encoding: JSONEncoding.default,
                 headers: headers
-            )
-            
-            let data = try await request.validate().serializingData().value
-            
-            // Response 로깅
-            print("📥 Response Status Code: \(request.response?.statusCode ?? 0)")
-            if let json = try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed) as? [String: Any] {
-                print("📥 Response Data: \(json)")
-            }
-            
-            return try JSONDecoder().decode(T.self, from: data)
-        } catch {
-            print("❌ Network Error: \(error)")
-            throw error
-        }
+             )
+             .validate()
+             .serializingDecodable(T.self)
+             .response
+
+             print("📥 Response Status Code:", response.response?.statusCode ?? 0)
+             print("📥 Response Data:", String(data: response.data ?? Data(), encoding: .utf8) ?? "")
+
+             return try JSONDecoder().decode(T.self, from: response.data ?? Data())
+
     }
 }
