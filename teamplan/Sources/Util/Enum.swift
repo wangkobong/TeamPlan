@@ -10,8 +10,8 @@ import Foundation
 import FirebaseAuth
 
 enum socialLoginType: Int {
-    case google = 0
-    case apple = 1
+    case google = 1
+    case apple = 0
 }
 
 enum LoginResult {

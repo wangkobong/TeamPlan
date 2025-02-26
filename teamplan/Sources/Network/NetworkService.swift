@@ -41,7 +41,6 @@ class NetworkService {
             var headers: HTTPHeaders = [
                 "Content-Type": "application/json",
                 "accept": "application/json",
-                "User-Agent": "TodoPang iOS"
             ]
             
             if let token = token {
@@ -51,6 +50,13 @@ class NetworkService {
             print("🚀 Request URL: \(url)")
             print("📤 Request Method: \(endpoint.method.rawValue)")
             print("📤 Request Headers: \(headers)")
+        
+            // 파라미터 프린트 추가
+            if let parameters = endpoint.parameters {
+                print("📤 Request Parameters: \(parameters)")
+            } else {
+                print("📤 Request Parameters: None")
+            }
             
              let response = try await AF.request(
                 url,

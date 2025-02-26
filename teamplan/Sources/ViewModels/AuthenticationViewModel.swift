@@ -152,9 +152,20 @@ final class AuthenticationViewModel: ObservableObject {
                                   return
                               }
                               
-                              let test = try await self.authRepository.tryLogin(token: firebaseIdToken.token, userId: user.uid)
-                              continuation.resume(returning: user)
+                              let loginResponse = try await self.authRepository.tryLogin(token: firebaseIdToken.token, userId: user.uid)
+                              if loginResponse.status == 200 {
+                                  print("로그인성공")
+                                  continuation.resume(returning: user)
+                              } else if loginResponse.status == 404 {
+                                  print("회원가입해야함")
+                                  let userSignupData = UserSignupData(userId: user.uid,
+                                                                      name: user.displayName ?? "",
+                                                                      email: user.email ?? "",
+                                                                      socialType: .google)
+                                  await self.trySignup2(userSignupData: userSignupData)
+                              }
                           } catch {
+                              print("에러발생: \(error)")
                               continuation.resume(throwing: error)
                           }
                       }
