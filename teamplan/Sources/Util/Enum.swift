@@ -11,7 +11,7 @@ import FirebaseAuth
 
 enum socialLoginType: Int {
     case google = 1
-    case apple = 0
+    case apple = 2
 }
 
 enum LoginResult {

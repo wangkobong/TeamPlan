@@ -16,11 +16,6 @@ import AuthenticationServices
 
 final class AuthenticationViewModel: ObservableObject {
 
-    enum State {
-        case signedIn
-        case signedOut
-    }
-
     enum SignupError: Error {
         case invalidUser
         case invalidAccountInfo
@@ -36,6 +31,7 @@ final class AuthenticationViewModel: ObservableObject {
     
     // published
     @Published var isReSignupNeeded: Bool = false
+    @Published var currentUser: User? = nil
     
     private let authRepository: AuthRepository
     
@@ -83,26 +79,6 @@ final class AuthenticationViewModel: ObservableObject {
     }
     
     // MARK: - Login
-    
-    func tryLogin(userId: String) async -> Bool {
-        
-        // check: userId
-        guard let userId = voltManager.getUserId() else {
-            print("[AuthViewModel] Failed to get userData from volt")
-            await changeStatus()
-            return false
-        }
-        let loginService = LoginService.initService(with: userId)
-        
-        if await loginService.executor() {
-            print("[AuthViewModel] Login Process Success")
-            return true
-        } else {
-            print("[AuthViewModel] Login Process Failed")
-            await changeStatus()
-            return false
-        }
-    }
     
     func tryGoogleLogin() async throws -> User? {
         // 1. Google Sign In 설정
@@ -156,6 +132,7 @@ final class AuthenticationViewModel: ObservableObject {
                               if loginResponse.status == 200 {
                                   print("로그인성공")
                                   continuation.resume(returning: user)
+                                  self.currentUser = user
                               } else if loginResponse.status == 404 {
                                   print("회원가입해야함")
                                   let userSignupData = UserSignupData(userId: user.uid,
@@ -163,6 +140,7 @@ final class AuthenticationViewModel: ObservableObject {
                                                                       email: user.email ?? "",
                                                                       socialType: .google)
                                   await self.trySignup2(userSignupData: userSignupData)
+                                  self.currentUser = user
                               }
                           } catch {
                               print("에러발생: \(error)")
@@ -174,7 +152,7 @@ final class AuthenticationViewModel: ObservableObject {
         }
     }
     
-    func tryAppleLogin() async throws {
+    func tryAppleLogin() async throws -> User? {
          let nonce = String.randomNonceString()
          let appleIDProvider = ASAuthorizationAppleIDProvider()
          let request = appleIDProvider.createRequest()
@@ -208,17 +186,30 @@ final class AuthenticationViewModel: ObservableObject {
                      
                      Task {
                          do {
-                             try await Auth.auth().signIn(with: credential)
+                             let user = try await Auth.auth().signIn(with: credential).user
                              
-                             let authResult = try await Auth.auth().signIn(with: credential)
-                             let user = authResult.user
+                             // FirebaseAuth IdToken 추출
+                             guard let firebaseIdToken = try await Auth.auth().currentUser?.getIDTokenResult() else {
+                                 continuation.resume(throwing: NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to get FirebaseID token"]))
+                                 return
+                             }
                              
-                             continuation.resume(returning: ())
-                         } catch let signInError as NSError {
-                             print("Firebase sign in error: \(signInError.localizedDescription)")
-                             continuation.resume(throwing: signInError)
+                             let loginResponse = try await self.authRepository.tryLogin(token: firebaseIdToken.token, userId: user.uid)
+                             if loginResponse.status == 200 {
+                                 print("로그인성공")
+                                 continuation.resume(returning: user)
+                                 self.currentUser = user
+                             } else if loginResponse.status == 404 {
+                                 print("회원가입해야함")
+                                 let userSignupData = UserSignupData(userId: user.uid,
+                                                                     name: user.displayName ?? "애플유저",
+                                                                     email: user.email ?? "",
+                                                                     socialType: .apple)
+                                 await self.trySignup2(userSignupData: userSignupData)
+                                 self.currentUser = user
+                             }
                          } catch {
-                             print("Unexpected error: \(error.localizedDescription)")
+                             print("에러발생: \(error)")
                              continuation.resume(throwing: error)
                          }
                      }

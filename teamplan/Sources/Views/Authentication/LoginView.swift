@@ -11,7 +11,7 @@ struct LoginView: View {
     
     @AppStorage("mainViewState") var mainViewState: MainViewState?
     @EnvironmentObject var authViewModel: AuthenticationViewModel
-
+    
     let transition: AnyTransition = .asymmetric(
         insertion: .move(edge: .trailing),
         removal: .move(edge: .leading)
@@ -124,14 +124,9 @@ struct LoginView: View {
             Button(action: {
                 Task {
                     let userInfo = try await authViewModel.tryGoogleLogin()
-//                    if userInfo == nil {
-//                        let signupData = UserSignupData(userId: <#T##String#>,
-//                                                        name: <#T##String#>,
-//                                                        email: <#T##String#>,
-//                                                        socialType: .google)
-//                        let signupResult =
-//                    }
-                    
+                    if userInfo != nil {
+                        self.mainViewState = .main
+                    }
                 }
             }) {
                 HStack {
