@@ -27,11 +27,18 @@ final class AuthenticationViewModel: ObservableObject {
         case loginApple
     }
     
+    enum LoginResult {
+        case loginSuccess(User)
+        case signupRequired(User)
+        case error(Error)
+    }
+    
     // MARK: - properties
     
     // published
     @Published var isReSignupNeeded: Bool = false
     @Published var currentUser: User? = nil
+    var socialType: SocialLoginType? 
     
     private let authRepository: AuthRepository
     
@@ -80,7 +87,7 @@ final class AuthenticationViewModel: ObservableObject {
     
     // MARK: - Login
     
-    func tryGoogleLogin() async throws -> User? {
+    func tryGoogleLogin() async throws -> LoginResult? {
         // 1. Google Sign In 설정
         guard let clientID = FirebaseApp.app()?.options.clientID,
               let windowScene = await UIApplication.shared.connectedScenes.first as? UIWindowScene,
@@ -131,16 +138,13 @@ final class AuthenticationViewModel: ObservableObject {
                               let loginResponse = try await self.authRepository.tryLogin(token: firebaseIdToken.token, userId: user.uid)
                               if loginResponse.status == 200 {
                                   print("로그인성공")
-                                  continuation.resume(returning: user)
+                                  continuation.resume(returning: .loginSuccess(user))
                                   self.currentUser = user
                               } else if loginResponse.status == 404 {
                                   print("회원가입해야함")
-                                  let userSignupData = UserSignupData(userId: user.uid,
-                                                                      name: user.displayName ?? "",
-                                                                      email: user.email ?? "",
-                                                                      socialType: .google)
-                                  await self.trySignup2(userSignupData: userSignupData)
                                   self.currentUser = user
+                                  self.socialType = .google
+                                  continuation.resume(returning: .signupRequired(user))
                               }
                           } catch {
                               print("에러발생: \(error)")
@@ -152,7 +156,7 @@ final class AuthenticationViewModel: ObservableObject {
         }
     }
     
-    func tryAppleLogin() async throws -> User? {
+    func tryAppleLogin() async throws -> LoginResult? {
          let nonce = String.randomNonceString()
          let appleIDProvider = ASAuthorizationAppleIDProvider()
          let request = appleIDProvider.createRequest()
@@ -197,16 +201,13 @@ final class AuthenticationViewModel: ObservableObject {
                              let loginResponse = try await self.authRepository.tryLogin(token: firebaseIdToken.token, userId: user.uid)
                              if loginResponse.status == 200 {
                                  print("로그인성공")
-                                 continuation.resume(returning: user)
+                                 continuation.resume(returning: .loginSuccess(user))
                                  self.currentUser = user
                              } else if loginResponse.status == 404 {
                                  print("회원가입해야함")
-                                 let userSignupData = UserSignupData(userId: user.uid,
-                                                                     name: user.displayName ?? "애플유저",
-                                                                     email: user.email ?? "",
-                                                                     socialType: .apple)
-                                 await self.trySignup2(userSignupData: userSignupData)
                                  self.currentUser = user
+                                 self.socialType = .apple
+                                 continuation.resume(returning: .signupRequired(user))
                              }
                          } catch {
                              print("에러발생: \(error)")

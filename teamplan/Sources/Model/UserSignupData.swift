@@ -12,5 +12,5 @@ struct UserSignupData {
     let userId: String
     let name: String
     let email: String
-    let socialType: socialLoginType
+    let socialType: SocialLoginType
 }

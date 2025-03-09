@@ -123,9 +123,16 @@ struct LoginView: View {
             // 구글 로그인 버튼
             Button(action: {
                 Task {
-                    let userInfo = try await authViewModel.tryGoogleLogin()
-                    if userInfo != nil {
+                    let loginResult = try await authViewModel.tryGoogleLogin()
+                    switch loginResult {
+                    case .loginSuccess:
                         self.mainViewState = .main
+                    case .signupRequired:
+                        self.mainViewState = .signup
+                    case .error:
+                        print("에러발생")
+                    case .none:
+                        break
                     }
                 }
             }) {
@@ -149,8 +156,17 @@ struct LoginView: View {
             // 애플 로그인 버튼
             Button(action: {
                 Task {
-                    let result = try await authViewModel.tryAppleLogin()
-                }
+                    let loginResult = try await authViewModel.tryGoogleLogin()
+                    switch loginResult {
+                    case .loginSuccess:
+                        self.mainViewState = .main
+                    case .signupRequired:
+                        self.mainViewState = .signup
+                    case .error:
+                        print("에러발생")
+                    case .none:
+                        break
+                    }                }
             }) {
                 HStack {
                     Image(systemName: "apple.logo")

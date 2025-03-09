@@ -12,6 +12,8 @@ import WrappingHStack
 struct SignupView: View {
     
     @Environment(\.dismiss) var dismiss
+    @Environment(\.scenePhase) private var scenePhase
+    
     @EnvironmentObject var authViewModel: AuthenticationViewModel
     @AppStorage("mainViewState") var mainViewState: MainViewState?
     
@@ -69,6 +71,11 @@ struct SignupView: View {
                     message: Text("회원가입에 실패했습니다. 다시 시도해주세요."),
                     dismissButton: .default(Text("확인"))
                 )
+            }
+            .onChange(of: scenePhase) { newPhase in
+                if newPhase == .background {
+                    mainViewState = .login
+                }
             }
         }
     }
@@ -163,6 +170,17 @@ struct SignupView: View {
     }
     
     private func trySignup() async -> Bool {
-        return await authViewModel.trySignup(userName: self.userName)
+        print(#function)
+        if let currentUser = authViewModel.currentUser, let socialType = authViewModel.socialType {
+            let userSignupDate = UserSignupData(userId: currentUser.uid ,
+                                                name: self.userName,
+                                                email: currentUser.email ?? "",
+                                                socialType: socialType)
+            await authViewModel.trySignup2(userSignupData: userSignupDate)
+            return true
+        } else {
+            return false
+        }
+
     }
 }

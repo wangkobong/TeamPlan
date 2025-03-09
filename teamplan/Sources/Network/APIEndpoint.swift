@@ -10,7 +10,7 @@ import Foundation
 import Alamofire
 
 enum APIEndpoint {
-    case signup(userId: String, name: String, email: String, socialType: socialLoginType)
+    case signup(userId: String, name: String, email: String, socialType: SocialLoginType)
     case login(userId: String, idToken: String)
 
     var path: String {

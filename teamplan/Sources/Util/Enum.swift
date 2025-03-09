@@ -9,7 +9,7 @@
 import Foundation
 import FirebaseAuth
 
-enum socialLoginType: Int {
+enum SocialLoginType: Int {
     case google = 1
     case apple = 2
 }
