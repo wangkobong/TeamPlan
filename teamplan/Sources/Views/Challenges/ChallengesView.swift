@@ -220,12 +220,12 @@ extension ChallengesView {
                 .cornerRadius(4)
                 .rotation3DEffect(.degrees(180), axis: (x: 0.0, y: 1.0, z: 0.0))
             } else {
-                ChallengeCardFrontView(
-                    challenge: challenge,
-                    parentsWidth: screenWidth
-                )
-                .background(.white)
-                .cornerRadius(4)
+//                ChallengeCardFrontView(
+//                    challenge: challenge,
+//                    parentsWidth: screenWidth
+//                )
+//                .background(.white)
+//                .cornerRadius(4)
             }
         }
         .rotation3DEffect(

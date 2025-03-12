@@ -12,11 +12,13 @@ import Alamofire
 enum APIEndpoint {
     case signup(userId: String, name: String, email: String, socialType: SocialLoginType)
     case login(userId: String, idToken: String)
+    case getHomeInfo(userId: String)
 
     var path: String {
         switch self {
         case .signup: return "/auth/signup"
         case .login: return "/auth/login"
+        case .getHomeInfo: return "/home/get"
         }
     }
     
@@ -24,6 +26,7 @@ enum APIEndpoint {
         switch self {
         case .signup: return .post
         case .login: return .post
+        case .getHomeInfo: return .post
         }
     }
     
@@ -33,6 +36,8 @@ enum APIEndpoint {
             return ["userId": userId, "name": name, "email": email, "socialType": socialType.rawValue]
         case let .login(userId, idToken):
             return ["userId": userId, "idToken": idToken]
+        case let .getHomeInfo(userId):
+            return ["userId": userId]
         }
     }
 }

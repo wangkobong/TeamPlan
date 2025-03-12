@@ -29,7 +29,7 @@ struct HomeView: View {
     @State private var isChallengesViewActive = false
     @State private var isRedirecting: Bool = false
     
-    @State private var isLoading = true
+    @State private var isLoading = false
     @State private var isNotifyNeed = false
     @State private var isRotating = false
     @State private var showLoadAlert = false
@@ -66,8 +66,8 @@ struct HomeView: View {
                     }
                     .onAppear {
                         Task {
-                            checkNotifyVM()
-                            await checkHomeVM()
+//                            checkNotifyVM()
+//                            await checkHomeVM()
                         }
                     }
                     .alert(isPresented: $showUpdateAlert) {
@@ -82,7 +82,7 @@ struct HomeView: View {
         }
         .onAppear {
             Task {
-                await prepareViewModel()
+                await homeViewModel.getHomeData(userId: "")
             }
         }
         .alert(isPresented: $showLoadAlert) {
@@ -90,39 +90,39 @@ struct HomeView: View {
         }
     }
     
-    private func checkHomeVM() async {
-        if await homeViewModel.updateData() {
-            isChallenging = !homeViewModel.userData.myChallenges.isEmpty
-            isExistProject = !homeViewModel.userData.projectsDTOs.isEmpty
-        } else {
-            showUpdateAlert = true
-        }
-    }
-    
-    private func checkNotifyVM() {
-        notifyViewModel.checkNewNotify()
-        if notifyViewModel.isNewNotifyAdded {
-            self.isNotifyNeed = true
-        } else {
-            self.isNotifyNeed = false
-        }
-    }
-    
-    private func prepareViewModel() async {
-        let isHomeViewModelReady = await homeViewModel.prepareData()
-        let isProjectrViewModelReady = await projectViewModel.prepareData()
-        let isNotifyViewModelReady = await notifyViewModel.prepareViewModel()
-        
-        if isHomeViewModelReady && isProjectrViewModelReady && isNotifyViewModelReady {
-            if notifyViewModel.isNewNotifyAdded {
-                self.isNotifyNeed = true
-            }
-            self.isLoading = false
-        } else {
-            self.showLoadAlert = true
-            self.isRedirecting = true
-        }
-    }
+//    private func checkHomeVM() async {
+//        if await homeViewModel.updateData() {
+//            isChallenging = !homeViewModel.userData.myChallenges.isEmpty
+//            isExistProject = !homeViewModel.userData.projectsDTOs.isEmpty
+//        } else {
+//            showUpdateAlert = true
+//        }
+//    }
+//    
+//    private func checkNotifyVM() {
+//        notifyViewModel.checkNewNotify()
+//        if notifyViewModel.isNewNotifyAdded {
+//            self.isNotifyNeed = true
+//        } else {
+//            self.isNotifyNeed = false
+//        }
+//    }
+//    
+//    private func prepareViewModel() async {
+//        let isHomeViewModelReady = await homeViewModel.prepareData()
+//        let isProjectrViewModelReady = await projectViewModel.prepareData()
+//        let isNotifyViewModelReady = await notifyViewModel.prepareViewModel()
+//        
+//        if isHomeViewModelReady && isProjectrViewModelReady && isNotifyViewModelReady {
+//            if notifyViewModel.isNewNotifyAdded {
+//                self.isNotifyNeed = true
+//            }
+//            self.isLoading = false
+//        } else {
+//            self.showLoadAlert = true
+//            self.isRedirecting = true
+//        }
+//    }
 }
 
 extension HomeView {
@@ -275,7 +275,7 @@ extension HomeView {
     //MARK: userName: Name
     private var userNameSection: some View {
         HStack {
-            Text("\(homeViewModel.userData.userName)" + "님,")
+            Text("\(homeViewModel.homeData?.userName)" + "님,")
                 .font(.appleSDGothicNeo(.bold, size: 20))
                 .foregroundColor(.theme.blackColor)
                 .background(
@@ -290,7 +290,8 @@ extension HomeView {
     //MARK: userName: pharse
     private var pharseSection: some View {
         HStack {
-            Text("\(homeViewModel.userData.phrase)")
+//            Text("\(homeViewModel.userData.phrase)")
+            Text("머냐 이거")
                 .font(.appleSDGothicNeo(.bold, size: 20))
                 .foregroundColor(.theme.blackColor)
             Spacer()

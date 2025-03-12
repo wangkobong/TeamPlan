@@ -57,7 +57,7 @@ struct MyChallengeView: View {
         ZStack {
             checkMyChallenges
             
-            if homeVM.userData.myChallenges.isEmpty {
+            if ((homeVM.homeData?.popularChallenges.isEmpty) != nil) {
                 noMyChallenges
             }
         }
@@ -67,16 +67,18 @@ struct MyChallengeView: View {
     private var checkMyChallenges: some View {
         HStack(spacing: 17) {
             let screenWidth = UIScreen.main.bounds.size.width
-            let myChallengeCount = homeVM.userData.myChallenges.count
+            let myChallengeCount = homeVM.homeData?.popularChallenges.count ?? 0
 
             ForEach(0..<3, id: \.self) { index in
                 if index < myChallengeCount {
-                    let challenge = homeVM.userData.myChallenges[index]
-                    ZStack {
-                        ChallengeCardFrontView(challenge: challenge, parentsWidth: screenWidth)
-                            .background(.white)
-                            .cornerRadius(4)
+                    if let challenge = homeVM.homeData?.popularChallenges[index] {
+                        ZStack {
+                            ChallengeCardFrontView(challenge: challenge, parentsWidth: screenWidth)
+                                .background(.white)
+                                .cornerRadius(4)
+                        }
                     }
+
                 } else {
                     ChallengeEmptyView()
                         .background(.white)

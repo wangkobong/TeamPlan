@@ -25,16 +25,16 @@ struct MyProjectView: View {
     var body: some View {
         VStack{
             if isProjectExist {
-                projectList
-                    .padding(.horizontal, 16)                    
-                    .navigationDestination(isPresented: $isProjectCardPush) {
-                        if projectVM.projectList.indices.contains(projectCardIndex) {
-                            ProjectDetailView(
-                                projectViewModel: projectVM,
-                                project: $projectVM.projectList[projectCardIndex]
-                            )
-                        }
-                    }
+//                projectList
+//                    .padding(.horizontal, 16)                    
+//                    .navigationDestination(isPresented: $isProjectCardPush) {
+//                        if projectVM.projectList.indices.contains(projectCardIndex) {
+//                            ProjectDetailView(
+//                                projectViewModel: projectVM,
+//                                project: $projectVM.projectList[projectCardIndex]
+//                            )
+//                        }
+//                    }
             } else {
                 noProject
                     .padding(.horizontal, 16)
@@ -85,42 +85,42 @@ struct MyProjectView: View {
     }
     
     //MARK: Project List & CardView
-    private var projectList: some View {
-        VStack {
-            TabView(selection: $currentPage) {
-                ForEach(Array(homeVM.userData.projectsDTOs.enumerated()), id: \.element.id) { index, project in
-                    MyProjectCardView(stat: homeVM.userData.statData, project: project)
-                        .tag(index)
-                        .onTapGesture {
-                            if self.searchProjectIndex(with: project.projectId) {
-                                self.isProjectCardPush = true
-                            } else {
-                                self.showAlert = true
-                            }
-                        }
-                }
-            }
-            .frame(height: 194)
-            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-            
-            pageControl
-                .padding(.top, 12)
-
-        }
-    }
-    
-    //MARK: Page Control
-    private var pageControl: some View {
-        HStack(spacing: 4) {
-            ForEach(0..<homeVM.userData.projectsDTOs.count, id: \.self) { index in
-                Circle()
-                    .frame(width: 6, height: 6)
-                    .foregroundColor(index == currentPage ? .theme.mainPurpleColor : .init(hex: "D9D9D9"))
-            }
-        }
-        .frame(height: 6)
-        .padding(.horizontal, 16)
-    }
+//    private var projectList: some View {
+//        VStack {
+//            TabView(selection: $currentPage) {
+//                ForEach(Array(homeVM.userData.projectsDTOs.enumerated()), id: \.element.id) { index, project in
+//                    MyProjectCardView(stat: homeVM.userData.statData, project: project)
+//                        .tag(index)
+//                        .onTapGesture {
+//                            if self.searchProjectIndex(with: project.projectId) {
+//                                self.isProjectCardPush = true
+//                            } else {
+//                                self.showAlert = true
+//                            }
+//                        }
+//                }
+//            }
+//            .frame(height: 194)
+//            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+//            
+//            pageControl
+//                .padding(.top, 12)
+//
+//        }
+//    }
+//    
+//    //MARK: Page Control
+//    private var pageControl: some View {
+//        HStack(spacing: 4) {
+//            ForEach(0..<homeVM.userData.projectsDTOs.count, id: \.self) { index in
+//                Circle()
+//                    .frame(width: 6, height: 6)
+//                    .foregroundColor(index == currentPage ? .theme.mainPurpleColor : .init(hex: "D9D9D9"))
+//            }
+//        }
+//        .frame(height: 6)
+//        .padding(.horizontal, 16)
+//    }
 }
 
 extension MyProjectView {

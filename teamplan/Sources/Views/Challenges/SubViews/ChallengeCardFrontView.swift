@@ -10,7 +10,7 @@ import SwiftUI
 
 struct ChallengeCardFrontView: View {
     
-    let challenge: MyChallengeDTO
+    let challenge: Challenge
     let parentsWidth: CGFloat
 
     var body: some View {
@@ -26,20 +26,20 @@ extension ChallengeCardFrontView {
             Circle()
                 .foregroundColor(Color.init(hex: "E5E5E5")) // 원의 배경색
                 .frame(width: 57, height: 57) // 원의 크기
-                .overlay(
-                    Image(self.setIcon(type: challenge.type, isComplete: true)) // 이미지 설정
-                        .foregroundColor(Color.init(hex: "B3B3B3")) // 이미지 색상
-                        .font(.system(size: 25)) // 이미지 크기
-                )
+//                .overlay(
+//                    Image(self.setIcon(type: challenge.category, isComplete: true)) // 이미지 설정
+//                        .foregroundColor(Color.init(hex: "B3B3B3")) // 이미지 색상
+//                        .font(.system(size: 25)) // 이미지 크기
+//                )
                 .padding(.bottom, 17)
                 
             
             Text(challenge.title)
                 .font(.appleSDGothicNeo(.semiBold, size: 12))
                 .foregroundColor(.theme.blackColor)
-            Text(challenge.desc)
-                .font(.appleSDGothicNeo(.regular, size: 12))
-                .foregroundColor(.theme.greyColor)
+//            Text(challenge.desc)
+//                .font(.appleSDGothicNeo(.regular, size: 12))
+//                .foregroundColor(.theme.greyColor)
         
         }
     }
